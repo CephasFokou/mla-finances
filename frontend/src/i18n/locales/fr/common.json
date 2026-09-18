@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "MLA Finance"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "contributions": "Contributions",
+    "projects": "Projets & catégories",
+    "withdrawals": "Retraits",
+    "reports": "Rapports",
+    "administration": "Administration",
+    "media": "Médias & bannières"
+  },
+  "login": {
+    "title": "Connexion",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "submit": "Se connecter"
+  },
+  "dashboard": {
+    "title": "Vue globale",
+    "placeholder": "Les indicateurs financiers s'afficheront ici (module en construction)."
+  }
+}
