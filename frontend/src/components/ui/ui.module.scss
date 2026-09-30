@@ -1,0 +1,502 @@
+// Briques visuelles partagées (boutons, cartes, pastilles, champs, tableaux, bannières),
+// calquées sur les composants des maquettes. Importées comme `ui` par les pages.
+
+// ---------- En-tête de page ----------
+.pageHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+
+  h1 {
+    font-size: 1.6rem;
+    margin: 0 0 var(--space-1);
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-ink);
+  }
+}
+
+// ---------- Boutons ----------
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 0.97rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    filter 0.15s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btnSm {
+  padding: 7px 11px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
+
+.btnPrimary {
+  background: var(--color-navy);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: var(--color-navy-ink);
+  }
+}
+
+.btnSecondary {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-color: var(--color-border);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-2);
+  }
+}
+
+.btnDanger {
+  background: var(--color-red);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-2);
+    color: var(--color-ink);
+  }
+}
+
+// ---------- Cartes ----------
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
+}
+
+.cardFlush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+
+  h3 {
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+}
+
+.sub {
+  font-size: 0.88rem;
+  color: var(--color-ink-faint);
+}
+
+// ---------- Pastilles de statut ----------
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pillGreen {
+  background: var(--color-green-tint);
+  color: var(--color-green);
+}
+
+.pillAmber {
+  background: var(--color-amber-tint);
+  color: var(--color-amber);
+}
+
+.pillRed {
+  background: var(--color-red-tint);
+  color: var(--color-red);
+}
+
+.pillNavy {
+  background: var(--color-navy-tint);
+  color: var(--color-navy-tint-ink);
+}
+
+.pillGrey {
+  background: var(--color-surface-2);
+  color: var(--color-ink-faint);
+  border: 1px solid var(--color-border);
+}
+
+// ---------- Indicateurs (KPI) ----------
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpiLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-faint);
+  font-weight: 700;
+}
+
+.kpiValue {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  margin-top: var(--space-2);
+}
+
+.exampleTag {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 700;
+  color: var(--color-amber);
+  background: var(--color-amber-tint);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+}
+
+// ---------- Formulaires ----------
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.span2 {
+  grid-column: 1 / -1;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-ink);
+
+    &:focus {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+      border-color: var(--color-accent);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.hint {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--color-ink-faint);
+}
+
+.error {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--color-red);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-navy);
+  }
+}
+
+// Bascule segmentée (ex. « Catégorie de don » / « Projet »)
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: 3px;
+  border-radius: 999px;
+  width: fit-content;
+
+  button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--color-ink-soft);
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-ink);
+    }
+  }
+}
+
+.segActive {
+  background: var(--color-navy) !important;
+  color: #fff !important;
+}
+
+// ---------- Bannières ----------
+.banner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: 13px 15px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  border: 1px solid;
+
+  svg {
+    flex: none;
+    margin-top: 2px;
+  }
+}
+
+.bannerNavy {
+  background: var(--color-navy-tint);
+  border-color: var(--color-navy-tint-border);
+  color: var(--color-navy-tint-ink);
+}
+
+.bannerAmber {
+  background: var(--color-amber-tint);
+  border-color: var(--color-amber-tint-border);
+  color: var(--color-amber);
+}
+
+.bannerRed {
+  background: var(--color-red-tint);
+  border-color: var(--color-red-tint-border);
+  color: var(--color-red);
+}
+
+.bannerGreen {
+  background: var(--color-green-tint);
+  border-color: var(--color-green-tint-border);
+  color: var(--color-green);
+}
+
+// ---------- Tableaux ----------
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+
+  th {
+    text-align: left;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-ink-faint);
+    font-weight: 700;
+    padding: 14px 12px 10px;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--color-border-soft);
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: var(--color-surface-2);
+  }
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellMain {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.cellSub {
+  font-size: 0.82rem;
+  color: var(--color-ink-faint);
+  font-weight: 400;
+}
+
+// ---------- États vides / chargement ----------
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: 56px 20px;
+  color: var(--color-ink-faint);
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--color-ink-soft);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 320px;
+  }
+}
+
+.emptyIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skel {
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border-soft) 25%,
+    var(--color-border) 37%,
+    var(--color-border-soft) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.6s ease infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: 0 0;
+  }
+}

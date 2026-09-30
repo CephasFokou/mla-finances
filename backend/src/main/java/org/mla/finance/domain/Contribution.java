@@ -60,6 +60,11 @@ public class Contribution {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
+    /** Renseigné uniquement sur une écriture ADJUSTMENT : la contribution qu'elle annule. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "adjusts_contribution_id")
+    private Contribution adjustsContribution;
+
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
 

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!--
+        Données de démonstration pour les listes de référence (catégories de don, projets,
+        donateurs) exploitées par le formulaire "Nouvelle contribution" et les écrans de liste.
+        0002-seed-reference-data.xml ne couvrait que les rôles et les canaux de paiement ; ces
+        trois tables restaient vides, ce qui laissait les menus déroulants du back-office sans
+        options. Contenu aligné sur le Cahier des Charges validé et sur la maquette back-office
+        "MLA Finance — Maquettes" (catégories/projets déjà utilisés comme exemples validés par
+        Cephas), pour rester cohérent avec ce que l'équipe a déjà vu et approuvé.
+    -->
+
+    <changeSet id="0004-01-seed-donation-categories" author="mla-finance">
+        <insert tableName="donation_categories">
+            <column name="name" value="Cotisation MLA"/>
+            <column name="description" value="Cotisations mensuelles des membres de la communauté MLA"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="donation_categories">
+            <column name="name" value="Semence missionnaire"/>
+            <column name="description" value="Dons de soutien aux missions et projets missionnaires"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="donation_categories">
+            <column name="name" value="Main levée"/>
+            <column name="description" value="Offrandes à main levée lors des cultes et rassemblements"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="0004-02-seed-projects" author="mla-finance">
+        <insert tableName="projects">
+            <column name="name" value="Toiture du Temple Central"/>
+            <column name="description" value="Réfection complète de la toiture du temple central"/>
+            <column name="status" value="ACTIVE"/>
+            <column name="opening_balance" valueNumeric="0"/>
+            <column name="target_amount" valueNumeric="1800000"/>
+            <column name="start_date" valueDate="2026-06-02"/>
+        </insert>
+        <insert tableName="projects">
+            <column name="name" value="Comfrat 2026"/>
+            <column name="description" value="Convention fraternelle annuelle — édition 2026"/>
+            <column name="status" value="ACTIVE"/>
+            <column name="opening_balance" valueNumeric="0"/>
+            <column name="recurring_series_id" value="COMFRAT"/>
+            <column name="start_date" valueDate="2026-01-01"/>
+        </insert>
+        <insert tableName="projects">
+            <column name="name" value="Comfrat 2025"/>
+            <column name="description" value="Convention fraternelle annuelle — édition 2025"/>
+            <column name="status" value="COMPLETED"/>
+            <column name="opening_balance" valueNumeric="0"/>
+            <column name="recurring_series_id" value="COMFRAT"/>
+            <column name="start_date" valueDate="2025-01-01"/>
+            <column name="end_date" valueDate="2025-12-31"/>
+        </insert>
+        <insert tableName="projects">
+            <column name="name" value="Rénovation Salle Enfants"/>
+            <column name="description" value="Travaux de rénovation et achat de matériel pour la salle des enfants"/>
+            <column name="status" value="ACTIVE"/>
+            <column name="opening_balance" valueNumeric="0"/>
+            <column name="target_amount" valueNumeric="75000"/>
+            <column name="start_date" valueDate="2026-07-01"/>
+        </insert>
+        <insert tableName="projects">
+            <column name="name" value="Semence Missionnaire Q3 2026"/>
+            <column name="description" value="Collecte trimestrielle de soutien aux missions"/>
+            <column name="status" value="ACTIVE"/>
+            <column name="opening_balance" valueNumeric="0"/>
+            <column name="start_date" valueDate="2026-07-01"/>
+            <column name="end_date" valueDate="2026-09-30"/>
+        </insert>
+        <insert tableName="projects">
+            <column name="name" value="Tournage Documentaire — Phase 1"/>
+            <column name="description" value="Production d'un documentaire sur l'historique de la communauté"/>
+            <column name="status" value="ARCHIVED"/>
+            <column name="opening_balance" valueNumeric="0"/>
+            <column name="start_date" valueDate="2025-11-01"/>
+            <column name="end_date" valueDate="2026-03-02"/>
+        </insert>
+        <insert tableName="projects">
+            <column name="name" value="Rénovation Cour Extérieure"/>
+            <column name="description" value="Projet en préparation : aménagement de la cour extérieure"/>
+            <column name="status" value="DRAFT"/>
+            <column name="opening_balance" valueNumeric="0"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="0004-03-seed-donors" author="mla-finance">
+        <insert tableName="donors">
+            <column name="full_name" value="Jean-Paul Mbarga"/>
+            <column name="email" value="jean-paul.mbarga@gmail.com"/>
+            <column name="phone" value="+237 677 12 34 56"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Béatrice Fouda"/>
+            <column name="email" value="beatrice.fouda@gmail.com"/>
+            <column name="phone" value="+237 699 45 67 89"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Emmanuel Nguema"/>
+            <column name="email" value="emmanuel.nguema@yahoo.fr"/>
+            <column name="phone" value="+237 655 22 33 44"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Marc Owona"/>
+            <column name="email" value="marc.owona@gmail.com"/>
+            <column name="phone" value="+237 674 88 99 00"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Alain Zang"/>
+            <column name="email" value="alain.zang@gmail.com"/>
+            <column name="phone" value="+237 691 11 22 33"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Chantal Mballa"/>
+            <column name="email" value="chantal.mballa@gmail.com"/>
+            <column name="phone" value="+237 678 55 66 77"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Paul Essomba"/>
+            <column name="email" value="paul.essomba@gmail.com"/>
+            <column name="phone" value="+237 696 33 44 55"/>
+        </insert>
+        <insert tableName="donors">
+            <column name="full_name" value="Brigitte Ngo Bakoa"/>
+            <column name="email" value="brigitte.ngobakoa@gmail.com"/>
+            <column name="phone" value="+237 654 77 88 99"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
