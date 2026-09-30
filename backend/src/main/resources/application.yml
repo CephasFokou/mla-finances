@@ -114,4 +114,9 @@ app:
     from: ${EMAIL_FROM}
   frontend-base-url: ${FRONTEND_BASE_URL}
   cors:
-    allowed-origins: ${FRONTEND_ORIGIN}
+    # Deux origines de prod distinctes désormais : le back-office (FRONTEND_ORIGIN) et le site
+    # public de don, déployé séparément (PUBLIC_FRONTEND_ORIGIN, voir frontend-public/ et
+    # claude/module-front-office-public-spec.md). PUBLIC_FRONTEND_ORIGIN est optionnelle (le split
+    # par virgule dans SecurityConfig filtre déjà les entrées vides) pour ne pas casser un
+    # déploiement existant tant qu'elle n'est pas renseignée.
+    allowed-origins: ${FRONTEND_ORIGIN},${PUBLIC_FRONTEND_ORIGIN:}

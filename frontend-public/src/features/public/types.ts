@@ -1,4 +1,4 @@
-// Types du front-office public (page de don) — endpoints /api/v1/public/**, sans authentification.
+// Types du site public de don — endpoints /api/v1/public/**, sans authentification.
 
 export interface PublicProject {
   id: number

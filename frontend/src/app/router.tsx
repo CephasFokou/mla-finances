@@ -24,7 +24,6 @@ import { MediaPage } from '../pages/media/MediaPage'
 import { NewBannerPage } from '../pages/media/NewBannerPage'
 import { BannerOrderPage } from '../pages/media/BannerOrderPage'
 import { NewVisualPage } from '../pages/media/NewVisualPage'
-import { PublicDonationPage } from '../pages/public/PublicDonationPage'
 import { PaymentTransactionsPage } from '../pages/payment-transactions/PaymentTransactionsPage'
 import { RequireAuth, RequirePermission } from './guards'
 
@@ -39,7 +38,6 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/session-expired', element: <SessionExpiredPage /> },
-  { path: '/don', element: <PublicDonationPage /> },
   {
     element: <RequireAuth />,
     children: [

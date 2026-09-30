@@ -1,0 +1,26 @@
+// Reset minimal, indépendant de design-system/tokens.scss du back-office : cette page définit sa
+// propre palette et typographie localement (voir pages/PublicDonationPage.module.scss, classe
+// .page), elle n'a pas vocation à partager de thème avec l'application authentifiée.
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid #151419;
+  outline-offset: 2px;
+}

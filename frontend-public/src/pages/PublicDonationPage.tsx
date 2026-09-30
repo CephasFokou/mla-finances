@@ -6,9 +6,9 @@ import {
   usePublicProjectsQuery,
   usePublicStatsQuery,
   useSubmitPublicDonationMutation,
-} from '../../features/public/hooks'
-import { ApiError } from '../../lib/apiClient'
-import { formatFcfa } from '../../lib/format'
+} from '../features/public/hooks'
+import { ApiError } from '../lib/apiClient'
+import { formatFcfa } from '../lib/format'
 import styles from './PublicDonationPage.module.scss'
 
 const AMOUNT_PRESETS = [5000, 15000, 30000, 50000]

@@ -1,0 +1,115 @@
+{
+  "public": {
+    "nav": {
+      "projects": "Projets",
+      "how": "Comment ça marche",
+      "faq": "FAQ",
+      "cta": "Faire un don"
+    },
+    "hero": {
+      "eyebrow": "Bienvenue à MLA · ICC Yaoundé",
+      "title": "généreux",
+      "lede": "Soutenez les projets de la chorale MLA : choisissez un projet, un montant, et faites un don en quelques minutes.",
+      "ctaMain": "Faire un don",
+      "ctaSecondary": "Voir les projets",
+      "statsLoading": "Chargement des chiffres…",
+      "stats": "{{raised}} collectés · {{count}} dons enregistrés · {{active}} projets actifs"
+    },
+    "trust": {
+      "title": "Un don qui change vraiment la donne.",
+      "items": {
+        "transparency": {
+          "title": "Transparence totale",
+          "desc": "Suivez l'avancement de chaque projet en temps réel."
+        },
+        "receipt": {
+          "title": "Suivi de votre don",
+          "desc": "Une référence unique vous est communiquée pour chaque don."
+        },
+        "verification": {
+          "title": "Vérification humaine",
+          "desc": "Chaque don en ligne est confirmé par le secrétariat après réception du paiement."
+        },
+        "channels": {
+          "title": "Plusieurs moyens de paiement",
+          "desc": "Mobile Money, carte, espèces ou virement, selon les canaux actifs."
+        }
+      }
+    },
+    "projects": {
+      "eyebrow": "Nos projets",
+      "title": "Des chantiers concrets à soutenir.",
+      "empty": "Aucun projet n'accepte de don pour le moment.",
+      "support": "Soutenir ce projet",
+      "targetLine": "{{collected}} / {{target}}",
+      "noTarget": "Objectif non défini",
+      "progressUnset": "—"
+    },
+    "form": {
+      "eyebrow": "Faire un don",
+      "title": "Choisissez, confirmez, c'est fait.",
+      "lede": "Trois étapes simples. Votre don sera confirmé par le secrétariat après réception du paiement.",
+      "step1Title": "Choisissez un projet",
+      "step2Title": "Choisissez un montant",
+      "step3Title": "Choisissez un canal de paiement",
+      "projectPlaceholder": "Sélectionnez un projet",
+      "customAmountLabel": "Autre montant",
+      "customAmountPlaceholder": "Ex : 37 500",
+      "anonymousLabel": "Faire un don anonyme",
+      "anonymousHint": "Votre nom n'apparaîtra dans aucun rapport public.",
+      "donorNameLabel": "Nom complet",
+      "donorContactLabel": "Téléphone ou email",
+      "donorNameRequired": "Le nom est requis pour un don non anonyme.",
+      "channelPlaceholder": "Sélectionnez un canal",
+      "summary": {
+        "title": "Récapitulatif",
+        "project": "Projet",
+        "channel": "Canal",
+        "donor": "Donateur",
+        "donorVisible": "Visible",
+        "donorAnonymous": "Anonyme",
+        "amount": "Montant"
+      },
+      "submit": "Confirmer le don · {{amount}}",
+      "submitting": "Envoi en cours…",
+      "secureNote": "Le don est enregistré immédiatement ; il sera confirmé par le secrétariat après vérification du paiement.",
+      "missingFields": "Choisissez un projet, un montant et un canal de paiement."
+    },
+    "success": {
+      "title": "Merci pour votre don !",
+      "lede": "Votre don a bien été enregistré pour :",
+      "referenceLabel": "Référence",
+      "statusPending": "En attente de confirmation par le secrétariat",
+      "newDonation": "Faire un autre don"
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Vos questions sur le don.",
+      "items": {
+        "confirm": {
+          "q": "Quand mon don est-il confirmé ?",
+          "a": "Après réception effective du paiement, le secrétariat confirme votre don depuis le back-office. Vous gardez votre référence pour toute question."
+        },
+        "anonymous": {
+          "q": "Puis-je rester anonyme ?",
+          "a": "Oui, activez l'option « don anonyme » : votre nom n'apparaîtra dans aucun rapport public."
+        },
+        "channels": {
+          "q": "Quels moyens de paiement sont acceptés ?",
+          "a": "Les canaux affichés dans le formulaire sont ceux actuellement actifs auprès du secrétariat."
+        },
+        "usage": {
+          "q": "Comment mon don est-il utilisé ?",
+          "a": "Chaque don est affecté au projet choisi ; son avancement est visible directement sur cette page."
+        }
+      }
+    },
+    "footer": {
+      "tagline": "La chorale MLA de l'ICC Yaoundé — au service du culte, de la communauté et de ses projets.",
+      "navTitle": "Navigation",
+      "helpTitle": "Assistance",
+      "contactNote": "Pour toute question sur votre don, contactez le secrétariat de la chorale.",
+      "rights": "Tous droits réservés"
+    }
+  }
+}

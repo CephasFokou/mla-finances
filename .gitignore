@@ -9,6 +9,11 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
+# Node / site public de don (projet détaché du back-office, voir frontend-public/)
+frontend-public/node_modules/
+frontend-public/dist/
+frontend-public/.vite/
+
 # IDE
 .idea/
 *.iml
