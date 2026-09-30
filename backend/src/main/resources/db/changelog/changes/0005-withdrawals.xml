@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <changeSet id="0005-01-create-withdrawals" author="mla-finance">
+        <createTable tableName="withdrawals">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT"/>
+            <column name="category_id" type="BIGINT"/>
+            <column name="requested_by_id" type="BIGINT"/>
+            <column name="decided_by_id" type="BIGINT"/>
+            <column name="amount" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requested_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decided_at" type="TIMESTAMP"/>
+            <column name="rejection_reason" type="VARCHAR(500)"/>
+            <column name="processed_at" type="TIMESTAMP"/>
+            <column name="reference" type="VARCHAR(60)">
+                <constraints unique="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="project_id"
+            constraintName="fk_withdrawals_project" referencedTableName="projects" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="category_id"
+            constraintName="fk_withdrawals_category" referencedTableName="donation_categories" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="requested_by_id"
+            constraintName="fk_withdrawals_requested_by" referencedTableName="users" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="decided_by_id"
+            constraintName="fk_withdrawals_decided_by" referencedTableName="users" referencedColumnNames="id" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="0005-02-withdrawals-project-xor-category" author="mla-finance">
+        <sql>
+            ALTER TABLE withdrawals
+                ADD CONSTRAINT chk_withdrawal_project_xor_category
+                CHECK (
+                    (project_id IS NOT NULL AND category_id IS NULL)
+                    OR (project_id IS NULL AND category_id IS NOT NULL)
+                );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

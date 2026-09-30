@@ -1,0 +1,179 @@
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 720px;
+}
+
+.spaced {
+  margin-bottom: var(--space-4);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.infoTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border-soft);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  tr:last-child th,
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  th {
+    width: 42%;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--color-ink-faint);
+  }
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.balanceTile {
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.balanceOk {
+  background: var(--color-green-tint);
+}
+
+.balanceDeficit {
+  background: var(--color-red-tint);
+}
+
+.balanceLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.labelOk {
+  color: var(--color-green);
+}
+
+.labelDeficit {
+  color: var(--color-red);
+}
+
+.balanceValue {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  margin: 6px 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.balanceSub {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--color-border-soft);
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+}
+
+// ---------- Modale de rejet / confirmation ----------
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(13, 24, 48, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.modal {
+  width: 100%;
+  max-width: 460px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+
+  h3 {
+    font-family: var(--font-body);
+    font-size: 1.08rem;
+    letter-spacing: 0;
+  }
+}
+
+.modalIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.iconRed {
+  background: var(--color-red-tint);
+  color: var(--color-red);
+}
+
+.iconNavy {
+  background: var(--color-navy-tint);
+  color: var(--color-navy-tint-ink);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 20px 22px;
+  color: var(--color-ink-soft);
+  line-height: 1.55;
+
+  p {
+    margin: 0;
+  }
+}
+
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 16px 22px;
+  border-top: 1px solid var(--color-border);
+}
