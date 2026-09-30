@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!--
+        0002-seed-reference-data.xml a créé les 4 rôles métier mais sans leur attribuer de
+        permission (role_permissions restait vide) : avec les permissions Spring Security encore
+        inertes en profil dev, ça ne bloquait rien, mais ça laissait l'écran "Rôles & permissions"
+        sans matrice à afficher. Matrice retenue ici (à confirmer avec Cephas, voir
+        claude/module-administration-spec.md) :
+        - SUPER_ADMIN : les 8 permissions.
+        - TRESORIER : contributions/projets/retraits + tableau de bord + audit, MAIS PAS
+          VALIDATE_WITHDRAWALS (séparation des tâches déjà actée dans le module Retraits :
+          celui qui demande un retrait n'est pas censé le valider lui-même).
+        - OPERATEUR : saisie quotidienne des contributions + tableau de bord seulement.
+        - AUDITEUR : lecture seule (tableau de bord + journal d'audit).
+        Modifiable ensuite depuis l'écran Administration → Rôles & permissions (PUT
+        /api/v1/roles/{id}/permissions), cette seed n'est qu'un point de départ.
+    -->
+    <changeSet id="0008-01-seed-role-permissions" author="mla-finance">
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="VIEW_DASHBOARD"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="MANAGE_CONTRIBUTIONS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="MANAGE_PROJECTS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="MANAGE_WITHDRAWALS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="VALIDATE_WITHDRAWALS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="MANAGE_USERS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="MANAGE_MEDIA"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="VIEW_AUDIT_LOG"/>
+        </insert>
+
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'TRESORIER')"/>
+            <column name="permission_code" value="VIEW_DASHBOARD"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'TRESORIER')"/>
+            <column name="permission_code" value="MANAGE_CONTRIBUTIONS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'TRESORIER')"/>
+            <column name="permission_code" value="MANAGE_PROJECTS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'TRESORIER')"/>
+            <column name="permission_code" value="MANAGE_WITHDRAWALS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'TRESORIER')"/>
+            <column name="permission_code" value="VIEW_AUDIT_LOG"/>
+        </insert>
+
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'OPERATEUR')"/>
+            <column name="permission_code" value="VIEW_DASHBOARD"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'OPERATEUR')"/>
+            <column name="permission_code" value="MANAGE_CONTRIBUTIONS"/>
+        </insert>
+
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'AUDITEUR')"/>
+            <column name="permission_code" value="VIEW_DASHBOARD"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'AUDITEUR')"/>
+            <column name="permission_code" value="VIEW_AUDIT_LOG"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
