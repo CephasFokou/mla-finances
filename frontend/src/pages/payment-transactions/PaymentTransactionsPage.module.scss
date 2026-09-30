@@ -1,0 +1,141 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 4px 6px 4px 12px;
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+
+  select {
+    font: inherit;
+    font-weight: 400;
+    color: var(--color-ink);
+    background: transparent;
+    border: none;
+    padding: 3px 6px;
+    max-width: 200px;
+    cursor: pointer;
+  }
+}
+
+.resetLink {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-5);
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+}
+
+// ---------- Modales confirmation / annulation ----------
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(13, 24, 48, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.modal {
+  width: 100%;
+  max-width: 460px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+
+  h3 {
+    font-family: var(--font-body);
+    font-size: 1.08rem;
+    letter-spacing: 0;
+  }
+}
+
+.modalIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.iconRed {
+  background: var(--color-red-tint);
+  color: var(--color-red);
+}
+
+.iconNavy {
+  background: var(--color-navy-tint);
+  color: var(--color-navy-tint-ink);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 20px 22px;
+  color: var(--color-ink-soft);
+  line-height: 1.55;
+
+  p {
+    margin: 0;
+  }
+}
+
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 16px 22px;
+  border-top: 1px solid var(--color-border);
+}

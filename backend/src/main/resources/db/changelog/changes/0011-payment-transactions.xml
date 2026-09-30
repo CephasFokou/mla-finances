@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <changeSet id="0011-01-create-payment-transactions" author="mla-finance">
+        <createTable tableName="payment_transactions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT"/>
+            <column name="category_id" type="BIGINT"/>
+            <column name="payment_channel_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contribution_id" type="BIGINT"/>
+            <column name="confirmed_by_id" type="BIGINT"/>
+            <column name="amount" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="donor_name" type="VARCHAR(160)"/>
+            <column name="donor_contact" type="VARCHAR(160)"/>
+            <column name="anonymous" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider" type="VARCHAR(20)" defaultValue="MANUAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider_reference" type="VARCHAR(120)"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reference" type="VARCHAR(60)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="cancel_reason" type="VARCHAR(500)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="confirmed_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="payment_transactions" baseColumnNames="project_id"
+            constraintName="fk_payment_tx_project" referencedTableName="projects" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint baseTableName="payment_transactions" baseColumnNames="category_id"
+            constraintName="fk_payment_tx_category" referencedTableName="donation_categories" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint baseTableName="payment_transactions" baseColumnNames="payment_channel_id"
+            constraintName="fk_payment_tx_channel" referencedTableName="payment_channels" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint baseTableName="payment_transactions" baseColumnNames="contribution_id"
+            constraintName="fk_payment_tx_contribution" referencedTableName="contributions" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="payment_transactions" baseColumnNames="confirmed_by_id"
+            constraintName="fk_payment_tx_confirmed_by" referencedTableName="users" referencedColumnNames="id" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="0011-02-payment-tx-project-xor-category" author="mla-finance">
+        <sql>
+            ALTER TABLE payment_transactions
+                ADD CONSTRAINT chk_payment_tx_project_xor_category
+                CHECK (
+                    (project_id IS NOT NULL AND category_id IS NULL)
+                    OR (project_id IS NULL AND category_id IS NOT NULL)
+                );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -36,6 +36,7 @@ export function AppLayout() {
     { to: '/projects', label: t('nav.projects'), icon: 'folder' },
     { to: '/withdrawals', label: t('nav.withdrawals'), icon: 'out' },
     { to: '/reports', label: t('nav.reports'), icon: 'file' },
+    { to: '/payment-transactions', label: t('nav.paymentTransactions'), icon: 'heart' },
     { to: '/administration', label: t('nav.administration'), icon: 'gear' },
     { to: '/media', label: t('nav.media'), icon: 'image' },
   ]

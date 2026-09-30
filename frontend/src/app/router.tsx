@@ -24,6 +24,8 @@ import { MediaPage } from '../pages/media/MediaPage'
 import { NewBannerPage } from '../pages/media/NewBannerPage'
 import { BannerOrderPage } from '../pages/media/BannerOrderPage'
 import { NewVisualPage } from '../pages/media/NewVisualPage'
+import { PublicDonationPage } from '../pages/public/PublicDonationPage'
+import { PaymentTransactionsPage } from '../pages/payment-transactions/PaymentTransactionsPage'
 import { RequireAuth, RequirePermission } from './guards'
 
 // Squelette de routage : un module = un dossier sous src/pages, monté ici au fil de
@@ -37,6 +39,7 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/session-expired', element: <SessionExpiredPage /> },
+  { path: '/don', element: <PublicDonationPage /> },
   {
     element: <RequireAuth />,
     children: [
@@ -55,6 +58,7 @@ export const router = createBrowserRouter([
           { path: 'withdrawals/new', element: <WithdrawalFormPage /> },
           { path: 'withdrawals/:id', element: <WithdrawalDetailPage /> },
           { path: 'reports', element: <ReportsPage /> },
+          { path: 'payment-transactions', element: <PaymentTransactionsPage /> },
           {
             path: 'administration',
             element: (
