@@ -21,3 +21,10 @@ frontend/.vite/
 
 # OS
 .DS_Store
+
+# Stockage local des médias (profil dev, en attendant Cloudflare R2)
+backend/data/
+
+# Artefacts de session laissés par erreur (doublons des specs deja dans le Claude Project)
+"Claude outputs/"
+backend/docs/

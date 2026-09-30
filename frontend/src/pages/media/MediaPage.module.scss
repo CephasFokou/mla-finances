@@ -1,0 +1,241 @@
+.tabPanel {
+  margin-top: var(--space-4);
+}
+
+.panelActions {
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.panelActionsEnd {
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-5);
+}
+
+// ---------- Grille de médias ----------
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.thumbWrap {
+  aspect-ratio: 16 / 9;
+  background: var(--color-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cardBody {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.cardTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardMeta {
+  font-size: 0.8rem;
+  color: var(--color-ink-faint);
+}
+
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border-soft);
+}
+
+// ---------- Ordre d'affichage des bannières ----------
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.orderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.orderThumb {
+  width: 56px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--color-surface-2);
+  flex: none;
+}
+
+.orderInfo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.orderTitle {
+  font-weight: 700;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orderMoves {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+// ---------- Formulaires d'upload ----------
+.form {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.formActions {
+  justify-content: flex-end;
+}
+
+.dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  text-align: center;
+  color: var(--color-ink-faint);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface-2);
+
+  input {
+    display: none;
+  }
+}
+
+.preview {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+}
+
+.projectSelectRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+// ---------- Modale d'ajout (bibliothèque) ----------
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(13, 24, 48, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+
+  h3 {
+    font-family: var(--font-body);
+    font-size: 1.08rem;
+    letter-spacing: 0;
+  }
+}
+
+.modalIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: var(--color-navy-tint);
+  color: var(--color-navy-tint-ink);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 20px 22px;
+}
+
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 16px 22px;
+  border-top: 1px solid var(--color-border);
+}
