@@ -25,10 +25,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Utilisateur du back-office. Pas de mot de passe saisi par l'administrateur : la création
- * se fait par invitation (lien à usage unique, cf. maquette Administration → Nouvel
- * utilisateur) ; l'authentification réelle sera branchée sur le fournisseur d'identité
- * choisi, consommée ici via JWT (voir security.SecurityConfig).
+ * Utilisateur du back-office. Aucun mot de passe n'est saisi par l'administrateur à la création :
+ * le compte est créé par invitation (lien à usage unique, cf. maquette Administration → Nouvel
+ * utilisateur) et l'invité choisit son mot de passe en l'activant (voir AuthService.activate,
+ * RG-18). passwordHash reste donc null tant que le compte est PENDING_INVITATION.
+ * passwordResetToken/passwordResetTokenExpiresAt ne sont renseignés que le temps d'un parcours
+ * "mot de passe oublié" ou d'une réinitialisation déclenchée par un super admin.
  */
 @Entity
 @Table(name = "users")
@@ -62,6 +64,15 @@ public class User {
 
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(name = "password_reset_token", length = 120)
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_token_expires_at")
+    private Instant passwordResetTokenExpiresAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

@@ -1,0 +1,58 @@
+// Gabarit partagé par les écrans d'authentification autres que la connexion elle-même (qui a son
+// propre LoginPage.module.scss avec le panneau de citation) : mot de passe oublié, activation,
+// réinitialisation, session expirée, accès refusé. Même identité (navy/or) mais en carte simple
+// centrée, ces écrans n'ayant pas besoin du panneau de marque pleine hauteur.
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px 36px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+
+  @media (max-width: 560px) {
+    padding: 32px 24px;
+  }
+}
+
+.crest {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-gold);
+  color: #152548;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lead {
+  margin: 4px 0 0;
+  color: var(--color-ink-soft);
+}
+
+.submit {
+  width: 100%;
+  justify-content: center;
+}
+
+.backLink {
+  align-self: center;
+}
+
+.center {
+  align-items: center;
+  text-align: center;
+}

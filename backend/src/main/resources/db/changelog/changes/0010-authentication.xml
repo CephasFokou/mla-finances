@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!--
+        RG-18 "authentification réelle" : ajoute le mot de passe (haché, jamais en clair) et le
+        jeton de réinitialisation sur users. Les trois colonnes sont nullables : un compte
+        PENDING_INVITATION n'a pas encore de mot de passe (il en choisit un via l'écran
+        d'activation, qui consomme invitation_token — colonne déjà existante depuis 0001) et le
+        jeton de réinitialisation n'existe que le temps d'un parcours "mot de passe oublié" ou
+        d'une réinitialisation déclenchée par un super admin (voir claude/module-authentification-spec.md).
+    -->
+    <changeSet id="0010-01-add-authentication-columns" author="mla-finance">
+        <addColumn tableName="users">
+            <column name="password_hash" type="VARCHAR(255)"/>
+            <column name="password_reset_token" type="VARCHAR(120)"/>
+            <column name="password_reset_token_expires_at" type="TIMESTAMP"/>
+        </addColumn>
+        <createIndex tableName="users" indexName="idx_users_password_reset_token" unique="true">
+            <column name="password_reset_token"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
