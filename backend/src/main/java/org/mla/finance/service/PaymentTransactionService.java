@@ -3,11 +3,13 @@ package org.mla.finance.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.Contribution;
+import org.mla.finance.domain.Donor;
 import org.mla.finance.domain.MovementType;
 import org.mla.finance.domain.PaymentTransaction;
 import org.mla.finance.domain.PaymentTransactionStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
 import org.mla.finance.repository.ContributionRepository;
+import org.mla.finance.repository.DonorRepository;
 import org.mla.finance.repository.PaymentTransactionRepository;
 import org.mla.finance.web.dto.CancelRequest;
 import org.mla.finance.web.dto.PaymentTransactionResponse;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * Traitement back-office des dons publics en attente (PaymentTransaction) : confirmation après
@@ -33,6 +36,7 @@ public class PaymentTransactionService {
 
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final ContributionRepository contributionRepository;
+    private final DonorRepository donorRepository;
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
@@ -51,6 +55,7 @@ public class PaymentTransactionService {
         Contribution contribution = Contribution.builder()
             .project(transaction.getProject())
             .category(transaction.getCategory())
+            .donor(resolveDonor(transaction))
             .paymentChannel(transaction.getPaymentChannel())
             .amount(transaction.getAmount())
             .periodMonth(today.withDayOfMonth(1))
@@ -86,6 +91,39 @@ public class PaymentTransactionService {
             "Don en ligne " + saved.getReference() + " annulé : " + request.reason());
 
         return PaymentTransactionResponse.from(saved);
+    }
+
+    /**
+     * Rattache la contribution créée à la confirmation à un Donor, en réutilisant un donateur
+     * existant lorsque le contact fourni (email ou téléphone) correspond exactement à un donateur
+     * déjà connu — jamais sur la seule base du nom, trop ambigu (voir DonorRepository). Sans nom ni
+     * contact (don anonyme), aucun Donor n'est créé.
+     */
+    private Donor resolveDonor(PaymentTransaction transaction) {
+        String name = transaction.getDonorName();
+        String contact = transaction.getDonorContact();
+        boolean hasName = name != null && !name.isBlank();
+        boolean hasContact = contact != null && !contact.isBlank();
+        if (!hasName && !hasContact) {
+            return null;
+        }
+
+        if (hasContact) {
+            String trimmed = contact.trim();
+            Optional<Donor> existing = trimmed.contains("@")
+                ? donorRepository.findByEmailIgnoreCase(trimmed)
+                : donorRepository.findByPhone(trimmed);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+
+        Donor donor = Donor.builder()
+            .fullName(hasName ? name.trim() : "Donateur")
+            .email(hasContact && contact.contains("@") ? contact.trim() : null)
+            .phone(hasContact && !contact.contains("@") ? contact.trim() : null)
+            .build();
+        return donorRepository.save(donor);
     }
 
     private void requirePending(PaymentTransaction transaction) {
