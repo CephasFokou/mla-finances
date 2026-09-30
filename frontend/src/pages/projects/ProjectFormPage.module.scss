@@ -1,0 +1,10 @@
+.form {
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.formActions {
+  justify-content: flex-end;
+}
