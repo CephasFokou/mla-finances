@@ -26,5 +26,5 @@ frontend/.vite/
 backend/data/
 
 # Artefacts de session laissés par erreur (doublons des specs deja dans le Claude Project)
-"Claude outputs/"
+Claude outputs/
 backend/docs/
