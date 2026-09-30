@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "MLA Finance"
+    "name": "MLA Finance",
+    "church": "ICC — Yaoundé"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -9,16 +10,562 @@
     "withdrawals": "Retraits",
     "reports": "Rapports",
     "administration": "Administration",
-    "media": "Médias & bannières"
+    "media": "Médias & bannières",
+    "toggleMenu": "Ouvrir ou fermer le menu",
+    "logout": "Se déconnecter"
   },
   "login": {
     "title": "Connexion",
+    "lead": "Accédez à votre espace de gestion financière.",
     "email": "Adresse email",
+    "emailPlaceholder": "prenom.nom@mla-icc.org",
     "password": "Mot de passe",
-    "submit": "Se connecter"
+    "submit": "Se connecter",
+    "quote": "« Chacun donnera comme il l'aura résolu dans son cœur, sans tristesse ni contrainte. »",
+    "quoteRef": "2 Corinthiens 9.7",
+    "restricted": "Accès réservé à l'équipe d'administration financière.",
+    "audit": "Accès protégé — toute tentative est journalisée.",
+    "forgotPassword": "Mot de passe oublié ?",
+    "genericError": "Connexion impossible. Réessayez."
   },
   "dashboard": {
     "title": "Vue globale",
-    "placeholder": "Les indicateurs financiers s'afficheront ici (module en construction)."
+    "error": "Impossible de charger les indicateurs pour le moment.",
+    "kpi": {
+      "balance": "Solde global",
+      "mobilized": "Mobilisé ce mois",
+      "disbursed": "Décaissé ce mois",
+      "pendingWithdrawals": "Retraits en attente"
+    }
+  },
+  "contributions": {
+    "title": "Contributions",
+    "count_one": "{{count}} contribution enregistrée",
+    "count_other": "{{count}} contributions enregistrées",
+    "new": "Nouvelle contribution",
+    "export": "Exporter",
+    "loading": "Chargement des contributions…",
+    "error": "Impossible de charger les contributions. Vérifiez que le backend est démarré.",
+    "empty": "Aucune contribution pour ces filtres",
+    "emptyHint": "Essayez d'élargir la période ou de réinitialiser les filtres appliqués.",
+    "anonymousLabel": "Anonyme",
+    "viewAction": "Voir le détail",
+    "movement": {
+      "STANDARD": "Confirmé",
+      "ADJUSTMENT": "Ajustement",
+      "TRANSFER": "Transfert"
+    },
+    "envelopeType": {
+      "project": "Projet",
+      "category": "Catégorie de don"
+    },
+    "columns": {
+      "donor": "Donateur",
+      "envelope": "Enveloppe",
+      "channel": "Canal",
+      "period": "Période",
+      "status": "Statut",
+      "amount": "Montant"
+    },
+    "filters": {
+      "period": "Période",
+      "envelope": "Enveloppe",
+      "channel": "Canal",
+      "movement": "Statut",
+      "all": "Toutes",
+      "allMasculine": "Tous",
+      "categories": "Catégories de don",
+      "projects": "Projets",
+      "reset": "Réinitialiser les filtres"
+    },
+    "pagination": {
+      "previous": "Précédent",
+      "next": "Suivant",
+      "pageInfo": "Page {{page}} / {{total}}"
+    },
+    "form": {
+      "title": "Nouvelle contribution",
+      "subtitle": "Renseignez l'essentiel : le mouvement est enregistré comme confirmé et journalisé automatiquement.",
+      "envelope": "Rattachement",
+      "envelopeHint": "Exclusif : une contribution est liée soit à une catégorie de don, soit à un projet.",
+      "projectOption": "Projet",
+      "categoryOption": "Catégorie de don",
+      "project": "Projet",
+      "category": "Catégorie",
+      "selectPlaceholder": "Choisir…",
+      "amount": "Montant (FCFA)",
+      "amountError": "Le montant doit être supérieur à 0",
+      "channel": "Canal de paiement",
+      "periodMonth": "Mois d'attribution",
+      "transactionDate": "Date de l'opération",
+      "donorSearch": "Rechercher un donateur",
+      "donorSearchPlaceholder": "Rechercher un donateur…",
+      "donor": "Donateur",
+      "noDonor": "Sans donateur identifié",
+      "anonymous": "Don anonyme",
+      "notes": "Renseignement (facultatif)",
+      "notesPlaceholder": "Précision libre sur cette contribution…",
+      "autoNotice": "Une fois enregistrés, le montant, le canal, le rattachement et les dates ne sont plus modifiables : une erreur se corrige par une annulation (écriture d'ajustement).",
+      "cancel": "Annuler",
+      "submit": "Enregistrer la contribution",
+      "genericError": "Une erreur est survenue. Réessayez."
+    },
+    "detail": {
+      "back": "Retour",
+      "title": "Contribution #{{id}}",
+      "createdAt": "Créée le {{date}}",
+      "general": "Informations générales",
+      "envelope": "Rattachement",
+      "amount": "Montant",
+      "transactionDate": "Date de l'opération",
+      "periodMonth": "Période d'attribution",
+      "channel": "Canal",
+      "donor": "Donateur",
+      "reference": "Référence",
+      "notes": "Renseignement",
+      "edit": "Modifier",
+      "editNotice": "Seuls le donateur anonyme et les notes sont modifiables. Le montant, le canal, le rattachement et les dates reflètent l'opération réelle.",
+      "cancelContribution": "Annuler",
+      "cancelEdit": "Annuler",
+      "saveEdit": "Enregistrer les modifications",
+      "cancelTitle": "Annuler cette contribution ?",
+      "cancelBody": "La contribution #{{id}} de {{amount}} ({{donor}}, {{envelope}}) sera compensée par une écriture d'ajustement. L'enregistrement d'origine n'est jamais supprimé.",
+      "cancelReasonLabel": "Motif de l'annulation",
+      "cancelReasonPlaceholder": "Ex. doublon de saisie, erreur de montant…",
+      "confirmCancel": "Confirmer l'annulation",
+      "cancelSuccess": "Contribution annulée : une écriture d'ajustement a été créée.",
+      "adjustmentOf": "Écriture d'ajustement pour la contribution",
+      "balanceTitle": "Solde de l'enveloppe",
+      "currentBalance": "Solde actuel",
+      "balanceCount_one": "{{count}} contribution",
+      "balanceCount_other": "{{count}} contributions",
+      "history": "Historique",
+      "created": "Contribution créée",
+      "adjustmentCreated": "Écriture d'ajustement créée"
+    }
+  },
+  "projects": {
+    "title": "Projets & catégories",
+    "tabs": {
+      "projects": "Projets",
+      "categories": "Catégories de don"
+    },
+    "new": "Nouveau projet",
+    "loading": "Chargement des projets…",
+    "error": "Impossible de charger les projets. Vérifiez que le backend est démarré.",
+    "empty": "Aucun projet pour l'instant",
+    "emptyHint": "Créez le premier projet pour commencer à y rattacher des contributions.",
+    "columns": {
+      "name": "Projet",
+      "status": "Statut",
+      "opening": "Solde d'ouverture",
+      "target": "Cible",
+      "period": "Période"
+    },
+    "status": {
+      "DRAFT": "Brouillon",
+      "ACTIVE": "Actif",
+      "COMPLETED": "Clôturé",
+      "ARCHIVED": "Archivé"
+    },
+    "viewAction": "Voir le détail",
+    "noTarget": "—",
+    "noPeriod": "Non renseignée",
+    "form": {
+      "createTitle": "Nouveau projet",
+      "createSubtitle": "Le projet démarre en brouillon : activez-le depuis sa fiche pour qu'il apparaisse dans le formulaire de contribution.",
+      "name": "Nom du projet",
+      "description": "Description (facultatif)",
+      "descriptionPlaceholder": "Précision libre sur ce projet…",
+      "openingBalance": "Solde d'ouverture (FCFA)",
+      "openingBalanceHint": "Somme déjà disponible avant la première contribution enregistrée ici. Non modifiable après création.",
+      "targetAmount": "Montant cible (FCFA, facultatif)",
+      "recurringSeriesId": "Identifiant de série récurrente (facultatif)",
+      "recurringSeriesIdHint": "Ex. « COMFRAT » : regroupe les occurrences successives d'un même événement récurrent (Comfrat 2026, 2027…).",
+      "startDate": "Date de début (facultatif)",
+      "endDate": "Date de fin (facultatif)",
+      "cancel": "Annuler",
+      "submit": "Créer le projet",
+      "genericError": "Une erreur est survenue. Réessayez."
+    },
+    "detail": {
+      "back": "Retour",
+      "createdAt": "Créé le {{date}}",
+      "edit": "Modifier",
+      "cancelEdit": "Annuler",
+      "saveEdit": "Enregistrer les modifications",
+      "activate": "Activer",
+      "complete": "Clôturer",
+      "archive": "Archiver",
+      "activateConfirm": "Activer ce projet ? Il deviendra sélectionnable dans le formulaire de contribution.",
+      "completeConfirm": "Marquer ce projet comme clôturé ? Il ne sera plus proposé pour de nouvelles contributions.",
+      "archiveConfirm": "Archiver ce projet ? Cette action est définitive : un projet archivé ne peut plus être réactivé.",
+      "actionError": "Une erreur est survenue. Réessayez.",
+      "general": "Informations générales",
+      "description": "Description",
+      "openingBalance": "Solde d'ouverture",
+      "targetAmount": "Montant cible",
+      "targetReached": "Cible atteinte",
+      "recurringSeriesId": "Série récurrente",
+      "period": "Période",
+      "balanceTitle": "Solde du projet",
+      "currentBalance": "Solde actuel",
+      "balanceCount_one": "{{count}} contribution",
+      "balanceCount_other": "{{count}} contributions",
+      "occurrencesTitle": "Occurrences de la série",
+      "occurrencesEmpty": "Aucune autre occurrence pour cette série.",
+      "newOccurrence": "Nouvelle occurrence",
+      "occurrenceForm": {
+        "title": "Nouvelle occurrence — {{series}}",
+        "name": "Nom de l'occurrence",
+        "openingBalance": "Solde d'ouverture (FCFA)",
+        "targetAmount": "Montant cible (FCFA, facultatif)",
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "cancel": "Annuler",
+        "submit": "Créer l'occurrence"
+      }
+    }
+  },
+  "categories": {
+    "title": "Catégories de don",
+    "new": "Nouvelle catégorie",
+    "loading": "Chargement des catégories…",
+    "error": "Impossible de charger les catégories.",
+    "empty": "Aucune catégorie de don pour l'instant",
+    "columns": {
+      "name": "Nom",
+      "description": "Description",
+      "status": "Statut"
+    },
+    "active": "Active",
+    "inactive": "Désactivée",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "edit": "Modifier",
+    "form": {
+      "name": "Nom de la catégorie",
+      "description": "Description (facultatif)",
+      "cancel": "Annuler",
+      "submit": "Créer",
+      "save": "Enregistrer",
+      "genericError": "Une erreur est survenue. Réessayez."
+    }
+  },
+  "withdrawals": {
+    "title": "Retraits",
+    "count_one": "{{count}} demande de retrait",
+    "count_other": "{{count}} demandes de retrait",
+    "new": "Nouvelle demande",
+    "export": "Exporter",
+    "loading": "Chargement des retraits…",
+    "error": "Impossible de charger les retraits. Vérifiez que le backend est démarré.",
+    "empty": "Aucune demande de retrait pour ces filtres",
+    "emptyHint": "Essayez de réinitialiser les filtres appliqués, ou créez une nouvelle demande.",
+    "viewAction": "Voir le détail",
+    "status": {
+      "PENDING": "En attente",
+      "APPROVED": "Validé",
+      "REJECTED": "Rejeté",
+      "PROCESSED": "Décaissé",
+      "CANCELLED": "Annulé"
+    },
+    "columns": {
+      "envelope": "Enveloppe",
+      "reason": "Motif",
+      "status": "Statut",
+      "requestedAt": "Demandé le",
+      "amount": "Montant"
+    },
+    "filters": {
+      "envelope": "Enveloppe",
+      "status": "Statut",
+      "all": "Toutes",
+      "allMasculine": "Tous",
+      "categories": "Catégories de don",
+      "projects": "Projets",
+      "reset": "Réinitialiser les filtres"
+    },
+    "pagination": {
+      "previous": "Précédent",
+      "next": "Suivant",
+      "pageInfo": "Page {{page}} / {{total}}"
+    },
+    "envelopeType": {
+      "project": "Projet",
+      "category": "Catégorie de don"
+    },
+    "form": {
+      "title": "Nouvelle demande de retrait",
+      "subtitle": "La demande est créée en attente : elle doit être validée par un second responsable avant tout décaissement.",
+      "workflowNotice": "Une fois envoyée, la demande ne peut plus être modifiée : un motif erroné se corrige par une annulation puis une nouvelle demande.",
+      "envelope": "Enveloppe concernée",
+      "envelopeHint": "Exclusif : un retrait est rattaché soit à un projet, soit à une catégorie de don.",
+      "projectOption": "Projet",
+      "categoryOption": "Catégorie de don",
+      "project": "Projet",
+      "category": "Catégorie",
+      "selectPlaceholder": "Choisir…",
+      "amount": "Montant demandé (FCFA)",
+      "amountError": "Le montant doit être supérieur à 0",
+      "reason": "Motif de la demande",
+      "reasonPlaceholder": "Ex. achat de matériaux, main d'œuvre, fournitures…",
+      "reasonError": "Le motif est requis",
+      "cancel": "Annuler",
+      "submit": "Envoyer la demande",
+      "genericError": "Une erreur est survenue. Réessayez."
+    },
+    "detail": {
+      "back": "Retour",
+      "title": "Retrait #{{id}}",
+      "requestedAt": "Demandé le {{date}}",
+      "general": "Informations générales",
+      "envelope": "Enveloppe",
+      "amount": "Montant",
+      "reason": "Motif",
+      "status": "Statut",
+      "decidedAt": "Décidé le {{date}}",
+      "decidedAtLabel": "Décidé le",
+      "processedAt": "Décaissé le {{date}}",
+      "processedAtLabel": "Décaissé le",
+      "rejectionReason": "Motif du rejet",
+      "reference": "Référence",
+      "approve": "Valider",
+      "reject": "Rejeter",
+      "cancel": "Annuler la demande",
+      "process": "Marquer comme décaissé",
+      "approveConfirm": "Valider cette demande de retrait ? Elle deviendra décaissable.",
+      "processConfirm": "Marquer ce retrait comme décaissé ? Cette action reflète un paiement déjà effectué et n'est pas réversible.",
+      "cancelConfirm": "Annuler cette demande de retrait ? Elle ne sera plus comptée comme dépense engagée.",
+      "rejectTitle": "Rejeter cette demande ?",
+      "rejectReasonLabel": "Motif du rejet",
+      "rejectReasonPlaceholder": "Ex. montant hors budget, devis à revoir…",
+      "confirmReject": "Confirmer le rejet",
+      "actionError": "Une erreur est survenue. Réessayez.",
+      "balanceTitle": "Solde de l'enveloppe",
+      "currentBalance": "Solde réel",
+      "provisionalBalance": "Solde prévisionnel",
+      "provisionalHint": "Solde réel moins les retraits en attente ou validés non encore décaissés (dépenses engagées).",
+      "engagedAmount": "Dépenses engagées",
+      "deficitAlert": "Solde prévisionnel négatif : les dépenses déjà engagées sur cette enveloppe dépassent le solde réel disponible.",
+      "pendingCount_one": "{{count}} demande en attente sur cette enveloppe",
+      "pendingCount_other": "{{count}} demandes en attente sur cette enveloppe"
+    }
+  },
+  "reports": {
+    "title": "Rapports",
+    "loading": "Chargement des données…",
+    "tabs": {
+      "overview": "Aperçu global",
+      "monthly": "Par projet",
+      "audit": "Journal d'audit"
+    },
+    "overview": {
+      "error": "Impossible de charger l'aperçu global pour le moment.",
+      "generatedAt": "Calculé le {{date}}",
+      "kpi": {
+        "globalBalance": "Solde global",
+        "mobilizedThisMonth": "Mobilisé ce mois",
+        "disbursedThisMonth": "Décaissé ce mois",
+        "pendingWithdrawalsCount": "Retraits en attente"
+      }
+    },
+    "monthly": {
+      "project": "Projet",
+      "noProjects": "Aucun projet à afficher.",
+      "error": "Impossible de charger la répartition mensuelle pour ce projet.",
+      "legendContributions": "Contributions",
+      "legendWithdrawals": "Retraits décaissés"
+    },
+    "audit": {
+      "error": "Impossible de charger le journal d'audit pour le moment.",
+      "empty": "Aucune écriture ne correspond à ces filtres.",
+      "columns": {
+        "occurredAt": "Date",
+        "action": "Action",
+        "summary": "Détail"
+      },
+      "filters": {
+        "entityType": "Élément",
+        "action": "Action",
+        "all": "Tous",
+        "allFeminine": "Toutes",
+        "reset": "Réinitialiser"
+      },
+      "entityType": {
+        "CONTRIBUTION": "Contribution",
+        "WITHDRAWAL": "Retrait",
+        "PROJECT": "Projet",
+        "CATEGORY": "Catégorie"
+      },
+      "action": {
+        "CREATE": "Création",
+        "APPROVE": "Validation",
+        "REJECT": "Rejet",
+        "CANCEL": "Annulation",
+        "PROCESS": "Décaissement",
+        "ACTIVATE": "Activation",
+        "COMPLETE": "Clôture",
+        "ARCHIVE": "Archivage",
+        "DEACTIVATE": "Désactivation"
+      },
+      "pagination": {
+        "previous": "Précédent",
+        "next": "Suivant",
+        "pageInfo": "Page {{page}} sur {{total}}"
+      }
+    }
+  },
+  "administration": {
+    "title": "Administration",
+    "tabs": {
+      "users": "Utilisateurs",
+      "roles": "Rôles & permissions"
+    },
+    "permissions": {
+      "VIEW_DASHBOARD": "Tableau de bord",
+      "MANAGE_CONTRIBUTIONS": "Gérer les contributions",
+      "MANAGE_PROJECTS": "Gérer les projets",
+      "MANAGE_WITHDRAWALS": "Gérer les retraits",
+      "VALIDATE_WITHDRAWALS": "Valider les retraits",
+      "MANAGE_USERS": "Gérer les utilisateurs",
+      "MANAGE_MEDIA": "Gérer les médias",
+      "VIEW_AUDIT_LOG": "Journal d'audit"
+    },
+    "roles": {
+      "error": "Impossible de charger les rôles pour le moment.",
+      "columns": {
+        "role": "Rôle"
+      }
+    },
+    "users": {
+      "new": "Nouvel utilisateur",
+      "back": "Retour aux utilisateurs",
+      "error": "Impossible de charger les utilisateurs pour le moment.",
+      "empty": "Aucun utilisateur pour l'instant.",
+      "genericError": "Une erreur est survenue. Réessayez.",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "editRoles": "Modifier les rôles",
+      "editRolesTitle": "Rôles de {{name}}",
+      "resendInvitation": "Renvoyer l'invitation",
+      "suspend": "Suspendre",
+      "suspendConfirm": "Suspendre le compte de {{name}} ? La personne perdra l'accès immédiatement.",
+      "reactivate": "Réactiver",
+      "reactivateConfirm": "Réactiver le compte de {{name}} ?",
+      "invitationTokenLabel": "Jeton d'invitation (secours si l'email n'arrive pas) :",
+      "copy": "Copier",
+      "copied": "Copié !",
+      "columns": {
+        "name": "Nom",
+        "email": "Email",
+        "roles": "Rôles",
+        "status": "Statut"
+      },
+      "status": {
+        "PENDING_INVITATION": "Invitation en attente",
+        "ACTIVE": "Actif",
+        "SUSPENDED": "Suspendu"
+      },
+      "inviteTitle": "Inviter un utilisateur",
+      "inviteSubtitle": "Crée un compte en attente d'invitation, sans mot de passe.",
+      "inviteNotice": "Un email d'invitation est envoyé automatiquement à l'adresse indiquée.",
+      "fullName": "Nom complet",
+      "email": "Adresse email",
+      "roles": "Rôles",
+      "sendInvitation": "Envoyer l'invitation",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "resetPasswordSent": "Email envoyé"
+    }
+  },
+  "media": {
+    "title": "Médias & bannières",
+    "back": "Retour",
+    "error": "Une erreur est survenue.",
+    "genericError": "Une erreur est survenue.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "tabs": {
+      "banners": "Bannières",
+      "visuals": "Visuels de projet",
+      "library": "Bibliothèque"
+    },
+    "form": {
+      "chooseFile": "Cliquer pour choisir une image",
+      "fileRequired": "Une image est requise.",
+      "title": "Libellé (optionnel)",
+      "titleHint": "Affiché en légende ; sinon le nom du fichier est utilisé.",
+      "cancel": "Annuler"
+    },
+    "banners": {
+      "showInactive": "Afficher les bannières désactivées",
+      "order": "Ordre d'affichage",
+      "new": "Nouvelle bannière",
+      "empty": "Aucune bannière pour le moment.",
+      "newTitle": "Nouvelle bannière",
+      "newSubtitle": "Ajoutée à la fin de l'ordre d'affichage, active immédiatement.",
+      "publish": "Publier la bannière",
+      "orderTitle": "Ordre d'affichage des bannières",
+      "orderSubtitle": "Chaque déplacement est enregistré immédiatement.",
+      "moveUp": "Monter",
+      "moveDown": "Descendre"
+    },
+    "visuals": {
+      "project": "Projet",
+      "new": "Ajouter un visuel",
+      "empty": "Aucun visuel pour ce projet.",
+      "noProjects": "Aucun projet disponible.",
+      "newTitle": "Ajouter un visuel",
+      "newSubtitle": "Rattaché au projet sélectionné.",
+      "projectRequired": "Sélectionnez un projet.",
+      "publish": "Ajouter le visuel"
+    },
+    "library": {
+      "new": "Ajouter un média",
+      "empty": "Aucun média dans la bibliothèque.",
+      "uploadTitle": "Ajouter un média",
+      "upload": "Ajouter",
+      "copyLink": "Copier le lien",
+      "copied": "Copié !"
+    }
+  },
+  "auth": {
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+    "passwordMismatch": "Les deux mots de passe ne correspondent pas.",
+    "genericError": "Une erreur est survenue. Réessayez.",
+    "backToLogin": "Retour à la connexion",
+    "activate": {
+      "title": "Activer votre compte",
+      "lead": "Choisissez votre mot de passe pour accéder à votre espace de gestion financière.",
+      "submit": "Activer mon compte",
+      "missingToken": "Lien d'activation invalide : aucun jeton n'a été trouvé dans l'adresse. Vérifiez le lien reçu par email."
+    },
+    "forgot": {
+      "title": "Mot de passe oublié",
+      "lead": "Indiquez votre adresse email : si un compte actif y est associé, vous recevrez un lien de réinitialisation.",
+      "submit": "Envoyer le lien de réinitialisation",
+      "success": "Si un compte actif est associé à cette adresse, un email de réinitialisation vient de lui être envoyé.",
+      "invalidEmail": "Adresse email invalide."
+    },
+    "reset": {
+      "title": "Réinitialiser le mot de passe",
+      "lead": "Choisissez un nouveau mot de passe.",
+      "submit": "Réinitialiser le mot de passe",
+      "missingToken": "Lien de réinitialisation invalide : aucun jeton n'a été trouvé dans l'adresse. Demandez un nouveau lien."
+    },
+    "sessionExpired": {
+      "title": "Session expirée",
+      "lead": "Votre session a expiré ou a été révoquée. Reconnectez-vous pour continuer.",
+      "backToLogin": "Se reconnecter"
+    },
+    "unauthorized": {
+      "title": "Accès non autorisé",
+      "lead": "Vous n'avez pas la permission nécessaire pour accéder à cette section.",
+      "backToDashboard": "Retour au tableau de bord"
+    }
   }
 }

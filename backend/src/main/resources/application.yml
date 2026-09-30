@@ -12,6 +12,10 @@ spring:
         format_sql: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
   port: ${PORT:8080}
@@ -31,6 +35,23 @@ management:
     health:
       show-details: when-authorized
 
+# RG-18 : durée de vie du JWT — commune à tous les profils (le secret de signature, lui, diffère
+# par profil, voir plus bas). 480 minutes = 8h, une journée de travail ; pas de refresh token pour
+# cette première version (voir claude/module-authentification-spec.md).
+app:
+  jwt:
+    expiration-minutes: 480
+
+# Niveaux de log paramétrables sans recompiler : exporter LOG_LEVEL_APP/LOG_LEVEL_SECURITY/
+# LOG_LEVEL_CORS avant de lancer le backend (n'importe quel profil, y compris prod pour du
+# diagnostic ponctuel). Le profil dev descend ses propres valeurs par défaut à DEBUG plus bas — ce
+# bloc ne fixe que ce qui s'applique si rien d'autre ne le redéfinit.
+logging:
+  level:
+    org.mla.finance: ${LOG_LEVEL_APP:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:WARN}
+    org.springframework.web.cors: ${LOG_LEVEL_CORS:WARN}
+
 ---
 spring:
   config:
@@ -46,6 +67,34 @@ spring:
       enabled: true
       path: /h2-console
 
+app:
+  media:
+    storage-dir: ./data/media-storage
+  jwt:
+    # Secret de développement uniquement : fixe, versionné, jamais utilisé en prod (voir bloc prod
+    # ci-dessous où il est obligatoire via JWT_SECRET). >= 32 caractères pour HS256.
+    secret: dev-only-insecure-secret-key-do-not-use-in-prod-1234567890
+  email:
+    # Vide par défaut (EmailService journalise un avertissement et n'envoie rien) ; renseigner
+    # RESEND_API_KEY localement pour tester l'envoi réel avec la clé Resend de test de Cephas.
+    resend-api-key: ${RESEND_API_KEY:}
+    from: "MLA Finance <no-reply@mla-finance.dev>"
+  frontend-base-url: http://localhost:5173
+  cors:
+    # Pattern, pas une origine exacte : Vite choisit un port différent dès que 5173 est occupé
+    # (5174 observé en test), setAllowedOriginPatterns gère ça sans qu'il faille le mettre à jour
+    # à chaque fois (voir security.SecurityConfig.corsConfigurationSource).
+    allowed-origins: http://localhost:*
+
+# Par défaut en dev : logs applicatifs + sécurité + CORS en DEBUG, pour voir tout de suite un rejet
+# CORS, un 401 ou un jeton invalide plutôt que de deviner. Reste surchargeable (LOG_LEVEL_APP=INFO
+# par exemple) si c'est trop verbeux au quotidien.
+logging:
+  level:
+    org.mla.finance: ${LOG_LEVEL_APP:DEBUG}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:DEBUG}
+    org.springframework.web.cors: ${LOG_LEVEL_CORS:DEBUG}
+
 ---
 spring:
   config:
@@ -56,8 +105,13 @@ spring:
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${OAUTH2_ISSUER_URI}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  email:
+    resend-api-key: ${RESEND_API_KEY}
+    from: ${EMAIL_FROM}
+  frontend-base-url: ${FRONTEND_BASE_URL}
+  cors:
+    allowed-origins: ${FRONTEND_ORIGIN}

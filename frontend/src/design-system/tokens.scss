@@ -1,71 +1,117 @@
-// Design tokens du back-office MLA Finance — repris des maquettes HTML/CSS validées
-// (palette navy/or issue des schémas d'architecture du Document Technique,
-// typographies Bodoni Moda + Familjen Grotesk).
+// Design tokens du back-office MLA Finance — repris à l'identique des maquettes Stitch
+// (palette navy/or, typographies Poppins + Plus Jakarta Sans).
 // Ce fichier est la seule source de vérité pour les couleurs, espacements et typographies :
-// les composants consomment ces variables SCSS, jamais de valeurs codées en dur.
+// les composants consomment ces variables, jamais de valeurs codées en dur.
 
 :root {
-  // Couleurs de marque
-  --color-navy-950: #0b1220;
-  --color-navy-900: #101a2e;
-  --color-navy-800: #182545;
-  --color-navy-700: #22315c;
-  --color-gold-500: #c99a2e;
-  --color-gold-400: #e0b955;
-  --color-gold-100: #f7ecd2;
+  color-scheme: light;
 
-  // Neutres (légèrement teintés vers le navy plutôt qu'un gris pur)
-  --color-ink: #14192b;
-  --color-ink-soft: #4a5170;
-  --color-ink-faint: #8a90a8;
-  --color-line: rgba(20, 25, 43, 0.12);
+  // Marque
+  --color-navy: #1f3864;
+  --color-navy-ink: #152548;
+  --color-navy-tint: #eaf0fa;
+  --color-navy-tint-ink: #1f3864;
+  --color-navy-tint-border: #cbd9f2;
+  --color-accent: #2e5395;
+  --color-accent-tint: #e7edf8;
+  --color-gold: #b8860b;
+  --color-gold-deep: #8c6a08;
+  --color-gold-tint: #f7efda;
+
+  // États sémantiques (+ fonds teintés)
+  --color-green: #1b5e20;
+  --color-green-tint: #e6f2e7;
+  --color-green-tint-border: #c7e3c8;
+  --color-red: #b00020;
+  --color-red-tint: #fbeaea;
+  --color-red-tint-border: #f0c6ce;
+  --color-amber: #9a6a00;
+  --color-amber-tint: #fdf3dc;
+  --color-amber-tint-border: #ead59b;
+
+  // Neutres
+  --color-ink: #1b2130;
+  --color-ink-soft: #525a6b;
+  --color-ink-faint: #8891a3;
+  --color-paper: #f4f6fb;
   --color-surface: #ffffff;
-  --color-surface-alt: #f6f7fb;
-
-  // États sémantiques
-  --color-success: #1c8a5a;
-  --color-warning: #b9770e;
-  --color-danger: #c33f3f;
-  --color-info: #2f6fb0;
+  --color-surface-2: #fafbfd;
+  --color-border: #e2e6f0;
+  --color-border-soft: #edf0f7;
 
   // Typographie
-  --font-display: 'Bodoni Moda', 'Georgia', serif;
-  --font-body: 'Familjen Grotesk', 'Segoe UI', sans-serif;
+  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, blinkmacsystemfont, 'Segoe UI', sans-serif;
 
-  // Échelle de tailles (rem)
   --text-xs: 0.8rem;
   --text-sm: 0.9rem;
   --text-base: 1rem;
   --text-lg: 1.15rem;
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
-  --text-3xl: 2.75rem;
 
   // Espacements
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
+  --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-12: 3rem;
 
   // Rayons / ombres
-  --radius-sm: 6px;
+  --radius-sm: 9px;
   --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow-card: 0 1px 2px rgba(20, 25, 43, 0.06), 0 8px 24px rgba(20, 25, 43, 0.08);
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-card: 0 1px 2px rgba(20, 30, 60, 0.04), 0 8px 24px -12px rgba(20, 30, 60, 0.12);
+  --shadow-lg: 0 4px 10px rgba(20, 30, 60, 0.06), 0 20px 48px -16px rgba(20, 30, 60, 0.2);
 
-  --sidebar-width: 264px;
+  --sidebar-width: 240px;
+  --topbar-height: 68px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-ink: #eef0f7;
-    --color-ink-soft: #b7bcd6;
-    --color-ink-faint: #7d84a3;
-    --color-line: rgba(238, 240, 247, 0.12);
-    --color-surface: #101a2e;
-    --color-surface-alt: #0b1220;
-  }
-}
+// Palette sombre — en réserve pour le jour où une vraie bascule de thème (pilotée par
+// l'utilisateur, pas par le système) sera ajoutée au produit. Désactivée pour l'instant :
+// sans bouton pour revenir au clair, un OS/navigateur en dark mode faisait basculer toute
+// l'app alors que la maquette validée par Cephas est en thème clair.
+//
+// @media (prefers-color-scheme: dark) {
+//   :root {
+//     color-scheme: dark;
+//
+//     --color-navy: #16264a;
+//     --color-navy-ink: #0d1830;
+//     --color-navy-tint: #1c2a46;
+//     --color-navy-tint-ink: #9dbbf0;
+//     --color-navy-tint-border: #33456c;
+//     --color-accent: #6e92d6;
+//     --color-accent-tint: #1b2740;
+//     --color-gold: #d9a73b;
+//     --color-gold-deep: #e9be63;
+//     --color-gold-tint: #3a2f14;
+//
+//     --color-green: #5fbe68;
+//     --color-green-tint: #12281a;
+//     --color-green-tint-border: #1f4a29;
+//     --color-red: #f0708a;
+//     --color-red-tint: #341018;
+//     --color-red-tint-border: #5c2430;
+//     --color-amber: #e3b34c;
+//     --color-amber-tint: #332707;
+//     --color-amber-tint-border: #5a4a1e;
+//
+//     --color-ink: #eaedf5;
+//     --color-ink-soft: #aeb6c7;
+//     --color-ink-faint: #79839a;
+//     --color-paper: #0e1524;
+//     --color-surface: #161e33;
+//     --color-surface-2: #131a2c;
+//     --color-border: #28324a;
+//     --color-border-soft: #202a40;
+//
+//     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+//     --shadow-lg: 0 4px 10px rgba(0, 0, 0, 0.35), 0 24px 56px -16px rgba(0, 0, 0, 0.6);
+//   }
+// }
