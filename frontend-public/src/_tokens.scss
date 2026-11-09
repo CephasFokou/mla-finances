@@ -1,0 +1,24 @@
+// Charte ICC (relevée sur le logo officiel, validée par Cephas le 09/11/2026). Les quatre rubans de
+// couleur vont toujours ensemble : chaque collecte en reçoit un, jamais une couleur vive seule.
+$violet-night: #3a065b;
+$violet-deep: #5f148b;
+$violet: #70358e;
+$violet-tint: #f6f1fa;
+$gold: #f9d03b;
+$red: #df3a3a;
+$green: #72bf5b;
+$blue: #16a5da;
+$logo-grey: #b2b2b1;
+
+$ink: #23122f;
+$ink-soft: #5b4a68;
+$ink-faint: #6e5c7b;
+$line: #ebe2f2;
+$mist: #fbf8fd;
+$paper: #ffffff;
+$lilac-text: #eadcf5;
+
+$hero-gradient: linear-gradient(155deg, $violet-night 0%, #4e0d72 55%, $violet-deep 100%);
+
+$font-display: 'Montserrat', system-ui, sans-serif;
+$font-body: 'Figtree', system-ui, sans-serif;

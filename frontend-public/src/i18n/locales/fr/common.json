@@ -1,115 +1,102 @@
 {
   "public": {
+    "brand": "Finances du MLA",
+    "brandSub": "ICC Yaoundé",
     "nav": {
-      "projects": "Projets",
-      "how": "Comment ça marche",
-      "faq": "FAQ",
+      "label": "Navigation principale",
+      "collections": "Collectes",
+      "how": "Comment donner",
+      "impact": "Ce que vos dons ont permis",
       "cta": "Faire un don"
     },
     "hero": {
-      "eyebrow": "Bienvenue à MLA · ICC Yaoundé",
-      "title": "généreux",
-      "lede": "Soutenez les projets de la chorale MLA : choisissez un projet, un montant, et faites un don en quelques minutes.",
-      "ctaMain": "Faire un don",
-      "ctaSecondary": "Voir les projets",
-      "statsLoading": "Chargement des chiffres…",
-      "stats": "{{raised}} collectés · {{count}} dons enregistrés · {{active}} projets actifs"
+      "title": "Chaque don arrive là où il a été promis.",
+      "lede": "Mains levées, mariages, projets de la famille : choisissez une collecte, donnez par Mobile Money, puis suivez ce qui a été remis.",
+      "ctaMain": "Donner à une collecte",
+      "ctaSecondary": "Voir ce qui a été remis",
+      "proof_one": "Au total, <b>{{amount}}</b> collectés pour {{count}} collecte, remis aux bénéficiaires ou en cours de remise.",
+      "proof_other": "Au total, <b>{{amount}}</b> collectés pour {{count}} collectes, remis aux bénéficiaires ou en cours de remise."
     },
-    "trust": {
-      "title": "Un don qui change vraiment la donne.",
-      "items": {
-        "transparency": {
-          "title": "Transparence totale",
-          "desc": "Suivez l'avancement de chaque projet en temps réel."
-        },
-        "receipt": {
-          "title": "Suivi de votre don",
-          "desc": "Une référence unique vous est communiquée pour chaque don."
-        },
-        "verification": {
-          "title": "Vérification humaine",
-          "desc": "Chaque don en ligne est confirmé par le secrétariat après réception du paiement."
-        },
-        "channels": {
-          "title": "Plusieurs moyens de paiement",
-          "desc": "Mobile Money, carte, espèces ou virement, selon les canaux actifs."
-        }
-      }
+    "collections": {
+      "title": "Collectes ouvertes",
+      "intro": "L'argent d'une collecte reste à part : il ne se mélange jamais avec la caisse du MLA.",
+      "live": "En cours",
+      "soon": "À venir",
+      "since": "depuis le {{date}}",
+      "soonMeta": "ouverture prochaine",
+      "received_one": "FCFA reçus d'un donateur",
+      "received_other": "FCFA reçus de {{count}} donateurs",
+      "receivedNone": "Pas encore de dons : soyez le premier.",
+      "upcomingText": "Pas encore de dons",
+      "give": "Donner pour cette collecte",
+      "opensSoon": "Ouvre bientôt",
+      "empty": "Aucune collecte n'est ouverte pour le moment. Revenez bientôt.",
+      "loading": "Chargement des collectes…",
+      "error": "Les collectes ne peuvent pas être chargées pour le moment. Réessayez dans quelques instants."
     },
-    "projects": {
-      "eyebrow": "Nos projets",
-      "title": "Des chantiers concrets à soutenir.",
-      "empty": "Aucun projet n'accepte de don pour le moment.",
-      "support": "Soutenir ce projet",
-      "targetLine": "{{collected}} / {{target}}",
-      "noTarget": "Objectif non défini",
-      "progressUnset": "—"
-    },
-    "form": {
-      "eyebrow": "Faire un don",
-      "title": "Choisissez, confirmez, c'est fait.",
-      "lede": "Trois étapes simples. Votre don sera confirmé par le secrétariat après réception du paiement.",
-      "step1Title": "Choisissez un projet",
-      "step2Title": "Choisissez un montant",
-      "step3Title": "Choisissez un canal de paiement",
-      "projectPlaceholder": "Sélectionnez un projet",
-      "customAmountLabel": "Autre montant",
-      "customAmountPlaceholder": "Ex : 37 500",
-      "anonymousLabel": "Faire un don anonyme",
-      "anonymousHint": "Votre nom n'apparaîtra dans aucun rapport public.",
-      "donorNameLabel": "Nom complet",
-      "donorContactLabel": "Téléphone ou email",
-      "donorNameRequired": "Le nom est requis pour un don non anonyme.",
-      "channelPlaceholder": "Sélectionnez un canal",
-      "summary": {
-        "title": "Récapitulatif",
-        "project": "Projet",
-        "channel": "Canal",
-        "donor": "Donateur",
-        "donorVisible": "Visible",
-        "donorAnonymous": "Anonyme",
-        "amount": "Montant"
+    "how": {
+      "title": "Comment donner",
+      "intro": "Trois étapes, moins d'une minute, depuis votre téléphone.",
+      "s1": {
+        "title": "Choisissez la collecte",
+        "text": "Chaque collecte a son ruban de couleur et son propre total."
       },
-      "submit": "Confirmer le don · {{amount}}",
-      "submitting": "Envoi en cours…",
-      "secureNote": "Le don est enregistré immédiatement ; il sera confirmé par le secrétariat après vérification du paiement.",
-      "missingFields": "Choisissez un projet, un montant et un canal de paiement."
-    },
-    "success": {
-      "title": "Merci pour votre don !",
-      "lede": "Votre don a bien été enregistré pour :",
-      "referenceLabel": "Référence",
-      "statusPending": "En attente de confirmation par le secrétariat",
-      "newDonation": "Faire un autre don"
-    },
-    "faq": {
-      "eyebrow": "FAQ",
-      "title": "Vos questions sur le don.",
-      "items": {
-        "confirm": {
-          "q": "Quand mon don est-il confirmé ?",
-          "a": "Après réception effective du paiement, le secrétariat confirme votre don depuis le back-office. Vous gardez votre référence pour toute question."
-        },
-        "anonymous": {
-          "q": "Puis-je rester anonyme ?",
-          "a": "Oui, activez l'option « don anonyme » : votre nom n'apparaîtra dans aucun rapport public."
-        },
-        "channels": {
-          "q": "Quels moyens de paiement sont acceptés ?",
-          "a": "Les canaux affichés dans le formulaire sont ceux actuellement actifs auprès du secrétariat."
-        },
-        "usage": {
-          "q": "Comment mon don est-il utilisé ?",
-          "a": "Chaque don est affecté au projet choisi ; son avancement est visible directement sur cette page."
-        }
+      "s2": {
+        "title": "Indiquez votre montant",
+        "text": "Avec votre nom ou de façon anonyme : c'est vous qui choisissez."
+      },
+      "s3": {
+        "title": "Payez par Mobile Money",
+        "text": "Orange Money ou MTN MoMo. Le secrétariat confirme la réception, puis votre don s'ajoute au total."
       }
+    },
+    "impact": {
+      "title": "Ce que vos dons ont permis",
+      "intro": "Collectes clôturées, du total reçu à ce qui a été remis. Un écart vient d'une avance ou d'un transfert entre collectes, enregistrés eux aussi.",
+      "collection": "Collecte",
+      "received": "Reçu (FCFA)",
+      "handedOver": "Remis (FCFA)",
+      "empty": "Les collectes clôturées apparaîtront ici."
     },
     "footer": {
-      "tagline": "La chorale MLA de l'ICC Yaoundé — au service du culte, de la communauté et de ses projets.",
-      "navTitle": "Navigation",
-      "helpTitle": "Assistance",
-      "contactNote": "Pour toute question sur votre don, contactez le secrétariat de la chorale.",
-      "rights": "Tous droits réservés"
+      "name": "MLA, Impact Centre Chrétien Yaoundé",
+      "contact": "Une question sur un don ? Contactez le secrétariat du MLA."
+    },
+    "dialog": {
+      "close": "Fermer",
+      "back": "Étape précédente",
+      "step": "Étape {{step}} sur 3",
+      "titles": {
+        "1": "Choisissez une collecte",
+        "2": "Votre don",
+        "3": "Paiement"
+      },
+      "collectionSub_one": "{{amount}} reçus d'un donateur",
+      "collectionSub_other": "{{amount}} reçus de {{count}} donateurs",
+      "collectionSubNone": "Pas encore de dons",
+      "separate": "L'argent d'une collecte reste à part de la caisse du MLA et sera remis aux bénéficiaires.",
+      "amount": "Montant",
+      "otherAmount": "Autre montant (FCFA)",
+      "otherAmountPlaceholder": "Ex. 3 000",
+      "name": "Votre nom",
+      "namePlaceholder": "Comme on vous appelle au MLA",
+      "contact": "Téléphone ou email (facultatif)",
+      "contactHint": "Pour que le secrétariat puisse vous joindre au sujet de votre don.",
+      "anonymous": "Donner anonymement",
+      "payWith": "Payer avec",
+      "manualNote": "Après l'envoi, faites votre paiement par le canal choisi en indiquant la référence du don. Le secrétariat confirme la réception, puis votre don s'ajoute au total.",
+      "continue": "Continuer",
+      "submit": "Enregistrer mon don",
+      "submitting": "Enregistrement…",
+      "nameRequired": "Indiquez votre nom, ou cochez « Donner anonymement ».",
+      "amountRequired": "Indiquez un montant supérieur à 0.",
+      "error": "Le don n'a pas pu être enregistré. Vérifiez votre connexion puis réessayez.",
+      "successTitle": "Merci, votre don est enregistré.",
+      "successText": "{{amount}} pour {{collection}}. Payez maintenant par {{channel}} en indiquant votre référence ; le secrétariat confirmera la réception.",
+      "payTo": "Numéro de paiement du MLA : {{number}}",
+      "reference": "Référence",
+      "again": "Faire un autre don",
+      "done": "Terminer"
     }
   }
 }

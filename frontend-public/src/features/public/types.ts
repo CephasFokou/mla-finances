@@ -34,3 +34,16 @@ export interface PublicDonationResult {
   reference: string
   status: string
 }
+
+/** Collecte publique : montants agrégés seulement (GET /public/collections). */
+export interface PublicCollection {
+  id: number
+  name: string
+  /** OPEN : on peut donner ; UPCOMING : pas encore ouverte ; CLOSED : clôturée. */
+  state: 'OPEN' | 'UPCOMING' | 'CLOSED'
+  collected: number
+  handedOver: number
+  contributionsCount: number
+  firstMovementDate: string | null
+  lastMovementDate: string | null
+}

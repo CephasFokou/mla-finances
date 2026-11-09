@@ -1,465 +1,270 @@
 import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 
-import {
-  usePublicPaymentChannelsQuery,
-  usePublicProjectsQuery,
-  usePublicStatsQuery,
-  useSubmitPublicDonationMutation,
-} from '../features/public/hooks'
-import { ApiError } from '../lib/apiClient'
-import { formatFcfa } from '../lib/format'
+import { IccLogo } from '../components/IccLogo'
+import { RibbonProgress } from '../components/RibbonProgress'
+import { usePublicCollectionsQuery } from '../features/public/hooks'
+import type { PublicCollection } from '../features/public/types'
+import { formatAmount, formatDayMonth, formatFcfa, formatPeriod } from '../lib/format'
+import { DonationDialog } from './DonationDialog'
 import styles from './PublicDonationPage.module.scss'
 
-const AMOUNT_PRESETS = [5000, 15000, 30000, 50000]
-const DEFAULT_AMOUNT = AMOUNT_PRESETS[0] ?? 5000
-const FAQ_KEYS = ['confirm', 'anonymous', 'channels', 'usage'] as const
+/** Couleurs des rubans du logo, attribuées aux collectes dans l'ordre (violet, bleu, rouge, vert, jaune). */
+const RIBBON_COLORS = ['#70358E', '#16A5DA', '#DF3A3A', '#72BF5B', '#F9D03B']
+const STEPS = ['s1', 's2', 's3'] as const
 
 /**
- * Front-office public — page « Faire un don ». Porte l'identité visuelle validée par Cephas
- * (artifact « Un don, un toit ») sur des données réelles (projets actifs, canaux de paiement) et
- * un vrai flux de soumission. Standalone : ne passe pas par AppLayout/RequireAuth, et n'a pas
- * accès aux mêmes tokens de design que le back-office (voir le module.scss, palette dédiée).
- * <p>
- * Chaque don soumis crée une PaymentTransaction PENDING, jamais une Contribution directement : le
- * secrétariat doit confirmer manuellement la réception réelle du paiement (voir
- * claude/module-front-office-public-spec.md) — il n'y a pas encore de fournisseur de paiement
- * (PawaPay) branché.
+ * Site public de don, charte ICC : « l'envol » du logo à l'ouverture, une collecte = un ruban de
+ * couleur, et la transparence sur ce qui a été remis. Montants agrégés uniquement (aucun donateur).
  */
 export function PublicDonationPage() {
   const { t } = useTranslation()
-  const { data: projects, isLoading: projectsLoading } = usePublicProjectsQuery()
-  const { data: channels } = usePublicPaymentChannelsQuery()
-  const { data: stats } = usePublicStatsQuery()
-  const donateMutation = useSubmitPublicDonationMutation()
+  const { data: collections, isLoading, isError } = usePublicCollectionsQuery()
+  const [dialog, setDialog] = useState<{ collectionId: number | null } | null>(null)
 
-  const [projectId, setProjectId] = useState<number | ''>('')
-  const [amount, setAmount] = useState<number>(DEFAULT_AMOUNT)
-  const [customAmount, setCustomAmount] = useState('')
-  const [useCustomAmount, setUseCustomAmount] = useState(false)
-  const [anonymous, setAnonymous] = useState(false)
-  const [donorName, setDonorName] = useState('')
-  const [donorContact, setDonorContact] = useState('')
-  const [channelId, setChannelId] = useState<number | ''>('')
-  const [formError, setFormError] = useState<string | null>(null)
-  const [openFaq, setOpenFaq] = useState<(typeof FAQ_KEYS)[number] | null>(FAQ_KEYS[0])
-
-  // Pas d'effet : le premier projet / canal actif sert de valeur par défaut tant que le
-  // donateur n'a rien choisi lui-même, dérivée directement du rendu plutôt que via setState.
-  const effectiveProjectId = projectId !== '' ? projectId : (projects?.[0]?.id ?? '')
-  const effectiveChannelId = channelId !== '' ? channelId : (channels?.[0]?.id ?? '')
-
-  const effectiveAmount = useCustomAmount ? Number(customAmount) || 0 : amount
-  const selectedProject = useMemo(
-    () => projects?.find((p) => p.id === effectiveProjectId),
-    [projects, effectiveProjectId],
-  )
-  const selectedChannel = useMemo(
-    () => channels?.find((c) => c.id === effectiveChannelId),
-    [channels, effectiveChannelId],
-  )
-
-  const handleSubmit = async () => {
-    setFormError(null)
-    if (!effectiveProjectId || !effectiveChannelId || effectiveAmount <= 0) {
-      setFormError(t('public.form.missingFields'))
-      return
+  const { open, upcoming, closed, totalCollected, fundedCount } = useMemo(() => {
+    const list = collections ?? []
+    return {
+      open: list.filter((c) => c.state === 'OPEN'),
+      upcoming: list.filter((c) => c.state === 'UPCOMING'),
+      closed: list.filter((c) => c.state === 'CLOSED'),
+      totalCollected: list.reduce((sum, c) => sum + c.collected, 0),
+      fundedCount: list.filter((c) => c.collected > 0).length,
     }
-    if (!anonymous && !donorName.trim()) {
-      setFormError(t('public.form.donorNameRequired'))
-      return
-    }
-    try {
-      await donateMutation.mutateAsync({
-        projectId: effectiveProjectId,
-        paymentChannelId: effectiveChannelId,
-        amount: effectiveAmount,
-        anonymous,
-        donorName: anonymous ? undefined : donorName.trim(),
-        donorContact: anonymous ? undefined : donorContact.trim() || undefined,
-      })
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t('public.form.missingFields'))
-    }
+  }, [collections])
+
+  const ribbonColor = (id: number) => {
+    const index = (collections ?? []).findIndex((c) => c.id === id)
+    return RIBBON_COLORS[(index < 0 ? id : index) % RIBBON_COLORS.length] ?? RIBBON_COLORS[0]!
   }
 
-  const resetForm = () => {
-    donateMutation.reset()
-    setDonorName('')
-    setDonorContact('')
-    setAnonymous(false)
-    setUseCustomAmount(false)
-    setAmount(DEFAULT_AMOUNT)
-  }
-
-  const scrollToDon = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault()
-    document.getElementById('don')?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const give = (collectionId: number | null) => setDialog({ collectionId })
 
   return (
-    <div className={styles.page}>
-      <header className={styles.topnav}>
-        <div className={styles.navRow}>
-          <a href="#" className={styles.brand}>
-            <span className={styles.brandCluster}>
-              <span className={styles.c1} />
-              <span className={styles.c2} />
-              <span className={styles.c3} />
-              <span className={styles.c4} />
+    <div className={styles.site}>
+      <header className={styles.hero}>
+        <IccLogo ribbonsOnly mono="#FFFFFF" className={styles.ghost} />
+        <nav className={`${styles.wrap} ${styles.topbar}`} aria-label={t('public.nav.label')}>
+          <a href="#top" className={styles.brand}>
+            <span className={styles.brandLogo}>
+              <IccLogo letterColor="#FFFFFF" />
             </span>
-            MLA
+            <span>
+              {t('public.brand')}
+              <small>{t('public.brandSub')}</small>
+            </span>
           </a>
-          <nav className={styles.navLinks}>
-            <a href="#projets">{t('public.nav.projects')}</a>
-            <a href="#faq">{t('public.nav.faq')}</a>
-          </nav>
-          <a href="#don" className={styles.navCta} onClick={scrollToDon}>
+          <div className={styles.navLinks}>
+            <a href="#collectes">{t('public.nav.collections')}</a>
+            <a href="#donner">{t('public.nav.how')}</a>
+            <a href="#transparence">{t('public.nav.impact')}</a>
+          </div>
+          <button type="button" className={`${styles.btn} ${styles.btnGold}`} onClick={() => give(null)}>
             {t('public.nav.cta')}
-          </a>
+          </button>
+        </nav>
+
+        <div className={`${styles.wrap} ${styles.heroGrid}`} id="top">
+          <div>
+            <h1 className={styles.heroTitle}>{t('public.hero.title')}</h1>
+            <p className={styles.lead}>{t('public.hero.lede')}</p>
+            <div className={styles.heroActions}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnGold} ${styles.btnLg}`}
+                onClick={() => give(open.length === 1 ? (open[0]?.id ?? null) : null)}
+              >
+                {t('public.hero.ctaMain')}
+              </button>
+              <a href="#transparence" className={`${styles.btn} ${styles.btnGhost} ${styles.btnLg}`}>
+                {t('public.hero.ctaSecondary')}
+              </a>
+            </div>
+            {fundedCount > 0 && (
+              <p className={styles.proof}>
+                <Trans
+                  i18nKey="public.hero.proof"
+                  count={fundedCount}
+                  values={{ amount: formatFcfa(totalCollected) }}
+                  components={{ b: <strong /> }}
+                />
+              </p>
+            )}
+          </div>
+          <div className={styles.heroLogo}>
+            <IccLogo animated letterColor="#FFFFFF" title="Impact Centre Chrétien" />
+          </div>
         </div>
       </header>
 
-      <section className={styles.hero}>
-        <div className={styles.heroWrap}>
-          <span className={styles.eyebrow}>{t('public.hero.eyebrow')}</span>
-          <h1 className={styles.heroTitle}>{t('public.hero.title')}</h1>
-          <div className={styles.heroDot} />
-          <p className={styles.heroLede}>{t('public.hero.lede')}</p>
-          <div className={styles.heroActions}>
-            <a href="#don" className={styles.btnGold} onClick={scrollToDon}>
-              {t('public.hero.ctaMain')}
-            </a>
-            <a href="#projets" className={styles.btnGhost}>
-              {t('public.hero.ctaSecondary')}
-            </a>
+      <main>
+        <section
+          className={`${styles.wrap} ${styles.section}`}
+          id="collectes"
+          aria-labelledby="collectes-title"
+        >
+          <div className={styles.sectionHead}>
+            <h2 id="collectes-title">{t('public.collections.title')}</h2>
+            <p>{t('public.collections.intro')}</p>
           </div>
-          <p className={styles.heroStats}>
-            {stats
-              ? t('public.hero.stats', {
-                  raised: formatFcfa(stats.totalRaised),
-                  count: stats.contributionCount,
-                  active: stats.activeProjectCount,
-                })
-              : t('public.hero.statsLoading')}
-          </p>
-        </div>
-      </section>
-
-      <section className={styles.trustSec}>
-        <h2 className={styles.trustTitle}>{t('public.trust.title')}</h2>
-        <div className={styles.trustGrid}>
-          {(['transparency', 'receipt', 'verification', 'channels'] as const).map((key) => (
-            <div className={styles.trustItem} key={key}>
-              <h4>{t(`public.trust.items.${key}.title`)}</h4>
-              <p>{t(`public.trust.items.${key}.desc`)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.projectsSec} id="projets">
-        <span className={styles.eyebrowDark}>{t('public.projects.eyebrow')}</span>
-        <h2 className={styles.sectionTitleDark}>{t('public.projects.title')}</h2>
-
-        {projectsLoading && <p className={styles.mutedDark}>{t('public.hero.statsLoading')}</p>}
-        {!projectsLoading && (!projects || projects.length === 0) && (
-          <p className={styles.mutedDark}>{t('public.projects.empty')}</p>
-        )}
-
-        <div className={styles.projGrid}>
-          {projects?.map((project, index) => (
-            <div className={`${styles.projCard} ${styles[`c${(index % 3) + 1}`]}`} key={project.id}>
-              <h3>{project.name}</h3>
-              {project.description && <p className={styles.projDesc}>{project.description}</p>}
-              {project.progressPercent !== null ? (
-                <>
-                  <div className={styles.barTrack}>
-                    <div className={styles.barFill} style={{ width: `${project.progressPercent}%` }} />
-                  </div>
-                  <div className={styles.projAmounts}>
-                    {t('public.projects.targetLine', {
-                      collected: formatFcfa(project.currentBalance),
-                      target: formatFcfa(project.targetAmount ?? 0),
-                    })}{' '}
-                    · {project.progressPercent}%
-                  </div>
-                </>
-              ) : (
-                <div className={styles.projAmounts}>{t('public.projects.noTarget')}</div>
-              )}
-              <a
-                href="#don"
-                className={styles.projMore}
-                onClick={(e) => {
-                  scrollToDon(e)
-                  setProjectId(project.id)
-                }}
-              >
-                {t('public.projects.support')} →
-              </a>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.donSec} id="don">
-        <div className={styles.donHead}>
-          <span className={styles.eyebrow}>{t('public.form.eyebrow')}</span>
-          <h2 className={styles.sectionTitle}>{t('public.form.title')}</h2>
-          <p className={styles.muted}>{t('public.form.lede')}</p>
-        </div>
-
-        <div className={styles.giveShell}>
-          <div>
-            <div className={styles.fieldBlock}>
-              <h3>
-                <span className={styles.stepNum}>1</span>
-                {t('public.form.step1Title')}
-              </h3>
-              <select
-                className={styles.select}
-                value={effectiveProjectId}
-                onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
-              >
-                <option value="" disabled>
-                  {t('public.form.projectPlaceholder')}
-                </option>
-                {projects?.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.fieldBlock}>
-              <h3>
-                <span className={styles.stepNum}>2</span>
-                {t('public.form.step2Title')}
-              </h3>
-              <div className={styles.amountGrid}>
-                {AMOUNT_PRESETS.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    className={
-                      !useCustomAmount && amount === preset
-                        ? `${styles.chip} ${styles.chipSelected}`
-                        : styles.chip
-                    }
-                    onClick={() => {
-                      setUseCustomAmount(false)
-                      setAmount(preset)
-                    }}
-                  >
-                    {formatFcfa(preset)}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className={useCustomAmount ? `${styles.chip} ${styles.chipSelected}` : styles.chip}
-                  onClick={() => setUseCustomAmount(true)}
-                >
-                  {t('public.form.customAmountLabel')}
-                </button>
-              </div>
-              {useCustomAmount && (
-                <div className={styles.customWrap}>
-                  <input
-                    type="number"
-                    min={500}
-                    placeholder={t('public.form.customAmountPlaceholder')}
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                  />
+          {isLoading && <p className={styles.status}>{t('public.collections.loading')}</p>}
+          {isError && (
+            <p className={styles.status} role="alert">
+              {t('public.collections.error')}
+            </p>
+          )}
+          {collections && open.length === 0 && upcoming.length === 0 && (
+            <p className={styles.status}>{t('public.collections.empty')}</p>
+          )}
+          <div className={styles.collects}>
+            {open.map((c) => (
+              <OpenCollection key={c.id} collection={c} color={ribbonColor(c.id)} onGive={() => give(c.id)} />
+            ))}
+            {upcoming.map((c) => (
+              <article key={c.id} className={`${styles.collect} ${styles.collectSoon}`}>
+                <div className={styles.collectTop}>
+                  <span className={`${styles.pill} ${styles.pillSoon}`}>{t('public.collections.soon')}</span>
+                  <span className={styles.collectMeta}>{t('public.collections.soonMeta')}</span>
                 </div>
-              )}
-
-              <div className={styles.anonRow}>
-                <div>
-                  <div className={styles.anonLabel}>{t('public.form.anonymousLabel')}</div>
-                  <div className={styles.anonHint}>{t('public.form.anonymousHint')}</div>
+                <h3>{c.name}</h3>
+                <div className={`${styles.collectAmount} ${styles.muted}`}>
+                  {t('public.collections.upcomingText')}
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={anonymous}
-                  className={anonymous ? `${styles.switch} ${styles.switchOn}` : styles.switch}
-                  onClick={() => setAnonymous((v) => !v)}
-                >
-                  <span className={styles.knob} />
-                </button>
-              </div>
-
-              {!anonymous && (
-                <div className={styles.donorFields}>
-                  <input
-                    type="text"
-                    placeholder={t('public.form.donorNameLabel')}
-                    value={donorName}
-                    onChange={(e) => setDonorName(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    placeholder={t('public.form.donorContactLabel')}
-                    value={donorContact}
-                    onChange={(e) => setDonorContact(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className={styles.fieldBlock}>
-              <h3>
-                <span className={styles.stepNum}>3</span>
-                {t('public.form.step3Title')}
-              </h3>
-              <div className={styles.channelGrid}>
-                {channels?.map((channel) => (
-                  <button
-                    key={channel.id}
-                    type="button"
-                    className={
-                      effectiveChannelId === channel.id
-                        ? `${styles.channelCard} ${styles.channelSelected}`
-                        : styles.channelCard
-                    }
-                    onClick={() => setChannelId(channel.id)}
-                  >
-                    {channel.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            {!donateMutation.isSuccess && (
-              <div className={styles.summaryPanel}>
-                <h3>{t('public.form.summary.title')}</h3>
-                <div className={styles.sumLine}>
-                  <span>{t('public.form.summary.project')}</span>
-                  <span>{selectedProject?.name ?? '—'}</span>
-                </div>
-                <div className={styles.sumLine}>
-                  <span>{t('public.form.summary.channel')}</span>
-                  <span>{selectedChannel?.label ?? '—'}</span>
-                </div>
-                <div className={styles.sumLine}>
-                  <span>{t('public.form.summary.donor')}</span>
-                  <span>
-                    {anonymous
-                      ? t('public.form.summary.donorAnonymous')
-                      : t('public.form.summary.donorVisible')}
-                  </span>
-                </div>
-                <div className={styles.sumTotal}>
-                  <span>{t('public.form.summary.amount')}</span>
-                  <span className={styles.sumVal}>{formatFcfa(effectiveAmount)}</span>
-                </div>
-                {formError && <div className={styles.formError}>{formError}</div>}
-                <button
-                  type="button"
-                  className={styles.submitBtn}
-                  disabled={donateMutation.isPending}
-                  onClick={() => void handleSubmit()}
-                >
-                  {donateMutation.isPending
-                    ? t('public.form.submitting')
-                    : t('public.form.submit', { amount: formatFcfa(effectiveAmount) })}
-                </button>
-                <div className={styles.secureNote}>{t('public.form.secureNote')}</div>
-              </div>
-            )}
-
-            {donateMutation.isSuccess && (
-              <div className={styles.successPanel}>
-                <h3>{t('public.success.title')}</h3>
-                <p>
-                  {t('public.success.lede')} {selectedProject?.name}
-                </p>
-                <div className={styles.refBox}>
-                  <div>
-                    {t('public.success.referenceLabel')}
-                    <b>{donateMutation.data?.reference}</b>
-                  </div>
-                </div>
-                <p className={styles.pendingNote}>{t('public.success.statusPending')}</p>
-                <button type="button" className={styles.btnGhostDark} onClick={resetForm}>
-                  {t('public.success.newDonation')}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.faqSec} id="faq">
-        <div className={styles.faqGrid}>
-          <div>
-            <span className={styles.eyebrow}>{t('public.faq.eyebrow')}</span>
-            <h2 className={styles.sectionTitle}>{t('public.faq.title')}</h2>
-          </div>
-          <div>
-            {FAQ_KEYS.map((key) => (
-              <div
-                className={openFaq === key ? `${styles.faqItem} ${styles.faqOpen}` : styles.faqItem}
-                key={key}
-              >
-                <button
-                  type="button"
-                  className={styles.faqQ}
-                  onClick={() => setOpenFaq((current) => (current === key ? null : key))}
-                >
-                  {t(`public.faq.items.${key}.q`)}
-                  <span className={styles.faqPlus}>+</span>
-                </button>
-                <div className={styles.faqA}>{t(`public.faq.items.${key}.a`)}</div>
-              </div>
+                <RibbonProgress color={ribbonColor(c.id)} empty />
+                <span className={`${styles.btn} ${styles.btnDisabled}`} aria-disabled="true">
+                  {t('public.collections.opensSoon')}
+                </span>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <footer className={styles.footer}>
-        <div className={styles.footMain}>
-          <div>
-            <div className={styles.footBrand}>
-              <span className={styles.brandCluster}>
-                <span className={styles.c1} />
-                <span className={styles.c2} />
-                <span className={styles.c3} />
-                <span className={styles.c4} />
-              </span>
-              MLA
+        <section className={styles.band} id="donner" aria-labelledby="donner-title">
+          <div className={`${styles.wrap} ${styles.section}`}>
+            <div className={styles.sectionHead}>
+              <h2 id="donner-title">{t('public.how.title')}</h2>
+              <p>{t('public.how.intro')}</p>
             </div>
-            <p className={styles.footTagline}>{t('public.footer.tagline')}</p>
+            <ol className={styles.steps}>
+              {STEPS.map((key, i) => (
+                <li key={key}>
+                  <span className={styles.stepN} aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <h3>{t(`public.how.${key}.title`)}</h3>
+                  <p>{t(`public.how.${key}.text`)}</p>
+                </li>
+              ))}
+            </ol>
           </div>
+        </section>
+
+        <section
+          className={`${styles.wrap} ${styles.section}`}
+          id="transparence"
+          aria-labelledby="impact-title"
+        >
+          <div className={styles.sectionHead}>
+            <h2 id="impact-title">{t('public.impact.title')}</h2>
+            <p>{t('public.impact.intro')}</p>
+          </div>
+          {closed.length === 0 ? (
+            <p className={styles.status}>{t('public.impact.empty')}</p>
+          ) : (
+            <div className={styles.ledgerWrap}>
+              <table className={styles.ledger}>
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <span className={styles.srOnly}>{t('public.impact.collection')}</span>
+                    </th>
+                    <th scope="col">{t('public.impact.collection')}</th>
+                    <th scope="col">{t('public.impact.received')}</th>
+                    <th scope="col">{t('public.impact.handedOver')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {closed.map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <span className={styles.dot} style={{ background: ribbonColor(c.id) }} />
+                      </td>
+                      <td>
+                        <span className={styles.ledgerName}>{c.name}</span>
+                        <span className={styles.ledgerWhen}>
+                          {formatPeriod(c.firstMovementDate, c.lastMovementDate)}
+                        </span>
+                      </td>
+                      <td className={styles.num}>{formatAmount(c.collected)}</td>
+                      <td className={`${styles.num} ${styles.strong}`}>{formatAmount(c.handedOver)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </main>
+
+      <footer className={styles.foot}>
+        <div className={`${styles.wrap} ${styles.footGrid}`}>
+          <span className={styles.footLogo}>
+            <IccLogo letterColor="#FFFFFF" />
+          </span>
           <div>
-            <h4>{t('public.footer.navTitle')}</h4>
-            <ul className={styles.footLinks}>
-              <li>
-                <a href="#projets">{t('public.nav.projects')}</a>
-              </li>
-              <li>
-                <a href="#don">{t('public.nav.cta')}</a>
-              </li>
-              <li>
-                <a href="#faq">{t('public.nav.faq')}</a>
-              </li>
-            </ul>
+            <strong>{t('public.footer.name')}</strong>
+            <p>{t('public.footer.contact')}</p>
           </div>
-          <div>
-            <h4>{t('public.footer.helpTitle')}</h4>
-            <p className={styles.footTagline}>{t('public.footer.contactNote')}</p>
-          </div>
-        </div>
-        <div className={styles.footBottom}>
-          <span>© {new Date().getFullYear()} MLA</span>
-          <span>{t('public.footer.rights')}</span>
         </div>
       </footer>
+
+      {dialog && (
+        <DonationDialog
+          onClose={() => setDialog(null)}
+          collections={open}
+          ribbonColor={ribbonColor}
+          initialCollectionId={dialog.collectionId}
+        />
+      )}
     </div>
+  )
+}
+
+function OpenCollection({
+  collection,
+  color,
+  onGive,
+}: {
+  collection: PublicCollection
+  color: string
+  onGive: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <article className={styles.collect}>
+      <div className={styles.collectTop}>
+        <span className={`${styles.pill} ${styles.pillLive}`}>{t('public.collections.live')}</span>
+        {collection.firstMovementDate && (
+          <span className={styles.collectMeta}>
+            {t('public.collections.since', { date: formatDayMonth(collection.firstMovementDate) })}
+          </span>
+        )}
+      </div>
+      <h3>{collection.name}</h3>
+      <div className={styles.collectAmount}>
+        {collection.contributionsCount > 0 ? (
+          <>
+            <span className={styles.big}>{formatAmount(collection.collected)}</span>{' '}
+            {t('public.collections.received', { count: collection.contributionsCount })}
+          </>
+        ) : (
+          t('public.collections.receivedNone')
+        )}
+      </div>
+      <RibbonProgress color={color} empty={collection.contributionsCount === 0} />
+      <button type="button" className={`${styles.btn} ${styles.btnViolet}`} onClick={onGive}>
+        {t('public.collections.give')}
+      </button>
+    </article>
   )
 }

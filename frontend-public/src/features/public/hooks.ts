@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { publicDonationApi } from './api'
 import type { PublicDonationInput } from './types'
@@ -16,5 +16,13 @@ export function usePublicStatsQuery() {
 }
 
 export function useSubmitPublicDonationMutation() {
-  return useMutation({ mutationFn: (input: PublicDonationInput) => publicDonationApi.donate(input) })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: PublicDonationInput) => publicDonationApi.donate(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['public-collections'] }),
+  })
+}
+
+export function usePublicCollectionsQuery() {
+  return useQuery({ queryKey: ['public-collections'], queryFn: publicDonationApi.collections })
 }

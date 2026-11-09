@@ -1,0 +1,51 @@
+// « L'envol » : chaque ruban se déploie depuis la base de la tige, puis les lettres se tracent.
+// Une seule fois, au montage ; désactivé si l'appareil demande moins d'animations.
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.ribbon {
+  transform-box: view-box;
+  transform-origin: 212px 205px;
+}
+
+.animated .ribbon {
+  animation: envol 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.animated .letter {
+  stroke-dasharray: 340;
+  stroke-dashoffset: 340;
+  animation: trace 1.2s cubic-bezier(0.6, 0, 0.2, 1) forwards;
+}
+
+@keyframes envol {
+  from {
+    opacity: 0;
+    transform: rotate(-38deg) scale(0.15);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated .ribbon,
+  .animated .letter {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

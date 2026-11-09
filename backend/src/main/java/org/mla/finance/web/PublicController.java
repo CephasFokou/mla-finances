@@ -2,9 +2,13 @@ package org.mla.finance.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.mla.finance.domain.ProjectStatus;
+import org.mla.finance.service.LedgerLookup;
+import org.mla.finance.service.LedgerReportsService;
 import org.mla.finance.service.PublicDonationService;
 import org.mla.finance.service.ReferenceDataService;
 import org.mla.finance.web.dto.PaymentChannelRef;
+import org.mla.finance.web.dto.PublicCollectionResponse;
 import org.mla.finance.web.dto.PublicDonationRequest;
 import org.mla.finance.web.dto.PublicDonationResponse;
 import org.mla.finance.web.dto.PublicProjectResponse;
@@ -31,15 +35,40 @@ public class PublicController {
 
     private final PublicDonationService publicDonationService;
     private final ReferenceDataService referenceDataService;
+    private final LedgerReportsService ledgerReportsService;
 
     @GetMapping("/projects")
     public List<PublicProjectResponse> projects() {
         return publicDonationService.activeProjects();
     }
 
+    /** Canaux proposés au public : tous les canaux actifs sauf « Autre », réservé aux transferts internes. */
     @GetMapping("/payment-channels")
     public List<PaymentChannelRef> paymentChannels() {
-        return referenceDataService.paymentChannels();
+        return referenceDataService.paymentChannels().stream()
+            .filter(c -> !LedgerLookup.OTHER_CHANNEL_CODE.equals(c.code()))
+            .toList();
+    }
+
+    /** Collectes ouvertes, à venir et clôturées, avec leurs totaux agrégés (jamais par donateur). */
+    @GetMapping("/collections")
+    public List<PublicCollectionResponse> collections() {
+        return ledgerReportsService.collections().stream()
+            .filter(r -> r.status() != ProjectStatus.ARCHIVED)
+            .map(r -> new PublicCollectionResponse(
+                r.project().id(),
+                r.project().name(),
+                switch (r.status()) {
+                    case ACTIVE -> "OPEN";
+                    case DRAFT -> "UPCOMING";
+                    default -> "CLOSED";
+                },
+                r.collected(),
+                r.used(),
+                r.contributionsCount(),
+                r.firstMovementDate(),
+                r.lastMovementDate()))
+            .toList();
     }
 
     @GetMapping("/stats")

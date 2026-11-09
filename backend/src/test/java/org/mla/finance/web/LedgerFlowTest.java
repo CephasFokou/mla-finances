@@ -247,6 +247,29 @@ class LedgerFlowTest {
     }
 
     @Test
+    void publicCollectionsExposeOnlyAggregatesWithoutAuthentication() throws Exception {
+        contribution(null, collecte.getId(), membre.getId(), "CONTRIBUTION", 7000, "2026-10", "2026-10-09");
+        String body = mockMvc.perform(get("/api/v1/public/collections"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        JsonNode row = null;
+        for (JsonNode r : objectMapper.readTree(body)) {
+            if (r.get("id").asLong() == collecte.getId()) {
+                row = r;
+            }
+        }
+        assertThat(row).isNotNull();
+        assertThat(row.get("state").asText()).isEqualTo("OPEN");
+        assertThat(row.get("collected").asDouble()).isEqualTo(7000);
+        assertThat(row.has("description")).isFalse();
+        assertThat(body).doesNotContain("Membre test");
+
+        mockMvc.perform(get("/api/v1/public/payment-channels"))
+            .andExpect(jsonPath("$[?(@.code=='OTHER')]").doesNotExist())
+            .andExpect(jsonPath("$[?(@.code=='ORANGE_MONEY')]").exists());
+    }
+
+    @Test
     void membersAndPaymentChannelsAreManageable() throws Exception {
         JsonNode created = postJson("/api/v1/members", Map.of("displayName", "Nouvelle", "firstName", "Ana", "lastName", "NDONGO",
             "memberRole", "MEMBRE"), ALL, 201);

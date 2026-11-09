@@ -1,0 +1,32 @@
+.ribbon {
+  display: block;
+  width: 100%;
+  height: 30px;
+}
+
+.track,
+.fill {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.track {
+  stroke: #efe8f4;
+}
+
+.fill {
+  stroke-dasharray: 420;
+  stroke-dashoffset: 420;
+  transition: stroke-dashoffset 1.8s cubic-bezier(0.6, 0, 0.2, 1) 0.2s;
+}
+
+.drawn {
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

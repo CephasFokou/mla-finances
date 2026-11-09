@@ -1,8 +1,19 @@
-// Reset minimal, indépendant de design-system/tokens.scss du back-office : cette page définit sa
-// propre palette et typographie localement (voir pages/PublicDonationPage.module.scss, classe
-// .page), elle n'a pas vocation à partager de thème avec l'application authentifiée.
+@use './tokens' as *;
+
+// Reset minimal du site public : sa charte (tokens ci-dessus) est la même que celle du back-office,
+// mais le code reste indépendant (voir claude/module-front-office-public-spec.md).
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 html,
@@ -13,6 +24,9 @@ body,
 
 body {
   margin: 0;
+  background: $paper;
+  color: $ink;
+  font-family: $font-body;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -21,6 +35,6 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid #151419;
-  outline-offset: 2px;
+  outline: 3px solid $violet;
+  outline-offset: 3px;
 }
