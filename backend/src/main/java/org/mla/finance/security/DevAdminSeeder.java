@@ -20,7 +20,7 @@ import java.util.Set;
  * Compte SUPER_ADMIN de développement, pour pouvoir se connecter localement dès le démarrage
  * sans passer par le cycle invitation → email → activation. Volontairement un
  * {@link CommandLineRunner} conditionné par {@code @Profile("dev")}, PAS une migration Liquibase :
- * contrairement à 0004-seed-demo-data.xml (qui s'exécute dans tous les profils, y compris prod),
+ * contrairement aux migrations (qui s'exécutent dans tous les profils, y compris prod),
  * un utilisateur avec un mot de passe fixe et connu ne doit jamais pouvoir exister en base de
  * production — voir claude/module-authentification-spec.md pour cette décision.
  * <p>

@@ -16,6 +16,9 @@ public interface DonationCategoryRepository extends JpaRepository<DonationCatego
 
     boolean existsByNameIgnoreCase(String name);
 
+    /** La caisse principale (Caisse MLA), créée par la migration 0012. */
+    Optional<DonationCategory> findFirstByMainFundTrue();
+
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 
     /** Même principe que ProjectRepository.findWithLockById : sérialise les décisions de retrait

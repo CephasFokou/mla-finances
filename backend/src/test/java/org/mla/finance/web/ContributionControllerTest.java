@@ -218,7 +218,7 @@ class ContributionControllerTest {
 
         assertThat(result.getResponse().getContentType()).startsWith("text/csv");
         String[] lines = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8).split("\r\n");
-        assertThat(lines[0]).isEqualTo("Date;Mois d'attribution;Projet;Catégorie;Donateur;Montant;Canal;Type;Anonyme;Notes");
+        assertThat(lines[0]).isEqualTo("Date;Mois d'attribution;Projet;Catégorie;Donateur;Montant;Canal;Nature;Type;Activité;Anonyme;Notes;Remarque");
         assertThat(lines[1]).startsWith("2026-09-18;2026-09;;Cat export;;100.00;");
     }
 }

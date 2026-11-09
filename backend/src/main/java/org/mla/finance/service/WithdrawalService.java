@@ -2,8 +2,7 @@ package org.mla.finance.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.mla.finance.domain.DonationCategory;
-import org.mla.finance.domain.Project;
+import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
@@ -16,10 +15,13 @@ import org.mla.finance.web.dto.WithdrawalRejectRequest;
 import org.mla.finance.web.dto.WithdrawalResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Workflow retrait : demande (PENDING) -> validation (APPROVED/REJECTED, un rôle distinct du
@@ -41,9 +43,13 @@ import java.time.Instant;
 @Transactional
 public class WithdrawalService {
 
+    private static final Sort EXPORT_SORT = Sort.by(Sort.Direction.DESC, "requestedAt", "id");
+
     private final WithdrawalRepository withdrawalRepository;
     private final ProjectRepository projectRepository;
     private final DonationCategoryRepository categoryRepository;
+    private final LedgerLookup lookup;
+    private final CurrentUserProvider currentUserProvider;
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
@@ -57,34 +63,76 @@ public class WithdrawalService {
         return WithdrawalResponse.from(find(id));
     }
 
-    public WithdrawalResponse create(WithdrawalCreateRequest request) {
-        // Même principe que RG-02 sur les contributions : rattachement exclusif à une enveloppe.
-        if ((request.projectId() == null) == (request.categoryId() == null)) {
-            throw new BusinessRuleViolationException("WITHDRAWAL_ENVELOPE",
-                "Une demande de retrait doit être rattachée à un projet OU à une catégorie de don (exactement un des deux).");
-        }
-        Project project = request.projectId() != null
-            ? projectRepository.findById(request.projectId())
-                .orElseThrow(() -> new EntityNotFoundException("Projet introuvable : " + request.projectId()))
-            : null;
-        DonationCategory category = request.categoryId() != null
-            ? categoryRepository.findById(request.categoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable : " + request.categoryId()))
-            : null;
+    @Transactional(readOnly = true)
+    public List<Withdrawal> searchAll(WithdrawalFilter filter) {
+        return withdrawalRepository.findAll(WithdrawalSpecifications.matching(filter), EXPORT_SORT);
+    }
 
-        Withdrawal withdrawal = Withdrawal.builder()
-            .project(project)
-            .category(category)
+    /** Demande de retrait : passe ensuite par la validation puis le décaissement. */
+    public WithdrawalResponse create(WithdrawalCreateRequest request) {
+        Withdrawal withdrawal = build(request);
+        withdrawal.setStatus(WithdrawalStatus.PENDING);
+        Withdrawal saved = withdrawalRepository.save(withdrawal);
+        auditLogService.record("WITHDRAWAL", saved.getId(), "CREATE",
+            "Demande de retrait (" + saved.getNature().label() + ") de " + saved.getAmount() + " FCFA sur "
+                + envelopeName(saved));
+        return WithdrawalResponse.from(saved);
+    }
+
+    /**
+     * Enregistre une sortie déjà effectuée (dépense payée, enveloppe remise...) : directement
+     * PROCESSED à la date réelle indiquée. Réservé, côté contrôleur, à qui peut à la fois demander et
+     * valider un retrait — c'est la saisie a posteriori du cahier de caisse.
+     */
+    public WithdrawalResponse record(WithdrawalCreateRequest request) {
+        if (request.operationDate() == null) {
+            throw new BusinessRuleViolationException("OPERATION_DATE",
+                "La date de la sortie est obligatoire pour enregistrer une dépense déjà effectuée.");
+        }
+        Withdrawal withdrawal = build(request);
+        lockEnvelope(withdrawal);
+        Instant now = Instant.now();
+        withdrawal.setStatus(WithdrawalStatus.PROCESSED);
+        withdrawal.setDecidedBy(withdrawal.getRequestedBy());
+        withdrawal.setDecidedAt(now);
+        withdrawal.setProcessedAt(now);
+        withdrawal.setOperationDate(request.operationDate());
+        Withdrawal saved = withdrawalRepository.save(withdrawal);
+        auditLogService.record("WITHDRAWAL", saved.getId(), "RECORD",
+            saved.getNature().label() + " de " + saved.getAmount() + " FCFA enregistrée sur " + envelopeName(saved)
+                + " (sortie du " + request.operationDate() + ")");
+        return WithdrawalResponse.from(saved);
+    }
+
+    private Withdrawal build(WithdrawalCreateRequest request) {
+        // Même principe que RG-02 sur les contributions : rattachement exclusif à une enveloppe.
+        LedgerLookup.Envelope envelope = lookup.envelope(request.projectId(), request.categoryId(), "WITHDRAWAL_ENVELOPE",
+            "Une demande de retrait doit être rattachée à un projet OU à une catégorie de don (exactement un des deux).");
+        MovementNature nature = request.nature() != null ? request.nature() : MovementNature.EXPENSE;
+        if (!nature.isOutflow()) {
+            throw new BusinessRuleViolationException("NATURE",
+                "« " + nature.label() + " » est une entrée d'argent : enregistrez-la comme contribution.");
+        }
+        if (nature == MovementNature.TRANSFER) {
+            throw new BusinessRuleViolationException("RG-10",
+                "Un transfert interne s'enregistre via POST /api/v1/transfers (les deux écritures sont créées ensemble).");
+        }
+        if (request.activityId() != null && envelope.category() == null) {
+            throw new BusinessRuleViolationException("ACTIVITY",
+                "Une activité se rattache aux mouvements de la caisse, pas à ceux d'une collecte.");
+        }
+        return Withdrawal.builder()
+            .project(envelope.project())
+            .category(envelope.category())
             .amount(request.amount())
             .reason(request.reason())
-            .status(WithdrawalStatus.PENDING)
-            // requestedBy reste null tant que l'authentification réelle n'est pas branchée.
+            .nature(nature)
+            .person(lookup.donorOrNull(request.personId()))
+            .paymentChannel(lookup.activeChannelOrNull(request.paymentChannelId()))
+            .activity(lookup.activityOrNull(request.activityId()))
+            .remark(request.remark())
+            .requestedBy(currentUserProvider.currentOrNull())
             .build();
-        Withdrawal saved = withdrawalRepository.save(withdrawal);
-        String envelope = project != null ? project.getName() : category.getName();
-        auditLogService.record("WITHDRAWAL", saved.getId(), "CREATE",
-            "Demande de retrait de " + saved.getAmount() + " FCFA sur " + envelope);
-        return WithdrawalResponse.from(saved);
     }
 
     public WithdrawalResponse approve(Long id) {
@@ -93,6 +141,7 @@ public class WithdrawalService {
         lockEnvelope(withdrawal);
         withdrawal.setStatus(WithdrawalStatus.APPROVED);
         withdrawal.setDecidedAt(Instant.now());
+        withdrawal.setDecidedBy(currentUserProvider.currentOrNull());
         auditLogService.record("WITHDRAWAL", id, "APPROVE", "Retrait #" + id + " validé");
         return WithdrawalResponse.from(withdrawal);
     }
@@ -102,6 +151,7 @@ public class WithdrawalService {
         requireStatus(withdrawal, WithdrawalStatus.PENDING, "rejeter");
         withdrawal.setStatus(WithdrawalStatus.REJECTED);
         withdrawal.setDecidedAt(Instant.now());
+        withdrawal.setDecidedBy(currentUserProvider.currentOrNull());
         withdrawal.setRejectionReason(request.reason());
         auditLogService.record("WITHDRAWAL", id, "REJECT", "Retrait #" + id + " rejeté : " + request.reason());
         return WithdrawalResponse.from(withdrawal);
@@ -125,6 +175,7 @@ public class WithdrawalService {
         lockEnvelope(withdrawal);
         withdrawal.setStatus(WithdrawalStatus.PROCESSED);
         withdrawal.setProcessedAt(Instant.now());
+        withdrawal.setOperationDate(LocalDate.now());
         auditLogService.record("WITHDRAWAL", id, "PROCESS", "Retrait #" + id + " décaissé");
         return WithdrawalResponse.from(withdrawal);
     }
@@ -144,6 +195,10 @@ public class WithdrawalService {
                 "Impossible de " + action + " le retrait " + withdrawal.getId() + " : statut actuel "
                     + withdrawal.getStatus() + " (attendu " + expected + ").");
         }
+    }
+
+    private static String envelopeName(Withdrawal w) {
+        return w.getProject() != null ? w.getProject().getName() : w.getCategory().getName();
     }
 
     private Withdrawal find(Long id) {

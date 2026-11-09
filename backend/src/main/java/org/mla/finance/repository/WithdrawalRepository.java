@@ -4,6 +4,7 @@ import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -39,8 +40,21 @@ public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long>, J
     @Query("select coalesce(sum(w.amount), 0) from Withdrawal w where w.status = :status and w.processedAt between :from and :to")
     BigDecimal sumAmountByStatusAndProcessedAtBetween(WithdrawalStatus status, Instant from, Instant to);
 
+    /** Toutes les sorties, relations chargées : base des rapports calculés en mémoire (volumes faibles). */
+    @EntityGraph(attributePaths = {"project", "category", "person", "activity"})
+    @Query("select w from Withdrawal w")
+    List<Withdrawal> findAllForReports();
+
+    /** "Décaissé ce mois" : sur la date réelle de la sortie (une dépense saisie après coup compte à sa date). */
+    @Query("select coalesce(sum(w.amount), 0) from Withdrawal w where w.status = :status and w.operationDate between :from and :to")
+    BigDecimal sumAmountByStatusAndOperationDateBetween(WithdrawalStatus status, java.time.LocalDate from, java.time.LocalDate to);
+
     // Évite le N+1 lors de la conversion en réponse (relations LAZY).
     @Override
-    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy"})
+    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy", "person", "paymentChannel", "activity"})
     Page<Withdrawal> findAll(Specification<Withdrawal> spec, Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy", "person", "paymentChannel", "activity"})
+    List<Withdrawal> findAll(Specification<Withdrawal> spec, Sort sort);
 }

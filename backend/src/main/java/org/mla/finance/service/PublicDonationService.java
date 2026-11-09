@@ -2,6 +2,7 @@ package org.mla.finance.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.PaymentChannel;
 import org.mla.finance.domain.PaymentTransaction;
 import org.mla.finance.domain.PaymentTransactionStatus;
@@ -55,7 +56,12 @@ public class PublicDonationService {
 
     public PublicStatsResponse stats() {
         long activeProjectCount = projectRepository.findByStatus(ProjectStatus.ACTIVE).size();
-        return new PublicStatsResponse(contributionRepository.sumAmountAll(), contributionRepository.count(), activeProjectCount);
+        // Seules les sommes réellement collectées pour des collectes dédiées : ni la caisse interne
+        // (contributions mensuelles), ni les mouvements techniques (transferts, avances, ajustements).
+        return new PublicStatsResponse(
+            contributionRepository.sumCollectedForProjects(MovementNature.COLLECTED),
+            contributionRepository.countCollectedForProjects(MovementNature.COLLECTED),
+            activeProjectCount);
     }
 
     @Transactional

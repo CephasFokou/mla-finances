@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!--
+        Alignement sur le fichier de suivi réel (MLA-ICC-YDE-FINANCE-2026, règles confirmées par Cephas
+        le 05/11/2026, voir claude/suivi-financier-2026-regles-de-gestion-confirmees.md) :
+        - une caisse principale (Caisse MLA) distincte des collectes dédiées (projets) ;
+        - une nature pour chaque mouvement (contribution mensuelle, don, dépense, remise, transfert...) ;
+        - des activités payées par la caisse (ComFrat, rencontres, matériel...) ;
+        - des membres (responsable / membre, statut) et des tiers, dans la table donors existante ;
+        - la personne, le canal et la date réelle d'une sortie ; les transferts internes (RG-10).
+    -->
+
+    <changeSet id="0012-01-payment-channel-other" author="mla-finance">
+        <insert tableName="payment_channels">
+            <column name="code" value="OTHER"/>
+            <column name="label" value="Autre"/>
+            <column name="sort_order" valueNumeric="6"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="0012-02-main-fund" author="mla-finance">
+        <addColumn tableName="donation_categories">
+            <column name="main_fund" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <insert tableName="donation_categories">
+            <column name="name" value="Caisse MLA"/>
+            <column name="description" value="Caisse principale du MLA : contributions mensuelles et dépenses des activités courantes"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="main_fund" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="0012-03-members" author="mla-finance">
+        <addColumn tableName="donors">
+            <column name="display_name" type="VARCHAR(80)">
+                <constraints unique="true" uniqueConstraintName="uq_donors_display_name"/>
+            </column>
+            <column name="first_name" type="VARCHAR(120)"/>
+            <column name="last_name" type="VARCHAR(120)"/>
+            <column name="member_role" type="VARCHAR(20)"/>
+            <column name="member_status" type="VARCHAR(20)"/>
+            <column name="remark" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="0012-04-activities" author="mla-finance">
+        <createTable tableName="activities">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(180)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_activities_name"/>
+            </column>
+            <column name="period_label" type="VARCHAR(60)"/>
+            <column name="event_date" type="DATE"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="PLANNED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="VARCHAR(500)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0012-05-contribution-nature" author="mla-finance">
+        <addColumn tableName="contributions">
+            <column name="nature" type="VARCHAR(30)" defaultValue="CONTRIBUTION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="activity_id" type="BIGINT"/>
+            <column name="remark" type="VARCHAR(500)"/>
+            <column name="transfer_group" type="VARCHAR(40)"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="contributions" baseColumnNames="activity_id"
+            constraintName="fk_contributions_activity" referencedTableName="activities" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <createIndex tableName="contributions" indexName="idx_contributions_nature_period">
+            <column name="nature"/>
+            <column name="period_month"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0012-06-withdrawal-nature" author="mla-finance">
+        <addColumn tableName="withdrawals">
+            <column name="nature" type="VARCHAR(30)" defaultValue="EXPENSE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="activity_id" type="BIGINT"/>
+            <column name="person_id" type="BIGINT"/>
+            <column name="payment_channel_id" type="BIGINT"/>
+            <column name="operation_date" type="DATE"/>
+            <column name="remark" type="VARCHAR(500)"/>
+            <column name="transfer_group" type="VARCHAR(40)"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="activity_id"
+            constraintName="fk_withdrawals_activity" referencedTableName="activities" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="person_id"
+            constraintName="fk_withdrawals_person" referencedTableName="donors" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="payment_channel_id"
+            constraintName="fk_withdrawals_channel" referencedTableName="payment_channels" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <sql>UPDATE withdrawals SET operation_date = CAST(processed_at AS DATE) WHERE processed_at IS NOT NULL</sql>
+    </changeSet>
+
+</databaseChangeLog>

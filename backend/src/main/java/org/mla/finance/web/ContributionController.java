@@ -2,6 +2,7 @@ package org.mla.finance.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.MovementType;
 import org.mla.finance.service.ContributionCsvExporter;
 import org.mla.finance.service.ContributionFilter;
@@ -55,11 +56,13 @@ public class ContributionController {
         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth periodMonth,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @RequestParam(required = false) MovementNature nature,
+        @RequestParam(required = false) Long activityId,
         @PageableDefault(size = 20, sort = "transactionDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return contributionService.search(
             new ContributionFilter(projectId, categoryId, donorId, paymentChannelId, movementType,
-                anonymous, periodMonth, dateFrom, dateTo),
+                anonymous, periodMonth, dateFrom, dateTo, nature, activityId),
             pageable);
     }
 
@@ -73,11 +76,13 @@ public class ContributionController {
         @RequestParam(required = false) Boolean anonymous,
         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth periodMonth,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @RequestParam(required = false) MovementNature nature,
+        @RequestParam(required = false) Long activityId
     ) {
         String csv = csvExporter.export(
             new ContributionFilter(projectId, categoryId, donorId, paymentChannelId, movementType,
-                anonymous, periodMonth, dateFrom, dateTo));
+                anonymous, periodMonth, dateFrom, dateTo, nature, activityId));
         return ResponseEntity.ok()
             .contentType(TEXT_CSV_UTF8)
             .header(HttpHeaders.CONTENT_DISPOSITION,

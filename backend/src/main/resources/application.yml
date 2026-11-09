@@ -96,6 +96,25 @@ logging:
     org.springframework.web.cors: ${LOG_LEVEL_CORS:DEBUG}
 
 ---
+# Profil « local » : à combiner avec dev (--spring.profiles.active=dev,local) pour travailler sur
+# une vraie base PostgreSQL sur le poste (au lieu de H2 en mémoire), avec les mêmes facilités que
+# dev (compte admin, secret JWT de dev, CORS localhost). Les valeurs par défaut visent
+# localhost:5432/mla_finance avec l'utilisateur système ; surchargeables par variables
+# d'environnement. Voir scripts/reset-local-db.sh pour (ré)initialiser cette base.
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:mla_finance}}
+    username: ${DATABASE_USERNAME:${PGUSER:${USER:postgres}}}
+    password: ${DATABASE_PASSWORD:${PGPASSWORD:}}
+    driver-class-name: org.postgresql.Driver
+  h2:
+    console:
+      enabled: false
+
+---
 spring:
   config:
     activate:

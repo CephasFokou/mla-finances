@@ -1,6 +1,7 @@
 package org.mla.finance.web.dto;
 
 import org.mla.finance.domain.Contribution;
+import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.MovementType;
 
 import java.math.BigDecimal;
@@ -18,6 +19,10 @@ public record ContributionResponse(
     LocalDate periodMonth,
     LocalDate transactionDate,
     MovementType movementType,
+    MovementNature nature,
+    ActivityRef activity,
+    String remark,
+    String transferGroup,
     boolean anonymous,
     String reference,
     String notes,
@@ -35,6 +40,10 @@ public record ContributionResponse(
             c.getPeriodMonth(),
             c.getTransactionDate(),
             c.getMovementType(),
+            c.getNature(),
+            ActivityRef.from(c.getActivity()),
+            c.getRemark(),
+            c.getTransferGroup(),
             c.isAnonymous(),
             c.getReference(),
             c.getNotes(),

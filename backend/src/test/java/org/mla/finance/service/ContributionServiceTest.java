@@ -51,7 +51,7 @@ class ContributionServiceTest {
 
     private ContributionRequest request(Long projectId, Long categoryId, String amount) {
         return new ContributionRequest(projectId, categoryId, null, channel.getId(), new BigDecimal(amount),
-            YearMonth.of(2026, 9), LocalDate.of(2026, 9, 18), false, "Don du dimanche");
+            YearMonth.of(2026, 9), LocalDate.of(2026, 9, 18), false, "Don du dimanche", null, null, null);
     }
 
     @Test
@@ -116,11 +116,11 @@ class ContributionServiceTest {
         ContributionResponse original = contributionService.create(request(project.getId(), null, "500.00"));
 
         assertThatThrownBy(() -> contributionService.update(original.id(),
-            new ContributionUpdateRequest(null, false, "x", new BigDecimal("1.00"), null, null, null, null, null)))
+            new ContributionUpdateRequest(null, false, "x", null, null, new BigDecimal("1.00"), null, null, null, null, null)))
             .isInstanceOf(BusinessRuleViolationException.class);
 
         ContributionResponse updated = contributionService.update(original.id(),
-            new ContributionUpdateRequest(null, true, "Note corrigée", null, null, null, null, null, null));
+            new ContributionUpdateRequest(null, true, "Note corrigée", null, null, null, null, null, null, null, null));
         assertThat(updated.anonymous()).isTrue();
         assertThat(updated.notes()).isEqualTo("Note corrigée");
         assertThat(updated.amount()).isEqualByComparingTo("500.00");

@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.Contribution;
 import org.mla.finance.domain.Donor;
+import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.MovementType;
 import org.mla.finance.domain.PaymentTransaction;
 import org.mla.finance.domain.PaymentTransactionStatus;
@@ -61,6 +62,7 @@ public class PaymentTransactionService {
             .periodMonth(today.withDayOfMonth(1))
             .transactionDate(today)
             .movementType(MovementType.STANDARD)
+            .nature(MovementNature.DONATION)
             .anonymous(transaction.isAnonymous())
             .notes("Don en ligne confirmé — référence " + transaction.getReference())
             .build();

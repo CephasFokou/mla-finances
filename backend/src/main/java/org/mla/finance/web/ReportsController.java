@@ -2,7 +2,9 @@ package org.mla.finance.web;
 
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.service.AuditLogFilter;
+import org.mla.finance.service.LedgerReportsService;
 import org.mla.finance.service.ReportsService;
+import org.mla.finance.web.dto.LedgerReports;
 import org.mla.finance.web.dto.AuditLogResponse;
 import org.mla.finance.web.dto.ProjectMonthlyReportResponse;
 import org.mla.finance.web.dto.ReportsOverviewResponse;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.Year;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -25,6 +29,31 @@ import java.time.LocalDate;
 public class ReportsController {
 
     private final ReportsService reportsService;
+    private final LedgerReportsService ledgerReportsService;
+
+    /** Onglet « Synthèse » du fichier de suivi (année courante par défaut). */
+    @GetMapping("/summary")
+    public LedgerReports.Summary summary(@RequestParam(required = false) Integer year) {
+        return ledgerReportsService.summary(year != null ? year : Year.now().getValue());
+    }
+
+    /** Onglet « Calendrier » : contributions mensuelles par membre et par mois d'attribution. */
+    @GetMapping("/monthly-calendar")
+    public LedgerReports.Calendar monthlyCalendar(@RequestParam(required = false) Integer year) {
+        return ledgerReportsService.calendar(year != null ? year : Year.now().getValue());
+    }
+
+    /** Onglet « Collectes » : collectes dédiées, hors caisse principale. */
+    @GetMapping("/collections")
+    public List<LedgerReports.CollectionRow> collections() {
+        return ledgerReportsService.collections();
+    }
+
+    /** Onglet « Activités » : coût net pour la caisse de chaque activité. */
+    @GetMapping("/activities")
+    public List<LedgerReports.ActivityRow> activities() {
+        return ledgerReportsService.activities();
+    }
 
     @GetMapping("/overview")
     public ReportsOverviewResponse overview() {

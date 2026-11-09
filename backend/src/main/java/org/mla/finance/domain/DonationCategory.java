@@ -35,4 +35,9 @@ public class DonationCategory {
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    /** Caisse principale (Caisse MLA) : ses mouvements ne se mélangent jamais avec ceux des collectes. */
+    @Column(name = "main_fund", nullable = false)
+    @Builder.Default
+    private boolean mainFund = false;
 }

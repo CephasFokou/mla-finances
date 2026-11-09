@@ -79,6 +79,23 @@ public class Contribution {
     @Builder.Default
     private MovementType movementType = MovementType.STANDARD;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private MovementNature nature = MovementNature.CONTRIBUTION;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "activity_id")
+    private Activity activity;
+
+    /** Justification (colonne « Remarque » du fichier de suivi), distincte de la description (notes). */
+    @Column(length = 500)
+    private String remark;
+
+    /** Identifiant commun aux deux écritures d'un transfert interne (RG-10). */
+    @Column(name = "transfer_group", length = 40)
+    private String transferGroup;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean anonymous = false;

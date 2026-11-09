@@ -59,11 +59,9 @@ public class ReportsService {
         LocalDate firstOfMonth = today.withDayOfMonth(1);
         BigDecimal mobilizedThisMonth = contributionRepository.sumAmountByTransactionDateBetween(firstOfMonth, today);
 
-        Instant monthStart = firstOfMonth.atStartOfDay(ZONE).toInstant();
         Instant now = Instant.now();
         BigDecimal disbursedThisMonth = withdrawalRepository
-            .sumAmountByStatusAndProcessedAtBetween(WithdrawalStatus.PROCESSED, monthStart, now);
-
+            .sumAmountByStatusAndOperationDateBetween(WithdrawalStatus.PROCESSED, firstOfMonth, today);
         long pendingWithdrawalsCount = withdrawalRepository.countByStatus(WithdrawalStatus.PENDING);
 
         return new ReportsOverviewResponse(globalBalance, mobilizedThisMonth, disbursedThisMonth, pendingWithdrawalsCount, now);
@@ -93,8 +91,10 @@ public class ReportsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal withdrawalsTotal = withdrawals.stream()
-                .filter(w -> w.getStatus() == WithdrawalStatus.PROCESSED && w.getProcessedAt() != null)
-                .filter(w -> YearMonth.from(w.getProcessedAt().atZone(ZONE)).equals(targetMonth))
+                .filter(w -> w.getStatus() == WithdrawalStatus.PROCESSED && (w.getOperationDate() != null || w.getProcessedAt() != null))
+                .filter(w -> (w.getOperationDate() != null
+                    ? YearMonth.from(w.getOperationDate())
+                    : YearMonth.from(w.getProcessedAt().atZone(ZONE))).equals(targetMonth))
                 .map(Withdrawal::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

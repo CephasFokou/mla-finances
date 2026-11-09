@@ -20,6 +20,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 /**
  * Une demande de retrait sur une enveloppe (Project XOR DonationCategory, même principe que
@@ -59,6 +60,34 @@ public class Withdrawal {
 
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private MovementNature nature = MovementNature.EXPENSE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "activity_id")
+    private Activity activity;
+
+    /** Membre ou tiers qui a effectué la dépense ou reçu l'argent (colonne « Membre / Tiers »). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "person_id")
+    private Donor person;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_channel_id")
+    private PaymentChannel paymentChannel;
+
+    /** Date réelle de la sortie d'argent, renseignée au décaissement (PROCESSED). */
+    @Column(name = "operation_date")
+    private LocalDate operationDate;
+
+    @Column(length = 500)
+    private String remark;
+
+    @Column(name = "transfer_group", length = 40)
+    private String transferGroup;
 
     @Column(nullable = false, length = 500)
     private String reason;

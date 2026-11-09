@@ -7,6 +7,7 @@ import org.mla.finance.repository.PaymentChannelRepository;
 import org.mla.finance.web.dto.CategoryResponse;
 import org.mla.finance.web.dto.DonorRef;
 import org.mla.finance.web.dto.PaymentChannelRef;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,9 +36,6 @@ public class ReferenceDataService {
 
     public List<DonorRef> donors(String query) {
         String q = query == null ? "" : query.trim();
-        return (q.isEmpty()
-            ? donorRepository.findTop20ByOrderByFullNameAsc()
-            : donorRepository.findTop20ByFullNameContainingIgnoreCaseOrderByFullNameAsc(q))
-            .stream().map(DonorRef::from).toList();
+        return donorRepository.search(q, PageRequest.of(0, 30)).stream().map(DonorRef::from).toList();
     }
 }

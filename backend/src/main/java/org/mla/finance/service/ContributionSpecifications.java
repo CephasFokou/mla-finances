@@ -42,6 +42,12 @@ final class ContributionSpecifications {
             if (f.dateTo() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("transactionDate"), f.dateTo()));
             }
+            if (f.nature() != null) {
+                predicates.add(cb.equal(root.get("nature"), f.nature()));
+            }
+            if (f.activityId() != null) {
+                predicates.add(cb.equal(root.get("activity").get("id"), f.activityId()));
+            }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
     }

@@ -4,13 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.AuditLog;
 import org.mla.finance.domain.User;
 import org.mla.finance.repository.AuditLogRepository;
-import org.mla.finance.repository.UserRepository;
 import org.mla.finance.web.dto.AuditLogResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     public void record(String entityType, Long entityId, String action, String summary) {
         AuditLog log = AuditLog.builder()
@@ -52,15 +48,7 @@ public class AuditLogService {
     }
 
     private User currentActor() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof JwtAuthenticationToken jwtAuthentication)) {
-            return null;
-        }
-        try {
-            Long userId = Long.valueOf(jwtAuthentication.getToken().getSubject());
-            return userRepository.findById(userId).orElse(null);
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return currentUserProvider.currentOrNull();
     }
+
 }

@@ -15,6 +15,8 @@ public record ContributionUpdateRequest(
     Long donorId,
     Boolean anonymous,
     @Size(max = 500) String notes,
+    @Size(max = 500) String remark,
+    Long activityId,
     BigDecimal amount,
     Long projectId,
     Long categoryId,
