@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
 
+import { IccLogo } from '../../components/brand/IccLogo'
 import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { useForgotPasswordMutation } from '../../features/auth/hooks'
@@ -38,7 +39,7 @@ export function ForgotPasswordPage() {
     <main className={styles.page}>
       <div className={styles.card}>
         <div className={styles.crest}>
-          <Icon name="crest" size={20} />
+          <IccLogo />
         </div>
         <div>
           <h1>{t('auth.forgot.title')}</h1>

@@ -1,0 +1,364 @@
+// Synthèse : un bandeau « caisse » d'un seul tenant (pas une rangée de cartes identiques), puis
+// le graphique mensuel et les derniers mouvements. Animations : une seule fois, au chargement.
+$ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.headActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.yearField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+
+  select {
+    min-height: 40px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font: inherit;
+  }
+}
+
+.leadBand {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.leadMain {
+  padding: 32px 36px;
+  background: linear-gradient(180deg, var(--color-surface), var(--color-surface-2));
+}
+
+.leadSide {
+  display: grid;
+  border-left: 1px solid var(--color-border-soft);
+
+  @media (max-width: 1100px) {
+    border-top: 1px solid var(--color-border-soft);
+    border-left: 0;
+  }
+}
+
+.kBlock {
+  padding: 26px 32px;
+
+  & + & {
+    border-top: 1px solid var(--color-border-soft);
+  }
+}
+
+.kLabel {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font: 600 15px var(--font-body);
+}
+
+.kBig {
+  margin-top: 10px;
+  color: var(--color-brand-ink);
+  font: 800 clamp(44px, 5vw, 64px) / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+
+  span {
+    color: var(--color-ink-soft);
+    font: 600 18px var(--font-body);
+    letter-spacing: 0;
+  }
+}
+
+.kMid {
+  margin-top: 8px;
+  color: var(--color-ink);
+  font: 800 34px/1.05 var(--font-display);
+  font-variant-numeric: tabular-nums;
+
+  span {
+    color: var(--color-ink-soft);
+    font: 600 18px var(--font-body);
+  }
+}
+
+.kNote {
+  margin: 10px 0 0;
+  color: var(--color-ink-soft);
+  font: 400 15px/1.5 var(--font-body);
+
+  strong {
+    color: var(--color-brand-ink);
+  }
+}
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 96px;
+  margin-top: 14px;
+}
+
+.sparkArea {
+  fill: rgb(112 53 142 / 8%);
+}
+
+.sparkLine {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: draw 1.6s 0.2s cubic-bezier(0.6, 0, 0.2, 1) forwards;
+  vector-effect: non-scaling-stroke;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.split {
+  display: flex;
+  height: 12px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border-soft);
+}
+
+.splitResp,
+.splitMemb {
+  transform-origin: left;
+  animation: grow-x 1.1s 0.3s $ease-out both;
+}
+
+.splitResp {
+  background: var(--ribbon-violet);
+}
+
+.splitMemb {
+  background: var(--ribbon-blue);
+  animation-delay: 0.55s;
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-6);
+
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panel {
+  padding: 26px 28px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    color: var(--color-ink);
+    font: 700 19px/1.3 var(--font-display);
+  }
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  color: var(--color-ink-soft);
+  font: 500 14px var(--font-body);
+
+  i {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    border-radius: 4px;
+    vertical-align: -1px;
+  }
+}
+
+.legendResp {
+  background: var(--ribbon-violet);
+}
+
+.legendMemb {
+  background: var(--ribbon-blue);
+}
+
+.link {
+  color: var(--color-brand);
+  font: 600 15px var(--font-body);
+}
+
+.chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(30px, 1fr));
+  gap: 10px;
+  align-items: end;
+  height: 270px;
+  overflow-x: auto;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 100%;
+}
+
+.colTotal {
+  color: var(--color-ink-soft);
+  font: 600 12px var(--font-body);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 40px;
+  overflow: hidden;
+  border-radius: 10px 10px 4px 4px;
+  transform-origin: bottom;
+  animation: grow-y 0.9s $ease-out both;
+}
+
+.barEmpty {
+  background: var(--color-border-soft);
+}
+
+.bMemb {
+  background: var(--ribbon-blue);
+}
+
+.bResp {
+  background: var(--ribbon-violet);
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.colLabel {
+  color: var(--color-ink-soft);
+  font: 500 13px var(--font-body);
+}
+
+.ops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--color-border-soft);
+  }
+}
+
+.op {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 4px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--color-surface-2);
+  }
+}
+
+.opDate {
+  color: var(--color-ink-faint);
+  font: 500 14px var(--font-body);
+}
+
+.opWhat {
+  display: block;
+  color: var(--color-ink);
+  font: 600 15px/1.3 var(--font-body);
+}
+
+.opSub {
+  display: block;
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  font: 400 14px/1.4 var(--font-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opMain {
+  min-width: 0;
+}
+
+.opAmt {
+  font: 700 16px var(--font-display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.opIn {
+  color: var(--color-green);
+}
+
+.opOut {
+  color: var(--color-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sparkLine,
+  .splitResp,
+  .splitMemb,
+  .bar {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

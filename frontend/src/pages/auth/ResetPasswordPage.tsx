@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+import { IccLogo } from '../../components/brand/IccLogo'
 import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { useResetPasswordMutation } from '../../features/auth/hooks'
@@ -37,7 +38,7 @@ export function ResetPasswordPage() {
     <main className={styles.page}>
       <div className={styles.card}>
         <div className={styles.crest}>
-          <Icon name="crest" size={20} />
+          <IccLogo />
         </div>
         <div>
           <h1>{t('auth.reset.title')}</h1>

@@ -75,11 +75,11 @@
 }
 
 .btnPrimary {
-  background: var(--color-navy);
+  background: var(--color-brand);
   color: #fff;
 
   &:hover:not(:disabled) {
-    background: var(--color-navy-ink);
+    background: var(--color-brand-ink);
   }
 }
 
@@ -184,8 +184,8 @@
 }
 
 .pillNavy {
-  background: var(--color-navy-tint);
-  color: var(--color-navy-tint-ink);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-tint-ink);
 }
 
 .pillGrey {
@@ -311,7 +311,7 @@
   input {
     width: 16px;
     height: 16px;
-    accent-color: var(--color-navy);
+    accent-color: var(--color-brand);
   }
 }
 
@@ -344,7 +344,7 @@
 }
 
 .segActive {
-  background: var(--color-navy) !important;
+  background: var(--color-brand) !important;
   color: #fff !important;
 }
 
@@ -365,9 +365,9 @@
 }
 
 .bannerNavy {
-  background: var(--color-navy-tint);
-  border-color: var(--color-navy-tint-border);
-  color: var(--color-navy-tint-ink);
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-tint-border);
+  color: var(--color-brand-tint-ink);
 }
 
 .bannerAmber {

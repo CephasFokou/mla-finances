@@ -9,7 +9,7 @@
 }
 
 .sidebar {
-  background: var(--color-navy-ink);
+  background: linear-gradient(180deg, var(--color-brand-ink) 0%, #4a0b6c 100%);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -49,19 +49,12 @@
   span {
     display: block;
     font-size: 0.75rem;
-    color: #8fa0c6;
+    color: #c9b2dc;
   }
 }
 
 .crest {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: var(--color-gold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #241b05;
+  width: 40px;
   flex: none;
 }
 
@@ -78,7 +71,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-md);
   text-decoration: none;
-  color: #c4cde3;
+  color: #eadcf5;
   font-weight: 600;
   font-size: 0.97rem;
 
@@ -89,12 +82,25 @@
 }
 
 .active {
-  background: var(--color-gold);
-  color: #241b05;
+  position: relative;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 600;
+
+  &::before {
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 0;
+    width: 4px;
+    border-radius: 4px;
+    background: var(--color-gold);
+    content: '';
+  }
 
   &:hover {
-    background: var(--color-gold);
-    color: #241b05;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
   }
 }
 

@@ -50,7 +50,7 @@
     "monthlyTotalHint": "Versées pour les mois de {{year}}",
     "responsablesShareHint": "{{contributors}} / {{count}} responsables ont contribué",
     "monthly": {
-      "title": "Contributions mensuelles : responsables et membres",
+      "title": "Contributions mensuelles, par mois d'attribution",
       "month": "Mois",
       "responsables": "Responsables",
       "responsablesAmount": "Montant resp.",
@@ -94,6 +94,21 @@
       "contribution": "Nouvelle contribution",
       "expense": "Nouvelle dépense",
       "reports": "Tous les rapports"
+    },
+    "lead": {
+      "curve": "Sans les collectes. Son évolution en fin de mois, à la date réelle des mouvements :",
+      "monthlyTitle": "Contributions mensuelles {{year}}",
+      "splitLabel": "Responsables {{resp}} FCFA, membres {{members}} FCFA",
+      "share": "{{share}} versés par les responsables",
+      "shareDetail": "({{contributors}} sur {{count}} ont contribué), le reste par {{members}} membres.",
+      "chartLabel": "Barres empilées des contributions mensuelles {{year}}, responsables et membres",
+      "chartNote": "Mois pour lequel chacun contribue, même si le dépôt arrive plus tard.",
+      "tableTitle": "Détail mois par mois"
+    },
+    "recent": {
+      "title": "Derniers mouvements",
+      "all": "Tout voir",
+      "empty": "Aucun mouvement pour l'instant."
     }
   },
   "contributions": {
@@ -200,7 +215,8 @@
       "history": "Historique",
       "created": "Contribution créée",
       "adjustmentCreated": "Écriture d'ajustement créée"
-    }
+    },
+    "anonymous": "Anonyme"
   },
   "projects": {
     "title": "Projets & catégories",

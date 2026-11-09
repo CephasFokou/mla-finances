@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
+import { IccLogo } from '../../components/brand/IccLogo'
 import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { useLoginMutation } from '../../features/auth/hooks'
@@ -54,9 +55,10 @@ export function LoginPage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <aside className={styles.side}>
+          <IccLogo ribbonsOnly mono="#FFFFFF" className={styles.ghost} />
           <div className={styles.mark}>
             <div className={styles.crest}>
-              <Icon name="crest" size={22} />
+              <IccLogo letterColor="#FFFFFF" animated />
             </div>
             <div>
               <b>{t('app.name')}</b>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '../../store/authStore'
+import { IccLogo } from '../brand/IccLogo'
 import { Icon, type IconName } from '../ui/Icon'
 import styles from './AppLayout.module.scss'
 
@@ -54,7 +55,7 @@ export function AppLayout() {
       <aside className={`${styles.sidebar} ${menuOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.brand}>
           <div className={styles.crest}>
-            <Icon name="crest" size={20} />
+            <IccLogo letterColor="#FFFFFF" />
           </div>
           <div>
             <b>{t('app.name')}</b>
