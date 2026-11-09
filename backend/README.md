@@ -39,6 +39,15 @@ LOG_LEVEL_APP=DEBUG LOG_LEVEL_SECURITY=DEBUG LOG_LEVEL_CORS=DEBUG mvn spring-boo
 valeur par défaut en dev est `http://localhost:*`, pour ne pas casser le CORS quand Vite choisit un
 port différent de 5173 (déjà occupé -> 5174, etc.).
 
+### PostgreSQL local (profil `local`)
+
+À combiner avec `dev` : `mvn spring-boot:run -Dspring-boot.run.profiles=dev,local`. Base par défaut
+`jdbc:postgresql://localhost:5432/mla_finance`, utilisateur système, surchargeable par `DATABASE_URL`
+ou `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD`. Pour (ré)initialiser cette base avec les
+données du fichier de suivi : `../scripts/reset-local-db.sh` (voir le README racine).
+
+`--app.migrate-only=true` applique les migrations puis arrête l'application (utilisé par ce script).
+
 ## Build
 
 ```bash
