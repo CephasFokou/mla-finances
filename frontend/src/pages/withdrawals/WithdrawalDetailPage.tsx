@@ -14,7 +14,7 @@ import {
   useWithdrawalQuery,
 } from '../../features/withdrawals/hooks'
 import { ApiError } from '../../lib/apiClient'
-import { formatDateTime, formatFcfa } from '../../lib/format'
+import { formatDate, formatDateTime, formatFcfa, personLabel } from '../../lib/format'
 import { WithdrawalStatusPill } from './WithdrawalStatusPill'
 import styles from './WithdrawalDetailPage.module.scss'
 
@@ -175,6 +175,56 @@ export function WithdrawalDetailPage() {
                 <th scope="row">{t('withdrawals.detail.reason')}</th>
                 <td>{withdrawal.reason}</td>
               </tr>
+              <tr>
+                <th scope="row">{t('ledger.nature')}</th>
+                <td>
+                  {t(`nature.${withdrawal.nature}`)}
+                  {withdrawal.transferGroup && (
+                    <span className={ui.cellSub}> · {withdrawal.transferGroup}</span>
+                  )}
+                </td>
+              </tr>
+              {withdrawal.person && (
+                <tr>
+                  <th scope="row">{t('withdrawals.form.person')}</th>
+                  <td>{personLabel(withdrawal.person)}</td>
+                </tr>
+              )}
+              {withdrawal.operationDate && (
+                <tr>
+                  <th scope="row">{t('withdrawals.form.operationDate')}</th>
+                  <td>{formatDate(withdrawal.operationDate)}</td>
+                </tr>
+              )}
+              {withdrawal.paymentChannel && (
+                <tr>
+                  <th scope="row">{t('contributions.form.channel')}</th>
+                  <td>{withdrawal.paymentChannel.label}</td>
+                </tr>
+              )}
+              {withdrawal.activity && (
+                <tr>
+                  <th scope="row">{t('ledger.activity')}</th>
+                  <td>{withdrawal.activity.name}</td>
+                </tr>
+              )}
+              {withdrawal.remark && (
+                <tr>
+                  <th scope="row">{t('ledger.remark')}</th>
+                  <td>{withdrawal.remark}</td>
+                </tr>
+              )}
+              {(withdrawal.requestedByName || withdrawal.decidedByName) && (
+                <tr>
+                  <th scope="row">{t('withdrawals.detail.people')}</th>
+                  <td>
+                    {t('withdrawals.detail.peopleValue', {
+                      requested: withdrawal.requestedByName ?? '—',
+                      decided: withdrawal.decidedByName ?? '—',
+                    })}
+                  </td>
+                </tr>
+              )}
               {withdrawal.decidedAt && (
                 <tr>
                   <th scope="row">{t('withdrawals.detail.decidedAtLabel')}</th>

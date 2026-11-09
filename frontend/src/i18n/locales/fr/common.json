@@ -4,16 +4,17 @@
     "church": "ICC — Yaoundé"
   },
   "nav": {
-    "dashboard": "Tableau de bord",
+    "dashboard": "Synthèse",
     "contributions": "Contributions",
-    "projects": "Projets & catégories",
-    "withdrawals": "Retraits",
+    "projects": "Collectes & caisse",
+    "withdrawals": "Retraits & dépenses",
     "reports": "Rapports",
     "administration": "Administration",
     "media": "Médias & bannières",
     "toggleMenu": "Ouvrir ou fermer le menu",
     "logout": "Se déconnecter",
-    "paymentTransactions": "Dons en ligne"
+    "paymentTransactions": "Dons en ligne",
+    "members": "Membres"
   },
   "login": {
     "title": "Connexion",
@@ -30,13 +31,69 @@
     "genericError": "Connexion impossible. Réessayez."
   },
   "dashboard": {
-    "title": "Vue globale",
-    "error": "Impossible de charger les indicateurs pour le moment.",
+    "title": "Synthèse {{year}}",
+    "error": "Impossible de charger la synthèse pour le moment.",
     "kpi": {
       "balance": "Solde global",
       "mobilized": "Mobilisé ce mois",
       "disbursed": "Décaissé ce mois",
-      "pendingWithdrawals": "Retraits en attente"
+      "pendingWithdrawals": "Retraits en attente",
+      "mainFund": "Solde de la caisse du MLA",
+      "openCollections": "Collectes en cours (à remettre)",
+      "monthlyTotal": "Contributions mensuelles",
+      "responsablesShare": "Part des responsables"
+    },
+    "year": "Année",
+    "generatedAt": "Calculée le {{date}}",
+    "openCollectionsHint_one": "{{count}} collecte en cours, hors caisse",
+    "openCollectionsHint_other": "{{count}} collectes en cours, hors caisse",
+    "monthlyTotalHint": "Versées pour les mois de {{year}}",
+    "responsablesShareHint": "{{contributors}} / {{count}} responsables ont contribué",
+    "monthly": {
+      "title": "Contributions mensuelles : responsables et membres",
+      "month": "Mois",
+      "responsables": "Responsables",
+      "responsablesAmount": "Montant resp.",
+      "members": "Membres",
+      "membersAmount": "Montant membres",
+      "total": "Total",
+      "share": "Part resp.",
+      "balance": "Caisse fin de mois",
+      "year": "Année {{year}}",
+      "note": "Mois = mois POUR LEQUEL on contribue (mois d'attribution), même si le dépôt arrive plus tard. Part des responsables = montant des responsables / total du mois. Solde caisse = caisse du MLA uniquement, sans les collectes."
+    },
+    "months": {
+      "jan": "Janvier",
+      "feb": "Février",
+      "mar": "Mars",
+      "apr": "Avril",
+      "may": "Mai",
+      "jun": "Juin",
+      "jul": "Juillet",
+      "aug": "Août",
+      "sep": "Septembre",
+      "oct": "Octobre",
+      "nov": "Novembre",
+      "dec": "Décembre"
+    },
+    "monthsShort": {
+      "jan": "Janv.",
+      "feb": "Févr.",
+      "mar": "Mars",
+      "apr": "Avr.",
+      "may": "Mai",
+      "jun": "Juin",
+      "jul": "Juil.",
+      "aug": "Août",
+      "sep": "Sept.",
+      "oct": "Oct.",
+      "nov": "Nov.",
+      "dec": "Déc."
+    },
+    "actions": {
+      "contribution": "Nouvelle contribution",
+      "expense": "Nouvelle dépense",
+      "reports": "Tous les rapports"
     }
   },
   "contributions": {
@@ -57,8 +114,8 @@
       "TRANSFER": "Transfert"
     },
     "envelopeType": {
-      "project": "Projet",
-      "category": "Catégorie de don"
+      "project": "Collecte",
+      "category": "Caisse"
     },
     "columns": {
       "donor": "Donateur",
@@ -149,7 +206,8 @@
     "title": "Projets & catégories",
     "tabs": {
       "projects": "Projets",
-      "categories": "Catégories de don"
+      "categories": "Catégories de don",
+      "activities": "Activités de la caisse"
     },
     "new": "Nouveau projet",
     "loading": "Chargement des projets…",
@@ -254,10 +312,8 @@
     }
   },
   "withdrawals": {
-    "title": "Retraits",
-    "count_one": "{{count}} demande de retrait",
-    "count_other": "{{count}} demandes de retrait",
-    "new": "Nouvelle demande",
+    "title": "Retraits & dépenses",
+    "new": "Nouvelle sortie",
     "export": "Exporter",
     "loading": "Chargement des retraits…",
     "error": "Impossible de charger les retraits. Vérifiez que le backend est démarré.",
@@ -273,10 +329,11 @@
     },
     "columns": {
       "envelope": "Enveloppe",
-      "reason": "Motif",
+      "reason": "Nature et motif",
       "status": "Statut",
       "requestedAt": "Demandé le",
-      "amount": "Montant"
+      "amount": "Montant",
+      "date": "Date"
     },
     "filters": {
       "envelope": "Enveloppe",
@@ -293,12 +350,12 @@
       "pageInfo": "Page {{page}} / {{total}}"
     },
     "envelopeType": {
-      "project": "Projet",
-      "category": "Catégorie de don"
+      "project": "Collecte",
+      "category": "Caisse"
     },
     "form": {
-      "title": "Nouvelle demande de retrait",
-      "subtitle": "La demande est créée en attente : elle doit être validée par un second responsable avant tout décaissement.",
+      "title": "Nouvelle sortie d'argent",
+      "subtitle": "Dépense, remise d'enveloppe, remboursement… sur la caisse du MLA ou une collecte.",
       "workflowNotice": "Une fois envoyée, la demande ne peut plus être modifiée : un motif erroné se corrige par une annulation puis une nouvelle demande.",
       "envelope": "Enveloppe concernée",
       "envelopeHint": "Exclusif : un retrait est rattaché soit à un projet, soit à une catégorie de don.",
@@ -307,14 +364,25 @@
       "project": "Projet",
       "category": "Catégorie",
       "selectPlaceholder": "Choisir…",
-      "amount": "Montant demandé (FCFA)",
+      "amount": "Montant (FCFA)",
       "amountError": "Le montant doit être supérieur à 0",
-      "reason": "Motif de la demande",
+      "reason": "Motif / description",
       "reasonPlaceholder": "Ex. achat de matériaux, main d'œuvre, fournitures…",
       "reasonError": "Le motif est requis",
       "cancel": "Annuler",
       "submit": "Envoyer la demande",
-      "genericError": "Une erreur est survenue. Réessayez."
+      "genericError": "Une erreur est survenue. Réessayez.",
+      "mode": "Type de saisie",
+      "modeRecord": "Sortie déjà effectuée",
+      "modeRequest": "Demande à valider",
+      "modeRecordHint": "L'argent est déjà sorti (cahier de caisse) : la sortie est enregistrée comme décaissée à sa date réelle.",
+      "modeRequestHint": "La demande suivra le circuit : validation, puis décaissement.",
+      "operationDate": "Date de la sortie",
+      "person": "Membre / tiers concerné",
+      "noPerson": "Personne non précisée",
+      "noChannel": "Canal non précisé",
+      "recordNotice": "Enregistrée directement comme décaissée : elle réduit tout de suite le solde de l'enveloppe et apparaît dans le journal d'audit.",
+      "submitRecord": "Enregistrer la sortie"
     },
     "detail": {
       "back": "Retour",
@@ -350,8 +418,12 @@
       "engagedAmount": "Dépenses engagées",
       "deficitAlert": "Solde prévisionnel négatif : les dépenses déjà engagées sur cette enveloppe dépassent le solde réel disponible.",
       "pendingCount_one": "{{count}} demande en attente sur cette enveloppe",
-      "pendingCount_other": "{{count}} demandes en attente sur cette enveloppe"
-    }
+      "pendingCount_other": "{{count}} demandes en attente sur cette enveloppe",
+      "people": "Saisie / validation",
+      "peopleValue": "Saisie par {{requested}}, validée par {{decided}}"
+    },
+    "count_one": "{{count}} sortie enregistrée",
+    "count_other": "{{count}} sorties enregistrées"
   },
   "reports": {
     "title": "Rapports",
@@ -359,7 +431,10 @@
     "tabs": {
       "overview": "Aperçu global",
       "monthly": "Par projet",
-      "audit": "Journal d'audit"
+      "audit": "Journal d'audit",
+      "calendar": "Calendrier",
+      "collections": "Collectes",
+      "activities": "Activités"
     },
     "overview": {
       "error": "Impossible de charger l'aperçu global pour le moment.",
@@ -415,13 +490,40 @@
         "next": "Suivant",
         "pageInfo": "Page {{page}} sur {{total}}"
       }
+    },
+    "error": "Impossible de charger ce rapport pour le moment.",
+    "calendar": {
+      "member": "Membre",
+      "total": "Total",
+      "monthsCount": "Nb mois",
+      "unattributed": "Non attribué",
+      "note": "Montant versé par chacun pour chaque mois d'attribution. Les membres partis ou non intégrés sont grisés."
+    },
+    "collections": {
+      "name": "Collecte",
+      "status": "Statut",
+      "period": "Période",
+      "count": "Nb contrib.",
+      "collected": "Collecté",
+      "otherInflows": "Autres entrées",
+      "used": "Utilisé / remis",
+      "remaining": "Reste",
+      "note": "Hors caisse du MLA. « Autres entrées » : avances, transferts reçus, régularisations. Le reste d'une collecte en cours est l'argent encore à remettre."
+    },
+    "activities": {
+      "expenses": "Dépenses",
+      "returns": "Retours et dons",
+      "netCost": "Coût net pour la caisse",
+      "total": "Total payé par la caisse",
+      "note": "Dépenses de la caisse rattachées à chaque activité, moins l'argent revenu en caisse (retours, dons, reliquats)."
     }
   },
   "administration": {
     "title": "Administration",
     "tabs": {
       "users": "Utilisateurs",
-      "roles": "Rôles & permissions"
+      "roles": "Rôles & permissions",
+      "channels": "Canaux de paiement"
     },
     "permissions": {
       "VIEW_DASHBOARD": "Tableau de bord",
@@ -612,5 +714,119 @@
       "next": "Suivant",
       "pageInfo": "Page {{page}} / {{total}}"
     }
+  },
+  "nature": {
+    "MONTHLY_CONTRIBUTION": "Contribution mensuelle",
+    "CONTRIBUTION": "Contribution",
+    "DONATION": "Don",
+    "RETURN": "Retour",
+    "ADVANCE": "Avance",
+    "EXPENSE": "Dépense",
+    "HANDOVER": "Remise",
+    "CASH_TOP_UP": "Complément de la caisse",
+    "REPAYMENT": "Remboursement",
+    "FEE": "Frais",
+    "TRANSFER": "Transfert",
+    "REGULARIZATION": "Régularisation"
+  },
+  "memberRole": {
+    "RESPONSABLE": "Responsable",
+    "MEMBRE": "Membre",
+    "THIRD_PARTY": "Tiers",
+    "plural": {
+      "RESPONSABLE": "Responsables",
+      "MEMBRE": "Membres",
+      "THIRD_PARTY": "Tiers"
+    }
+  },
+  "memberStatus": {
+    "ACTIVE": "Actif",
+    "LEFT": "Parti(e)",
+    "NOT_INTEGRATED": "Non intégré"
+  },
+  "activityStatus": {
+    "PLANNED": "À venir",
+    "COMPLETED": "Clôturé"
+  },
+  "ledger": {
+    "mainFundOption": "Caisse du MLA",
+    "collectionOption": "Collecte dédiée",
+    "collection": "Collecte",
+    "envelopeHint": "La caisse du MLA reçoit les contributions mensuelles et paie les activités courantes. Une collecte (mariage, main levée, projet…) a son propre fonds et ne compte jamais dans le solde de la caisse.",
+    "nature": "Nature",
+    "activity": "Activité",
+    "noActivity": "Aucune activité",
+    "activityHintInflow": "Pour un retour d'argent ou un don lié à une activité de la caisse.",
+    "remark": "Remarque (justification)",
+    "remarkPlaceholder": "Justificatif, précision, correction…",
+    "periodHint": "Le mois POUR LEQUEL la personne contribue, même si le dépôt arrive plus tard.",
+    "personSearch": "Rechercher une personne…",
+    "personHint": "Nom usuel du journal (ex. « Maman Jeanne »). Une personne absente s'ajoute dans Membres."
+  },
+  "activities": {
+    "intro": "Activités payées par la caisse du MLA (ComFrat, rencontres, matériel…). Rattachez-y les dépenses pour suivre leur coût net dans Rapports → Activités.",
+    "new": "Nouvelle activité",
+    "name": "Activité",
+    "date": "Date",
+    "periodLabel": "Période (libellé)",
+    "periodLabelPlaceholder": "ex. mars 2026",
+    "status": "Statut",
+    "comment": "Commentaire",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier {{name}}",
+    "genericError": "Impossible d'enregistrer l'activité."
+  },
+  "members": {
+    "title": "Membres",
+    "subtitle": "{{responsables}} responsables et {{members}} membres actifs · {{thirdParties}} tiers",
+    "new": "Ajouter une personne",
+    "newTitle": "Nouvelle personne",
+    "editTitle": "Modifier la fiche",
+    "all": "Tous",
+    "filter": "Filtrer par rôle",
+    "error": "Impossible de charger les membres.",
+    "genericError": "Impossible d'enregistrer la fiche.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier {{name}}",
+    "fields": {
+      "displayName": "Nom usuel",
+      "displayNameHint": "Nom utilisé dans le journal (« Maman Jeanne »), unique.",
+      "firstName": "Prénom(s)",
+      "lastName": "Nom",
+      "fullName": "Nom complet",
+      "role": "Rôle",
+      "status": "Statut",
+      "phone": "Téléphone",
+      "email": "Email",
+      "remark": "Remarque"
+    }
+  },
+  "transfers": {
+    "new": "Transfert interne",
+    "title": "Transfert interne",
+    "subtitle": "Déplacer de l'argent entre la caisse et une collecte, ou entre deux collectes (reliquat reversé, complément…).",
+    "from": "Depuis",
+    "to": "Vers",
+    "sameEnvelope": "Choisissez deux enveloppes différentes.",
+    "reasonPlaceholder": "ex. Reliquat de la ComFrat reversé dans la caisse",
+    "notice": "Deux écritures liées sont créées : une sortie sur la source et une entrée sur la destination. Le total de l'argent détenu ne change pas.",
+    "submit": "Enregistrer le transfert",
+    "genericError": "Impossible d'enregistrer le transfert."
+  },
+  "paymentChannels": {
+    "intro": "Canaux proposés dans les formulaires de saisie. Un canal désactivé reste visible sur les anciens mouvements.",
+    "label": "Libellé",
+    "code": "Code",
+    "state": "État",
+    "add": "Ajouter",
+    "save": "Enregistrer",
+    "edit": "Modifier {{name}}",
+    "active": "Actif",
+    "inactive": "Désactivé",
+    "activate": "Réactiver",
+    "deactivate": "Désactiver",
+    "genericError": "Opération impossible."
   }
 }

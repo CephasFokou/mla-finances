@@ -27,6 +27,12 @@ export const withdrawalsApi = {
 
   create: (input: WithdrawalCreateInput) => apiClient.post<WithdrawalResponse>('/withdrawals', input),
 
+  /** Sortie déjà effectuée : enregistrée directement comme décaissée à sa date réelle. */
+  record: (input: WithdrawalCreateInput) => apiClient.post<WithdrawalResponse>('/withdrawals/record', input),
+
+  exportCsv: (filters: WithdrawalFilters) =>
+    apiClient.get<string>(`/withdrawals/export${toQueryString(filters)}`),
+
   approve: (id: number) => apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/approve`),
 
   reject: (id: number, input: WithdrawalRejectInput) =>

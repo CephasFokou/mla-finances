@@ -1,5 +1,8 @@
 // Types calqués sur le contrat JSON du module Retraits (backend WithdrawalController).
 
+import type { ActivityRef, MovementNature } from '../ledger/types'
+import type { DonorRef, PaymentChannelRef } from '../contributions/types'
+
 export type WithdrawalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'CANCELLED'
 
 export interface RefOption {
@@ -13,9 +16,18 @@ export interface WithdrawalResponse {
   category: RefOption | null
   amount: number
   reason: string
+  nature: MovementNature
+  person: DonorRef | null
+  paymentChannel: PaymentChannelRef | null
+  activity: ActivityRef | null
+  operationDate: string | null
+  remark: string | null
+  transferGroup: string | null
   status: WithdrawalStatus
   requestedAt: string
+  requestedByName: string | null
   decidedAt: string | null
+  decidedByName: string | null
   rejectionReason: string | null
   processedAt: string | null
   reference: string | null
@@ -33,6 +45,9 @@ export interface WithdrawalFilters {
   projectId?: number
   categoryId?: number
   status?: WithdrawalStatus
+  nature?: MovementNature
+  activityId?: number
+  personId?: number
   dateFrom?: string
   dateTo?: string
   page?: number
@@ -45,6 +60,13 @@ export interface WithdrawalCreateInput {
   categoryId?: number
   amount: number
   reason: string
+  nature?: MovementNature
+  personId?: number
+  paymentChannelId?: number
+  activityId?: number
+  /** Renseignée uniquement pour une sortie déjà effectuée (POST /withdrawals/record). */
+  operationDate?: string
+  remark?: string
 }
 
 export interface WithdrawalRejectInput {

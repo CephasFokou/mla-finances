@@ -4,10 +4,14 @@ import { Link } from 'react-router-dom'
 
 import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
+import { OUTFLOW_NATURES, type MovementNature } from '../../features/ledger/types'
+import { withdrawalsApi } from '../../features/withdrawals/api'
 import { useWithdrawalsQuery } from '../../features/withdrawals/hooks'
 import type { WithdrawalFilters, WithdrawalStatus } from '../../features/withdrawals/types'
 import { useCategoriesQuery, useProjectsQuery } from '../../features/reference-data/hooks'
-import { formatDate, formatFcfa } from '../../lib/format'
+import { downloadTextFile } from '../../lib/download'
+import { formatDate, formatFcfa, personLabel } from '../../lib/format'
+import { useHasPermission } from '../../store/authStore'
 import { WithdrawalStatusPill } from './WithdrawalStatusPill'
 import styles from './WithdrawalsListPage.module.scss'
 
@@ -26,10 +30,13 @@ export function WithdrawalsListPage() {
   const [page, setPage] = useState(0)
   const [envelope, setEnvelope] = useState('')
   const [status, setStatus] = useState('')
+  const [nature, setNature] = useState('')
+  const canTransfer = useHasPermission('MANAGE_WITHDRAWALS', 'VALIDATE_WITHDRAWALS')
 
   const activeFilters: WithdrawalFilters = {
     ...parseEnvelope(envelope),
     status: (status || undefined) as WithdrawalStatus | undefined,
+    nature: (nature || undefined) as MovementNature | undefined,
   }
   const { data, isLoading, isError, isFetching } = useWithdrawalsQuery({
     ...activeFilters,
@@ -40,7 +47,7 @@ export function WithdrawalsListPage() {
   const { data: projects } = useProjectsQuery()
   const { data: categories } = useCategoriesQuery()
 
-  const hasFilters = !!(envelope || status)
+  const hasFilters = !!(envelope || status || nature)
 
   const setFilter = (setter: (value: string) => void) => (value: string) => {
     setPage(0)
@@ -51,6 +58,12 @@ export function WithdrawalsListPage() {
     setPage(0)
     setEnvelope('')
     setStatus('')
+    setNature('')
+  }
+
+  const handleExport = async () => {
+    const csv = await withdrawalsApi.exportCsv(activeFilters)
+    downloadTextFile('retraits.csv', csv)
   }
 
   return (
@@ -61,6 +74,20 @@ export function WithdrawalsListPage() {
           {data && <p>{t('withdrawals.count', { count: data.totalElements })}</p>}
         </div>
         <div className={ui.actions}>
+          <button
+            type="button"
+            className={`${ui.btn} ${ui.btnSecondary} ${ui.btnSm}`}
+            onClick={() => void handleExport()}
+          >
+            <Icon name="download" size={14} />
+            {t('contributions.export')}
+          </button>
+          {canTransfer && (
+            <Link to="/transfers/new" className={`${ui.btn} ${ui.btnSecondary} ${ui.btnSm}`}>
+              <Icon name="swap" size={14} />
+              {t('transfers.new')}
+            </Link>
+          )}
           <Link to="/withdrawals/new" className={`${ui.btn} ${ui.btnPrimary} ${ui.btnSm}`}>
             <Icon name="plus" strokeWidth={2.4} />
             {t('withdrawals.new')}
@@ -101,6 +128,17 @@ export function WithdrawalsListPage() {
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {t(`withdrawals.status.${s}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filter}>
+          <span>{t('ledger.nature')}</span>
+          <select value={nature} onChange={(e) => setFilter(setNature)(e.target.value)}>
+            <option value="">{t('withdrawals.filters.all')}</option>
+            {[...OUTFLOW_NATURES, 'TRANSFER' as const].map((n) => (
+              <option key={n} value={n}>
+                {t(`nature.${n}`)}
               </option>
             ))}
           </select>
@@ -157,7 +195,7 @@ export function WithdrawalsListPage() {
                   <th>{t('withdrawals.columns.envelope')}</th>
                   <th>{t('withdrawals.columns.reason')}</th>
                   <th>{t('withdrawals.columns.status')}</th>
-                  <th>{t('withdrawals.columns.requestedAt')}</th>
+                  <th>{t('withdrawals.columns.date')}</th>
                   <th className={ui.num}>{t('withdrawals.columns.amount')}</th>
                   <th />
                 </tr>
@@ -175,11 +213,17 @@ export function WithdrawalsListPage() {
                           : t('withdrawals.envelopeType.category')}
                       </div>
                     </td>
-                    <td className={ui.cellSub}>{withdrawal.reason}</td>
+                    <td>
+                      <div className={ui.cellMain}>{t(`nature.${withdrawal.nature}`)}</div>
+                      <div className={ui.cellSub}>
+                        {withdrawal.person ? `${personLabel(withdrawal.person)} · ` : ''}
+                        {withdrawal.reason}
+                      </div>
+                    </td>
                     <td>
                       <WithdrawalStatusPill status={withdrawal.status} />
                     </td>
-                    <td>{formatDate(withdrawal.requestedAt)}</td>
+                    <td>{formatDate(withdrawal.operationDate ?? withdrawal.requestedAt)}</td>
                     <td className={`${ui.num} ${ui.cellMain}`}>{formatFcfa(withdrawal.amount)}</td>
                     <td>
                       <Link

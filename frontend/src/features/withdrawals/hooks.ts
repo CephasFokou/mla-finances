@@ -48,12 +48,14 @@ function invalidateDerivedQueries(queryClient: ReturnType<typeof useQueryClient>
   void queryClient.invalidateQueries({ queryKey: ['withdrawals'] })
   void queryClient.invalidateQueries({ queryKey: ['project-balance'] })
   void queryClient.invalidateQueries({ queryKey: ['category-balance'] })
+  void queryClient.invalidateQueries({ queryKey: ['reports'] })
 }
 
 export function useCreateWithdrawalMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: WithdrawalCreateInput) => withdrawalsApi.create(input),
+    mutationFn: (input: WithdrawalCreateInput) =>
+      input.operationDate ? withdrawalsApi.record(input) : withdrawalsApi.create(input),
     onSuccess: () => invalidateDerivedQueries(queryClient),
   })
 }

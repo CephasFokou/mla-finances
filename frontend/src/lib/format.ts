@@ -34,3 +34,28 @@ export function formatMonth(isoDate: string): string {
 export function formatDateTime(isoInstant: string): string {
   return dateTimeFormatter.format(new Date(isoInstant))
 }
+
+const percentFormatter = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 })
+const shortMonthFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
+
+/** « 58 % » à partir d'une part entre 0 et 1 ; tiret si la part n'existe pas (total nul). */
+export function formatPercent(share: number | null | undefined): string {
+  return share === null || share === undefined ? '—' : percentFormatter.format(share)
+}
+
+/** Montant sans unité, tiret pour zéro : lecture rapide d'un tableau dense (calendrier, synthèse). */
+export function formatAmountCell(amount: number): string {
+  return amount === 0 ? '–' : amountFormatter.format(amount)
+}
+
+/** « mars » à partir de « 2026-03 » (mois d'attribution). */
+export function formatMonthKey(monthKey: string): string {
+  return shortMonthFormatter.format(new Date(`${monthKey}-01T12:00:00`))
+}
+
+/** Nom à afficher pour une personne : nom usuel du journal, sinon nom complet. */
+export function personLabel(
+  person: { displayName?: string | null; fullName?: string | null } | null | undefined,
+): string {
+  return person?.displayName || person?.fullName || '—'
+}

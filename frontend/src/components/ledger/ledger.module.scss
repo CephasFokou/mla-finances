@@ -1,0 +1,85 @@
+// Tableaux denses des rapports du grand livre (Synthèse, Calendrier, Collectes, Activités) et
+// petites briques partagées par les écrans de saisie. Mêmes tokens que le reste du back-office.
+
+.denseTable {
+  th,
+  td {
+    padding: var(--space-2) var(--space-3);
+    white-space: nowrap;
+  }
+
+  td:first-child,
+  th:first-child {
+    // La première colonne (nom + description) passe à la ligne plutôt que de pousser les montants
+    // hors de l'écran : ce sont eux qu'on vient lire.
+    min-width: 160px;
+    max-width: 300px;
+    white-space: normal;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-surface);
+  }
+}
+
+.groupRow td {
+  background: var(--color-navy-tint);
+  color: var(--color-navy-ink);
+  font-weight: 600;
+}
+
+.totalRow td {
+  background: var(--color-surface-2);
+  font-weight: 700;
+  border-top: 2px solid var(--color-border);
+}
+
+.muted {
+  color: var(--color-ink-faint);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.toolbar label {
+  min-width: 140px;
+}
+
+.sectionTitle {
+  margin: var(--space-6) 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.note {
+  margin-top: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: var(--text-xs);
+}
+
+.inlineForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-4);
+}
+
+.rowActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.negative {
+  color: var(--color-red);
+}
+
+.positive {
+  color: var(--color-green);
+}

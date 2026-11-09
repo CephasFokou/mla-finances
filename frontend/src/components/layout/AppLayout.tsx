@@ -33,8 +33,9 @@ export function AppLayout() {
   const navItems: NavItem[] = [
     { to: '/', label: t('nav.dashboard'), icon: 'grid' },
     { to: '/contributions', label: t('nav.contributions'), icon: 'coins' },
-    { to: '/projects', label: t('nav.projects'), icon: 'folder' },
     { to: '/withdrawals', label: t('nav.withdrawals'), icon: 'out' },
+    { to: '/projects', label: t('nav.projects'), icon: 'folder' },
+    { to: '/members', label: t('nav.members'), icon: 'users' },
     { to: '/reports', label: t('nav.reports'), icon: 'file' },
     { to: '/payment-transactions', label: t('nav.paymentTransactions'), icon: 'heart' },
     { to: '/administration', label: t('nav.administration'), icon: 'gear' },

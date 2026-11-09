@@ -7,6 +7,8 @@ export interface ProjectOption {
 export interface CategoryOption {
   id: number
   name: string
+  /** Caisse principale (Caisse MLA). */
+  mainFund: boolean
 }
 
 export interface PaymentChannelOption {
@@ -17,5 +19,7 @@ export interface PaymentChannelOption {
 
 export interface DonorOption {
   id: number
-  fullName: string
+  fullName: string | null
+  displayName: string | null
+  memberRole: 'RESPONSABLE' | 'MEMBRE' | null
 }

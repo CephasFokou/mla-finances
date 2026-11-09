@@ -6,11 +6,12 @@ import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { useProjectsAdminQuery } from '../../features/projects/hooks'
 import { formatDate, formatFcfa } from '../../lib/format'
+import { ActivitiesPanel } from './ActivitiesPanel'
 import { CategoriesPanel } from './CategoriesPanel'
 import { ProjectStatusPill } from './ProjectStatusPill'
 import styles from './ProjectsListPage.module.scss'
 
-type Tab = 'projects' | 'categories'
+type Tab = 'projects' | 'categories' | 'activities'
 
 function ProjectsTable() {
   const { t } = useTranslation()
@@ -138,9 +139,22 @@ export function ProjectsListPage() {
         >
           {t('projects.tabs.categories')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'activities'}
+          className={tab === 'activities' ? ui.segActive : undefined}
+          onClick={() => setTab('activities')}
+        >
+          {t('projects.tabs.activities')}
+        </button>
       </div>
 
-      <div className={styles.tabPanel}>{tab === 'projects' ? <ProjectsTable /> : <CategoriesPanel />}</div>
+      <div className={styles.tabPanel}>
+        {tab === 'projects' && <ProjectsTable />}
+        {tab === 'categories' && <CategoriesPanel />}
+        {tab === 'activities' && <ActivitiesPanel />}
+      </div>
     </section>
   )
 }

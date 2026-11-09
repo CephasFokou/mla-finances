@@ -1,6 +1,8 @@
 // Types calqués sur le contrat JSON défini dans backend/docs/module-contributions-spec.md (§6).
 // Toute évolution du contrat backend doit être répercutée ici.
 
+import type { ActivityRef, MemberRole, MovementNature } from '../ledger/types'
+
 export type MovementType = 'STANDARD' | 'TRANSFER' | 'ADJUSTMENT'
 
 export interface RefOption {
@@ -10,7 +12,10 @@ export interface RefOption {
 
 export interface DonorRef {
   id: number
-  fullName: string
+  fullName: string | null
+  /** Nom usuel (« Maman Jeanne ») : c'est le nom à afficher. */
+  displayName: string | null
+  memberRole: MemberRole | null
 }
 
 export interface PaymentChannelRef {
@@ -29,6 +34,10 @@ export interface ContributionResponse {
   periodMonth: string // "YYYY-MM-DD" (normalisé au 1er du mois)
   transactionDate: string // "YYYY-MM-DD"
   movementType: MovementType
+  nature: MovementNature
+  activity: ActivityRef | null
+  remark: string | null
+  transferGroup: string | null
   anonymous: boolean
   reference: string | null
   notes: string | null
@@ -50,6 +59,8 @@ export interface ContributionFilters {
   donorId?: number
   paymentChannelId?: number
   movementType?: MovementType
+  nature?: MovementNature
+  activityId?: number
   anonymous?: boolean
   periodMonth?: string // "YYYY-MM"
   dateFrom?: string
@@ -69,12 +80,17 @@ export interface ContributionCreateInput {
   transactionDate: string
   anonymous: boolean
   notes?: string
+  nature?: MovementNature
+  activityId?: number
+  remark?: string
 }
 
 export interface ContributionUpdateInput {
   donorId?: number | null
   anonymous?: boolean
   notes?: string
+  remark?: string | null
+  activityId?: number | null
 }
 
 export interface ContributionCancelInput {

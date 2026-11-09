@@ -13,7 +13,8 @@ import {
   useProjectsQuery,
 } from '../../features/reference-data/hooks'
 import { downloadTextFile } from '../../lib/download'
-import { formatDate, formatMonth, formatSignedAmount } from '../../lib/format'
+import { INFLOW_NATURES, type MovementNature } from '../../features/ledger/types'
+import { formatDate, formatMonth, formatSignedAmount, personLabel } from '../../lib/format'
 import { MovementPill } from './MovementPill'
 import styles from './ContributionsListPage.module.scss'
 
@@ -34,12 +35,14 @@ export function ContributionsListPage() {
   const [envelope, setEnvelope] = useState('')
   const [channelId, setChannelId] = useState('')
   const [movementType, setMovementType] = useState('')
+  const [nature, setNature] = useState('')
 
   const activeFilters: ContributionFilters = {
     periodMonth: periodMonth || undefined,
     ...parseEnvelope(envelope),
     paymentChannelId: channelId ? Number(channelId) : undefined,
     movementType: (movementType || undefined) as MovementType | undefined,
+    nature: (nature || undefined) as MovementNature | undefined,
   }
   const { data, isLoading, isError, isFetching } = useContributionsQuery({
     ...activeFilters,
@@ -51,7 +54,7 @@ export function ContributionsListPage() {
   const { data: categories } = useCategoriesQuery()
   const { data: channels } = usePaymentChannelsQuery()
 
-  const hasFilters = !!(periodMonth || envelope || channelId || movementType)
+  const hasFilters = !!(periodMonth || envelope || channelId || movementType || nature)
 
   const setFilter = (setter: (value: string) => void) => (value: string) => {
     setPage(0)
@@ -64,6 +67,7 @@ export function ContributionsListPage() {
     setEnvelope('')
     setChannelId('')
     setMovementType('')
+    setNature('')
   }
 
   const handleExport = async () => {
@@ -135,6 +139,17 @@ export function ContributionsListPage() {
             {channels?.map((channel) => (
               <option key={channel.id} value={channel.id}>
                 {channel.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filter}>
+          <span>{t('ledger.nature')}</span>
+          <select value={nature} onChange={(e) => setFilter(setNature)(e.target.value)}>
+            <option value="">{t('contributions.filters.all')}</option>
+            {[...INFLOW_NATURES, 'TRANSFER' as const].map((n) => (
+              <option key={n} value={n}>
+                {t(`nature.${n}`)}
               </option>
             ))}
           </select>
@@ -221,7 +236,7 @@ export function ContributionsListPage() {
                         <div className={ui.cellMain}>
                           {contribution.anonymous
                             ? t('contributions.anonymousLabel')
-                            : (contribution.donor?.fullName ?? '—')}
+                            : personLabel(contribution.donor)}
                         </div>
                         <div className={ui.cellSub}>{formatDate(contribution.transactionDate)}</div>
                       </td>
@@ -234,7 +249,10 @@ export function ContributionsListPage() {
                         </div>
                       </td>
                       <td>{contribution.paymentChannel.label}</td>
-                      <td>{formatMonth(contribution.periodMonth)}</td>
+                      <td>
+                        {formatMonth(contribution.periodMonth)}
+                        <div className={ui.cellSub}>{t(`nature.${contribution.nature}`)}</div>
+                      </td>
                       <td>
                         <MovementPill type={contribution.movementType} />
                       </td>

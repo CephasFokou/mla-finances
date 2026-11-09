@@ -43,3 +43,8 @@ export const useAuthStore = create<AuthState>()(
     { name: 'mla-finance-auth' },
   ),
 )
+
+/** Garde-fou d'affichage uniquement (masquer un bouton) : la vraie vérification reste @PreAuthorize côté backend. */
+export function useHasPermission(...permissions: string[]): boolean {
+  return useAuthStore((state) => permissions.every((p) => state.user?.permissions.includes(p) ?? false))
+}

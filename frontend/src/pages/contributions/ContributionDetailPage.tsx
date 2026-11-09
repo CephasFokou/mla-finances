@@ -12,7 +12,7 @@ import {
   useUpdateContributionMutation,
 } from '../../features/contributions/hooks'
 import { ApiError } from '../../lib/apiClient'
-import { formatDate, formatDateTime, formatFcfa, formatMonth } from '../../lib/format'
+import { formatDate, formatDateTime, formatFcfa, formatMonth, personLabel } from '../../lib/format'
 import { MovementPill } from './MovementPill'
 import styles from './ContributionDetailPage.module.scss'
 
@@ -31,6 +31,7 @@ export function ContributionDetailPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [notes, setNotes] = useState('')
   const [anonymous, setAnonymous] = useState(false)
+  const [remark, setRemark] = useState('')
 
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -57,6 +58,7 @@ export function ContributionDetailPage() {
   const startEditing = () => {
     setNotes(contribution.notes ?? '')
     setAnonymous(contribution.anonymous)
+    setRemark(contribution.remark ?? '')
     setActionError(null)
     setIsEditing(true)
   }
@@ -64,7 +66,15 @@ export function ContributionDetailPage() {
   const saveEdit = async () => {
     setActionError(null)
     try {
-      await updateMutation.mutateAsync({ notes, anonymous })
+      // Le backend remplace tels quels les champs non financiers : on renvoie la personne et
+      // l'activité actuelles, sinon une simple correction de note les effacerait.
+      await updateMutation.mutateAsync({
+        notes,
+        anonymous,
+        donorId: contribution.donor?.id ?? null,
+        activityId: contribution.activity?.id ?? null,
+        remark: remark || null,
+      })
       setIsEditing(false)
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : t('contributions.form.genericError'))
@@ -93,7 +103,9 @@ export function ContributionDetailPage() {
   const envelopeName = contribution.project?.name ?? contribution.category?.name ?? '—'
   const donorName = contribution.anonymous
     ? t('contributions.anonymousLabel')
-    : (contribution.donor?.fullName ?? t('contributions.form.noDonor'))
+    : contribution.donor
+      ? personLabel(contribution.donor)
+      : t('contributions.form.noDonor')
 
   return (
     <section>
@@ -194,9 +206,30 @@ export function ContributionDetailPage() {
                 </tr>
               )}
               <tr>
+                <th scope="row">{t('ledger.nature')}</th>
+                <td>
+                  {t(`nature.${contribution.nature}`)}
+                  {contribution.transferGroup && (
+                    <span className={ui.cellSub}> · {contribution.transferGroup}</span>
+                  )}
+                </td>
+              </tr>
+              {contribution.activity && (
+                <tr>
+                  <th scope="row">{t('ledger.activity')}</th>
+                  <td>{contribution.activity.name}</td>
+                </tr>
+              )}
+              <tr>
                 <th scope="row">{t('contributions.detail.notes')}</th>
                 <td>{contribution.notes || '—'}</td>
               </tr>
+              {contribution.remark && (
+                <tr>
+                  <th scope="row">{t('ledger.remark')}</th>
+                  <td>{contribution.remark}</td>
+                </tr>
+              )}
             </tbody>
           </table>
 
@@ -213,6 +246,10 @@ export function ContributionDetailPage() {
               <label className={ui.field}>
                 {t('contributions.form.notes')}
                 <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </label>
+              <label className={ui.field}>
+                {t('ledger.remark')}
+                <input value={remark} onChange={(e) => setRemark(e.target.value)} />
               </label>
               {actionError && <span className={ui.error}>{actionError}</span>}
               <div className={`${ui.actions} ${styles.right}`}>

@@ -55,6 +55,7 @@ function invalidateDerivedQueries(queryClient: ReturnType<typeof useQueryClient>
   void queryClient.invalidateQueries({ queryKey: ['contributions'] })
   void queryClient.invalidateQueries({ queryKey: ['project-balance'] })
   void queryClient.invalidateQueries({ queryKey: ['category-balance'] })
+  void queryClient.invalidateQueries({ queryKey: ['reports'] })
 }
 
 export function useCreateContributionMutation() {

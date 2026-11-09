@@ -1,16 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
+import { PersonPicker } from '../../components/ledger/PersonPicker'
 import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { useCreateContributionMutation } from '../../features/contributions/hooks'
+import { useActivitiesQuery } from '../../features/ledger/hooks'
+import { INFLOW_NATURES, type MovementNature } from '../../features/ledger/types'
 import {
   useCategoriesQuery,
-  useDonorSearchQuery,
   usePaymentChannelsQuery,
   useProjectsQuery,
 } from '../../features/reference-data/hooks'
@@ -32,10 +34,17 @@ const schema = z
     donorId: z.string().optional(),
     anonymous: z.boolean(),
     notes: z.string().optional(),
+    nature: z.string().min(1),
+    activityId: z.string().optional(),
+    remark: z.string().optional(),
   })
   .refine((v) => (v.envelopeType === 'project' ? !!v.projectId : !!v.categoryId), {
-    message: 'Sélectionnez un projet ou une catégorie',
+    message: 'Sélectionnez une collecte ou la caisse',
     path: ['projectId'],
+  })
+  .refine((v) => v.nature !== 'MONTHLY_CONTRIBUTION' || v.envelopeType === 'category', {
+    message: 'Une contribution mensuelle va toujours dans la caisse du MLA',
+    path: ['nature'],
   })
 
 type FormValues = z.infer<typeof schema>
@@ -49,8 +58,7 @@ export function ContributionFormPage() {
   const { data: projects } = useProjectsQuery()
   const { data: categories } = useCategoriesQuery()
   const { data: channels } = usePaymentChannelsQuery()
-  const [donorQuery, setDonorQuery] = useState('')
-  const { data: donors } = useDonorSearchQuery(donorQuery)
+  const { data: activities } = useActivitiesQuery()
   const createMutation = useCreateContributionMutation()
 
   const {
@@ -66,11 +74,24 @@ export function ContributionFormPage() {
       transactionDate: today,
       periodMonth: currentMonth,
       anonymous: false,
+      nature: 'MONTHLY_CONTRIBUTION',
     },
   })
 
   const envelopeType = watch('envelopeType')
   const anonymous = watch('anonymous')
+  const nature = watch('nature')
+  const categoryId = watch('categoryId')
+
+  // La caisse du MLA est l'enveloppe par défaut (contributions mensuelles) ; une collecte reçoit
+  // des contributions ponctuelles, jamais de contribution mensuelle.
+  const mainFund = categories?.find((c) => c.mainFund)
+  useEffect(() => {
+    if (mainFund && !categoryId) setValue('categoryId', String(mainFund.id))
+  }, [mainFund, categoryId, setValue])
+  useEffect(() => {
+    if (envelopeType === 'project' && nature === 'MONTHLY_CONTRIBUTION') setValue('nature', 'CONTRIBUTION')
+  }, [envelopeType, nature, setValue])
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const activeProjects = useMemo(() => projects?.filter((p) => p.status === 'ACTIVE') ?? [], [projects])
@@ -88,6 +109,10 @@ export function ContributionFormPage() {
         donorId: values.anonymous || !values.donorId ? undefined : Number(values.donorId),
         anonymous: values.anonymous,
         notes: values.notes || undefined,
+        nature: values.nature as MovementNature,
+        activityId:
+          values.envelopeType === 'category' && values.activityId ? Number(values.activityId) : undefined,
+        remark: values.remark || undefined,
       })
       navigate(`/contributions/${created.id}`)
     } catch (error) {
@@ -124,15 +149,15 @@ export function ContributionFormPage() {
           <div className={`${ui.field} ${ui.span2}`}>
             <span>{t('contributions.form.envelope')}</span>
             <div className={ui.seg} role="group" aria-label={t('contributions.form.envelope')}>
-              {envelopeButton('category', t('contributions.form.categoryOption'))}
-              {envelopeButton('project', t('contributions.form.projectOption'))}
+              {envelopeButton('category', t('ledger.mainFundOption'))}
+              {envelopeButton('project', t('ledger.collectionOption'))}
             </div>
-            <span className={ui.hint}>{t('contributions.form.envelopeHint')}</span>
+            <span className={ui.hint}>{t('ledger.envelopeHint')}</span>
           </div>
 
           {envelopeType === 'project' ? (
             <label className={`${ui.field} ${ui.span2}`}>
-              {t('contributions.form.project')}
+              {t('ledger.collection')}
               <select {...register('projectId')}>
                 <option value="">{t('contributions.form.selectPlaceholder')}</option>
                 {activeProjects.map((project) => (
@@ -144,19 +169,47 @@ export function ContributionFormPage() {
               {errors.projectId && <span className={ui.error}>{errors.projectId.message}</span>}
             </label>
           ) : (
-            <label className={`${ui.field} ${ui.span2}`}>
-              {t('contributions.form.category')}
-              <select {...register('categoryId')}>
-                <option value="">{t('contributions.form.selectPlaceholder')}</option>
-                {categories?.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              {errors.projectId && <span className={ui.error}>{errors.projectId.message}</span>}
-            </label>
+            <>
+              <label className={ui.field}>
+                {t('contributions.form.category')}
+                <select {...register('categoryId')}>
+                  <option value="">{t('contributions.form.selectPlaceholder')}</option>
+                  {categories?.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.projectId && <span className={ui.error}>{errors.projectId.message}</span>}
+              </label>
+              <label className={ui.field}>
+                {t('ledger.activity')}
+                <select {...register('activityId')}>
+                  <option value="">{t('ledger.noActivity')}</option>
+                  {activities?.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <span className={ui.hint}>{t('ledger.activityHintInflow')}</span>
+              </label>
+            </>
           )}
+
+          <label className={`${ui.field} ${ui.span2}`}>
+            {t('ledger.nature')}
+            <select {...register('nature')}>
+              {INFLOW_NATURES.filter((n) => envelopeType === 'category' || n !== 'MONTHLY_CONTRIBUTION').map(
+                (n) => (
+                  <option key={n} value={n}>
+                    {t(`nature.${n}`)}
+                  </option>
+                ),
+              )}
+            </select>
+            {errors.nature && <span className={ui.error}>{errors.nature.message}</span>}
+          </label>
 
           <label className={ui.field}>
             {t('contributions.form.amount')}
@@ -180,6 +233,7 @@ export function ContributionFormPage() {
           <label className={ui.field}>
             {t('contributions.form.periodMonth')}
             <input type="month" {...register('periodMonth')} />
+            {nature === 'MONTHLY_CONTRIBUTION' && <span className={ui.hint}>{t('ledger.periodHint')}</span>}
           </label>
 
           <label className={ui.field}>
@@ -189,28 +243,12 @@ export function ContributionFormPage() {
 
           <div className={`${ui.field} ${ui.span2}`}>
             <span>{t('contributions.form.donor')}</span>
-            <div className={styles.donorPicker}>
-              <input
-                type="search"
-                value={donorQuery}
-                disabled={anonymous}
-                onChange={(e) => setDonorQuery(e.target.value)}
-                placeholder={t('contributions.form.donorSearchPlaceholder')}
-                aria-label={t('contributions.form.donorSearch')}
-              />
-              <select
-                disabled={anonymous}
-                aria-label={t('contributions.form.donor')}
-                {...register('donorId')}
-              >
-                <option value="">{t('contributions.form.noDonor')}</option>
-                {donors?.map((donor) => (
-                  <option key={donor.id} value={donor.id}>
-                    {donor.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <PersonPicker
+              label={t('contributions.form.donor')}
+              registration={register('donorId')}
+              disabled={anonymous}
+              emptyLabel={t('contributions.form.noDonor')}
+            />
             <label className={ui.checkRow}>
               <input type="checkbox" {...register('anonymous')} />
               {t('contributions.form.anonymous')}
@@ -224,6 +262,11 @@ export function ContributionFormPage() {
               placeholder={t('contributions.form.notesPlaceholder')}
               {...register('notes')}
             />
+          </label>
+
+          <label className={`${ui.field} ${ui.span2}`}>
+            {t('ledger.remark')}
+            <input placeholder={t('ledger.remarkPlaceholder')} {...register('remark')} />
           </label>
         </div>
 
