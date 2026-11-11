@@ -1,7 +1,7 @@
 package org.mla.finance.storage;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -14,15 +14,19 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 /**
- * Implémentation de développement de MediaStorageService : écrit les fichiers sur le disque local
- * (répertoire configurable via app.media.storage-dir, par défaut ./data/media-storage), en dehors
- * du classpath pour survivre aux redémarrages de l'application — contrairement à la base H2 en
- * mémoire du profil dev, qui repart à vide à chaque redémarrage (voir l'échange avec Cephas sur le
- * module Contributions). Ne convient ni à un déploiement multi-instance ni à la production : voir
- * la javadoc de MediaStorageService pour la marche à suivre le moment venu.
+ * Implémentation « disque local » de MediaStorageService : écrit les fichiers dans le répertoire
+ * app.media.storage-dir (par défaut ./data/media-storage), en dehors du classpath pour survivre
+ * aux redémarrages de l'application.
+ * <p>
+ * Active dans tous les profils tant que app.media.storage=local (valeur par défaut). En
+ * déploiement Railway, le répertoire doit être porté par un volume persistant (monté sur
+ * /app/data/media-storage), sinon les fichiers disparaissent à chaque redéploiement. Ne convient
+ * pas à un déploiement multi-instance : une implémentation objet (Cloudflare R2 / S3) pourra être
+ * ajoutée avec app.media.storage=s3 sans toucher à MediaAssetService (voir
+ * claude/plan-de-deploiement.md).
  */
 @Service
-@Profile("dev")
+@ConditionalOnProperty(name = "app.media.storage", havingValue = "local", matchIfMissing = true)
 public class LocalDiskMediaStorageService implements MediaStorageService {
 
     private final Path root;

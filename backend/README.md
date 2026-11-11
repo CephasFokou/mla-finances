@@ -57,12 +57,13 @@ mvn clean verify
 ## Profils
 
 - `dev` : H2 en mémoire, secret JWT fixe versionné, compte SUPER_ADMIN pré-créé (voir ci-dessus). L'envoi d'email (invitations, réinitialisation de mot de passe) est un no-op journalisé tant que `RESEND_API_KEY` n'est pas exporté localement.
-- `prod` : PostgreSQL via `DATABASE_URL` / `DATABASE_USERNAME` / `DATABASE_PASSWORD`. Variables d'environnement **obligatoires** pour l'authentification et l'email :
-  - `JWT_SECRET` — secret de signature HMAC256 (≥ 32 caractères aléatoires).
-  - `RESEND_API_KEY` — clé API Resend (même fournisseur que le projet PÉNIEL de Cephas).
-  - `EMAIL_FROM` — adresse d'expédition (ex. `MLA Finance <no-reply@votre-domaine.org>`).
-  - `FRONTEND_BASE_URL` — URL publique du frontend, utilisée dans les liens d'activation/réinitialisation envoyés par email.
-  - `FRONTEND_ORIGIN` — origine autorisée en CORS (doit correspondre au domaine du frontend déployé).
+- `prod` : PostgreSQL via `DATABASE_URL` (format JDBC `jdbc:postgresql://hôte:port/base`) / `DATABASE_USERNAME` / `DATABASE_PASSWORD`. Variables d'environnement :
+  - **Obligatoires** : `JWT_SECRET` (secret HMAC256, ≥ 32 caractères aléatoires), `FRONTEND_BASE_URL` (URL du back-office, pour les liens d'activation/réinitialisation), `FRONTEND_ORIGIN` (origine CORS du back-office).
+  - `PUBLIC_FRONTEND_ORIGIN` — origine CORS du site public de don (`frontend-public/`), si déployé.
+  - `RESEND_API_KEY` / `EMAIL_FROM` — facultatives : sans clé, aucun email n'est envoyé (avertissement journalisé). Resend n'envoie qu'à l'adresse du compte tant qu'aucun domaine expéditeur n'est vérifié.
+  - `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (≥ 12 caractères) / `BOOTSTRAP_ADMIN_NAME` — amorçage du premier SUPER_ADMIN (`security.BootstrapAdminRunner`) : n'agit que si la table `users` est vide. **À retirer après la première connexion**, puis changer le mot de passe.
+  - `MEDIA_STORAGE_DIR` (défaut `/app/data/media-storage`) — répertoire des médias ; sur Railway, y monter un volume persistant (et `RAILWAY_RUN_UID=0` pour que le conteneur puisse y écrire), sinon les fichiers sont perdus à chaque redéploiement. `MEDIA_STORAGE=local` est la seule valeur gérée pour l'instant (un stockage objet R2/S3 pourra être ajouté derrière `MediaStorageService`).
+  - `LOG_LEVEL_APP` / `LOG_LEVEL_SECURITY` / `LOG_LEVEL_CORS` — niveaux de log (voir plus haut).
 
 ## Modèle de données (fondations)
 

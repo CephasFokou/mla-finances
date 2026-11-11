@@ -129,8 +129,21 @@ app:
   jwt:
     secret: ${JWT_SECRET}
   email:
-    resend-api-key: ${RESEND_API_KEY}
-    from: ${EMAIL_FROM}
+    # Facultative : sans clé, EmailService journalise un avertissement et n'envoie rien (utile en
+    # environnement de test sans domaine Resend vérifié).
+    resend-api-key: ${RESEND_API_KEY:}
+    from: ${EMAIL_FROM:MLA Finance <no-reply@mla-finance.dev>}
+  media:
+    # Stockage disque local (app.media.storage=local, valeur par défaut) : sur Railway, monter un
+    # volume persistant sur ce chemin, sinon les médias sont perdus à chaque redéploiement.
+    storage: ${MEDIA_STORAGE:local}
+    storage-dir: ${MEDIA_STORAGE_DIR:/app/data/media-storage}
+  bootstrap:
+    # Amorçage du premier SUPER_ADMIN (security.BootstrapAdminRunner) : n'agit que si la table
+    # users est vide. À retirer après la première connexion.
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+    admin-name: ${BOOTSTRAP_ADMIN_NAME:Administrateur}
   frontend-base-url: ${FRONTEND_BASE_URL}
   cors:
     # Deux origines de prod distinctes désormais : le back-office (FRONTEND_ORIGIN) et le site

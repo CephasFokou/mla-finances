@@ -9,8 +9,11 @@ RUN mvn -B clean package -DskipTests
 # ---- Runtime stage ----
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-RUN useradd --system --create-home mla
+RUN useradd --system --create-home mla \
+    && mkdir -p /app/data/media-storage \
+    && chown -R mla:mla /app/data
 COPY --from=build /app/target/mla-finance-backend-*.jar app.jar
 USER mla
+VOLUME ["/app/data"]
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
