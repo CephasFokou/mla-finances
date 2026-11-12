@@ -14,6 +14,5 @@ RUN useradd --system --create-home mla \
     && chown -R mla:mla /app/data
 COPY --from=build /app/target/mla-finance-backend-*.jar app.jar
 USER mla
-VOLUME ["/app/data"]
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
