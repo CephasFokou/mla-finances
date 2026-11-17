@@ -24,12 +24,17 @@ Pour travailler sur les données réelles du fichier de suivi (`MLA-ICC-YDE-FINA
    Base par défaut : `localhost:5432/mla_finance`, utilisateur système (surchargeable par `PGHOST`,
    `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`). Le script crée la base si besoin, applique les
    migrations, charge les données et affiche les totaux à comparer avec l'onglet Synthèse.
-3. Lancer l'application :
+3. Variables locales : `cp backend/.env.example backend/.env` et compléter (secret JWT, clé Resend, jeton
+   PawaPay sandbox…) ; `cp frontend-public/.env.example frontend-public/.env.local` (numéro de paiement MLA
+   facultatif). Détail dans `backend/README.md`.
+4. Lancer l'application :
    ```bash
-   cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev,local
-   cd frontend && npm run dev
+   ./scripts/dev-backend.sh                 # backend, profils dev,local, variables de backend/.env
+   cd frontend && npm run dev               # back-office : http://localhost:5173
+   cd frontend-public && npm run dev        # site de don : http://localhost:5180
    ```
-   Connexion : `admin@mla-finance.dev` / `admin1234`.
+   Connexion : `admin@mla-finance.dev` / `admin1234`. Les ports 5173 et 5180 sont stricts (ils
+   correspondent aux origines CORS de `backend/.env`) : libérer le port plutôt que laisser Vite en choisir un autre.
 
 Correspondance fichier ↔ application : voir `scripts/import-excel/import_journal.py` (en-tête) et
 `claude/module-grand-livre-spec.md` dans le Projet claude.ai.

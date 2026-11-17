@@ -7,10 +7,25 @@ API backend du système de gestion financière de la chorale MLA (ICC Yaoundé).
 - Java 21
 - Maven 3.9+ (`brew install maven`, ou l'installation bundlée de votre IDE — pas de wrapper `mvnw` fourni pour l'instant)
 
+## Variables locales : `backend/.env`
+
+```bash
+cp backend/.env.example backend/.env   # puis compléter (voir les commentaires du fichier)
+```
+
+Spring Boot lit `backend/.env` au démarrage (`spring.config.import` dans `application.yml`, aucune
+dépendance) ; les vraies variables d'environnement gardent la priorité. Contenu : `FRONTEND_ORIGIN` /
+`PUBLIC_FRONTEND_ORIGIN` (CORS, ports 5173 et 5180 fixés en `strictPort` côté Vite), `FRONTEND_BASE_URL`,
+`JWT_SECRET` (`openssl rand -base64 64`), `RESEND_API_KEY` / `EMAIL_FROM`, `DATABASE_*` (profil `local`),
+`PAWAPAY_*` (voir plus bas) et `RATE_LIMIT_TRUST_PROXY`. Les profils Spring ne peuvent pas y être fixés :
+utiliser `./scripts/dev-backend.sh [profils]` (défaut `dev,local`), qui exporte aussi le fichier dans
+l'environnement et vérifie que `JWT_SECRET` est renseigné.
+
 ## Démarrer en local
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+../scripts/dev-backend.sh            # dev,local : PostgreSQL local + variables de backend/.env
+mvn spring-boot:run -Dspring-boot.run.profiles=dev   # H2 en mémoire, base vide
 ```
 
 L'API démarre sur `http://localhost:8080`, avec une base H2 en mémoire (auto-migrée par Liquibase). L'authentification réelle est active même en profil `dev` (Cephas a choisi de ne pas garder de mode "tout ouvert" local, voir `claude/module-authentification-spec.md`) : un compte SUPER_ADMIN est créé automatiquement au démarrage (`security.DevAdminSeeder`) pour pouvoir se connecter tout de suite —
@@ -48,6 +63,28 @@ données du fichier de suivi : `../scripts/reset-local-db.sh` (voir le README ra
 
 `--app.migrate-only=true` applique les migrations puis arrête l'application (utilisé par ce script).
 
+## Paiement Mobile Money : PawaPay (`PAWAPAY_*`)
+
+Intégration de l'API PawaPay v2 (dépôts Orange Money / MTN MoMo), désactivée par défaut. Avec
+`PAWAPAY_ENABLED=true` et `PAWAPAY_API_TOKEN` (dashboard sandbox → Developers → API tokens), les
+canaux `ORANGE_MONEY` et `MTN_MOMO` du site de don passent « en ligne » : le donateur saisit son numéro,
+reçoit une demande de paiement sur son téléphone, et le don est confirmé **automatiquement** (Contribution
+créée) dès que PawaPay rapporte `COMPLETED`. Les autres canaux (carte, espèces, virement) restent en mode
+manuel. Détail des choix et des mesures de sécurité : `claude/module-paiement-pawapay-spec.md` (Projet
+claude.ai).
+
+- Sandbox : `PAWAPAY_BASE_URL=https://api.sandbox.pawapay.io` ; numéros de test qui aboutissent :
+  `237653456789` (MTN), `237693456789` (Orange) ; échecs simulés : `...019` plafond, `...029` compte
+  inconnu, `...039` refus du client, `...049` solde insuffisant (Orange), `...069` erreur.
+- Callback : URL à déclarer dans le dashboard PawaPay :
+  `<URL publique de l'API>/api/v1/webhooks/pawapay/<PAWAPAY_CALLBACK_SECRET>`. Le contenu du callback n'est
+  jamais cru : il déclenche une relecture du statut chez PawaPay. En local (poste injoignable), le job de
+  réconciliation relit les dons en cours toutes les 15 s — le flux complet fonctionne donc sans tunnel.
+- Bornes et anti-abus : `PAWAPAY_MIN_AMOUNT` / `PAWAPAY_MAX_AMOUNT` (100 / 500 000 FCFA, entiers),
+  3 demandes maximum par numéro et par 10 minutes, limitation de débit par IP (`app.rate-limit.*` :
+  60 req/min sur `/api/v1/public/**`, 20 sur `/api/v1/auth/**`, 120 sur `/api/v1/webhooks/**` ;
+  `RATE_LIMIT_TRUST_PROXY=true` derrière Railway pour lire `X-Forwarded-For`).
+
 ## Build
 
 ```bash
@@ -64,9 +101,12 @@ mvn clean verify
   - `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (≥ 12 caractères) / `BOOTSTRAP_ADMIN_NAME` — amorçage du premier SUPER_ADMIN (`security.BootstrapAdminRunner`) : n'agit que si la table `users` est vide. **À retirer après la première connexion**, puis changer le mot de passe.
   - `MEDIA_STORAGE_DIR` (défaut `/app/data/media-storage`) — répertoire des médias ; sur Railway, y monter un volume persistant (et `RAILWAY_RUN_UID=0` pour que le conteneur puisse y écrire), sinon les fichiers sont perdus à chaque redéploiement. `MEDIA_STORAGE=local` est la seule valeur gérée pour l'instant (un stockage objet R2/S3 pourra être ajouté derrière `MediaStorageService`).
   - `LOG_LEVEL_APP` / `LOG_LEVEL_SECURITY` / `LOG_LEVEL_CORS` — niveaux de log (voir plus haut).
+  - `PAWAPAY_ENABLED`, `PAWAPAY_BASE_URL` (`https://api.pawapay.io` en production, jeton différent du
+    sandbox), `PAWAPAY_API_TOKEN`, `PAWAPAY_CALLBACK_SECRET` — voir la section PawaPay.
+  - `RATE_LIMIT_TRUST_PROXY=true` — l'API est derrière le proxy Railway.
 
 ## Modèle de données (fondations)
 
 Premier lot d'entités, aligné sur le Document Technique validé : `Role`/`Permission`, `User` (invitation par email, mot de passe choisi par l'invité à l'activation — voir `service.AuthService`), `Donor`, `PaymentChannel` (canaux dynamiques), `DonationCategory`, `Project` (solde d'ouverture, séries récurrentes), `Contribution` (rattachement Project **XOR** DonationCategory, contrainte appliquée aussi en base ; `periodMonth` distinct de `transactionDate`).
 
-Les modules suivants (transferts, moyens de paiement PawaPay, notifications) seront ajoutés au fil des prochaines itérations, module par module, en s'appuyant sur les règles de gestion RG-01 à RG-20 du Cahier des Charges.
+Paiement en ligne : `PaymentTransaction` (intention de don, jamais une Contribution avant réception des fonds), `payment/PaymentProvider` avec `ManualPaymentProvider` et `payment/pawapay/PawaPayProvider`, réconciliation par callback + polling (RG-20).

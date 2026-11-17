@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,9 +31,15 @@ import java.time.Instant;
  * Pour l'instant, la seule implémentation de PaymentProvider (ManualPaymentProvider) ne fait
  * aucun appel externe : chaque don public reste PENDING jusqu'à ce qu'un membre du staff le
  * confirme manuellement (après vérification du paiement réel — Mobile Money, espèces au
- * secrétariat, etc.), ce qui crée alors la Contribution. Le jour où PawaPay sera branché, une
- * nouvelle implémentation de PaymentProvider fera cette confirmation automatiquement (webhook,
- * RG-20 idempotence) sans changer ce modèle.
+ * secrétariat, etc.), ce qui crée alors la Contribution.
+ * <p>
+ * En mode en ligne (PawaPayProvider, canaux Orange Money / MTN MoMo), le don passe en PROCESSING
+ * dès que PawaPay accepte la demande, puis est résolu (CONFIRMED → Contribution, ou FAILED) par la
+ * réconciliation (callback PawaPay ou job de polling), jamais par une action manuelle. Clés
+ * d'idempotence (RG-20) : {@code depositId}, UUID généré ici et envoyé à PawaPay (PawaPay ignore
+ * tout doublon), et le verrou de ligne pris par PaymentTransactionService.applyProviderOutcome
+ * avant tout changement d'état — un statut final n'évolue plus, quel que soit le nombre de
+ * callbacks ou de relectures reçus.
  */
 @Entity
 @Table(name = "payment_transactions")
@@ -104,10 +111,65 @@ public class PaymentTransaction {
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
 
+    /** UUID v4 envoyé à PawaPay comme depositId (null en mode manuel). Unique : clé d'idempotence RG-20. */
+    @Column(name = "deposit_id", length = 36, unique = true)
+    private String depositId;
+
+    /**
+     * Jeton opaque (UUID) remis au donateur pour suivre son don (GET /public/donations/{token}).
+     * Distinct de la référence lisible MLA-xxxxxx, trop courte pour être non devinable : on ne
+     * doit pas pouvoir énumérer les dons des autres.
+     */
+    @Column(name = "tracking_token", length = 36, unique = true)
+    private String trackingToken;
+
+    /** MSISDN du payeur Mobile Money (ex. 2376xxxxxxxx), uniquement en mode en ligne. */
+    @Column(name = "payer_phone", length = 20)
+    private String payerPhone;
+
+    /** Dernier statut brut rapporté par le prestataire (ACCEPTED, PROCESSING, COMPLETED, FAILED...). */
+    @Column(name = "provider_status", length = 30)
+    private String providerStatus;
+
+    @Column(name = "failure_code", length = 60)
+    private String failureCode;
+
+    @Column(name = "failure_message", length = 500)
+    private String failureMessage;
+
+    /** Prochaine relecture planifiée du statut auprès du prestataire ; null = plus de relecture automatique. */
+    @Column(name = "next_check_at")
+    private Instant nextCheckAt;
+
+    @Column(name = "check_count", nullable = false)
+    @Builder.Default
+    private int checkCount = 0;
+
+    /**
+     * Signalé au back-office : statut non résolu après le délai de réconciliation, ou anomalie
+     * (ex. paiement complété chez PawaPay après une annulation locale). N'est jamais un statut.
+     */
+    @Column(name = "needs_review", nullable = false)
+    @Builder.Default
+    private boolean needsReview = false;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) {
             createdAt = Instant.now();
         }
+        updatedAt = createdAt;
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    public boolean isOnline() {
+        return depositId != null;
     }
 }

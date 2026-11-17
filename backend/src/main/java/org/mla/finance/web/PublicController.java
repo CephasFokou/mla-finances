@@ -3,18 +3,18 @@ package org.mla.finance.web;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.ProjectStatus;
-import org.mla.finance.service.LedgerLookup;
 import org.mla.finance.service.LedgerReportsService;
 import org.mla.finance.service.PublicDonationService;
-import org.mla.finance.service.ReferenceDataService;
-import org.mla.finance.web.dto.PaymentChannelRef;
 import org.mla.finance.web.dto.PublicCollectionResponse;
 import org.mla.finance.web.dto.PublicDonationRequest;
 import org.mla.finance.web.dto.PublicDonationResponse;
+import org.mla.finance.web.dto.PublicDonationStatusResponse;
+import org.mla.finance.web.dto.PublicPaymentChannelResponse;
 import org.mla.finance.web.dto.PublicProjectResponse;
 import org.mla.finance.web.dto.PublicStatsResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +34,6 @@ import java.util.List;
 public class PublicController {
 
     private final PublicDonationService publicDonationService;
-    private final ReferenceDataService referenceDataService;
     private final LedgerReportsService ledgerReportsService;
 
     @GetMapping("/projects")
@@ -42,12 +41,10 @@ public class PublicController {
         return publicDonationService.activeProjects();
     }
 
-    /** Canaux proposés au public : tous les canaux actifs sauf « Autre », réservé aux transferts internes. */
+    /** Canaux proposés au public (actifs sauf « Autre »), avec online=true pour ceux payés via PawaPay. */
     @GetMapping("/payment-channels")
-    public List<PaymentChannelRef> paymentChannels() {
-        return referenceDataService.paymentChannels().stream()
-            .filter(c -> !LedgerLookup.OTHER_CHANNEL_CODE.equals(c.code()))
-            .toList();
+    public List<PublicPaymentChannelResponse> paymentChannels() {
+        return publicDonationService.paymentChannels();
     }
 
     /** Collectes ouvertes, à venir et clôturées, avec leurs totaux agrégés (jamais par donateur). */
@@ -79,5 +76,11 @@ public class PublicController {
     @PostMapping("/donations")
     public ResponseEntity<PublicDonationResponse> donate(@Valid @RequestBody PublicDonationRequest request) {
         return ResponseEntity.ok(publicDonationService.submit(request));
+    }
+
+    /** Suivi d'un don par son jeton opaque (jamais par la référence, trop courte pour être non devinable). */
+    @GetMapping("/donations/{trackingToken}")
+    public PublicDonationStatusResponse donationStatus(@PathVariable String trackingToken) {
+        return publicDonationService.status(trackingToken);
     }
 }

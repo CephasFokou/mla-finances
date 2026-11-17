@@ -698,7 +698,9 @@
       "pending": "En attente",
       "confirmed": "Confirmés",
       "cancelled": "Annulés",
-      "reset": "Réinitialiser les filtres"
+      "reset": "Réinitialiser les filtres",
+      "processing": "Paiement en cours",
+      "failed": "Échoués"
     },
     "columns": {
       "reference": "Référence",
@@ -712,7 +714,9 @@
     "anonymousLabel": "Anonyme",
     "status": {
       "PENDING": "En attente",
+      "PROCESSING": "Paiement en cours",
       "CONFIRMED": "Confirmé",
+      "FAILED": "Échoué",
       "CANCELLED": "Annulé"
     },
     "confirm": "Confirmer",
@@ -724,12 +728,16 @@
     "back": "Retour",
     "actionError": "L'action a échoué.",
     "confirmHint": "La confirmation crée une contribution réelle pour ce montant.",
-    "emptyHint": "Les dons soumis depuis la page publique apparaîtront ici.",
+    "emptyHint": "Les dons soumis depuis la page publique apparaissent ici : les dons Mobile Money (PawaPay) se confirment automatiquement, les autres attendent votre confirmation.",
     "pagination": {
       "previous": "Précédent",
       "next": "Suivant",
       "pageInfo": "Page {{page}} / {{total}}"
-    }
+    },
+    "viaPawaPay": "via PawaPay",
+    "needsReview": "À vérifier",
+    "recheck": "Vérifier le statut",
+    "abandon": "Abandonner"
   },
   "nature": {
     "MONTHLY_CONTRIBUTION": "Contribution mensuelle",

@@ -78,6 +78,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/v1/auth/**",
                     "/api/v1/public/**",
+                    // Callback PawaPay : protégé par un secret d'URL + relecture du statut chez PawaPay,
+                    // jamais par le contenu du callback (voir web.PawaPayWebhookController).
+                    "/api/v1/webhooks/**",
                     "/api/v1/media/*/file",
                     "/actuator/health/**",
                     "/actuator/info",

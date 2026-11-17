@@ -11,21 +11,32 @@ import org.mla.finance.domain.ProjectStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
 import org.mla.finance.payment.PaymentInitiationResult;
 import org.mla.finance.payment.PaymentProvider;
+import org.mla.finance.payment.PaymentProviderResolver;
+import org.mla.finance.payment.pawapay.PawaPayClient;
+import org.mla.finance.payment.pawapay.PawaPayProperties;
 import org.mla.finance.repository.ContributionRepository;
 import org.mla.finance.repository.PaymentChannelRepository;
 import org.mla.finance.repository.PaymentTransactionRepository;
 import org.mla.finance.repository.ProjectRepository;
 import org.mla.finance.web.dto.PublicDonationRequest;
 import org.mla.finance.web.dto.PublicDonationResponse;
+import org.mla.finance.web.dto.PublicDonationStatusResponse;
+import org.mla.finance.web.dto.PublicPaymentChannelResponse;
 import org.mla.finance.web.dto.PublicProjectResponse;
 import org.mla.finance.web.dto.PublicStatsResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Point d'entrée du front-office public (page de don) : lecture des projets actifs à soutenir et
@@ -34,24 +45,52 @@ import java.util.List;
  * (SecurityConfig exempte /api/v1/public/**). Les codes DON-xx utilisés ici sont des codes
  * d'erreur internes à ce module, pas des règles de gestion du Cahier des Charges (contrairement à
  * RG-15, repris tel quel car c'est bien la même règle que celle déjà appliquée côté back-office).
+ * <p>
+ * Garde-fous d'un don payé en ligne (PawaPay), tous appliqués AVANT d'appeler le prestataire :
+ * numéro Mobile Money camerounais valide et normalisé (DON-04), montant entier dans les bornes
+ * configurées (DON-05, le XAF n'a pas de décimales), et nombre de demandes récentes vers un même
+ * numéro plafonné (DON-06) — un attaquant ne doit pas pouvoir inonder un téléphone de demandes de
+ * validation de paiement, ni nous faire dépenser des appels API. La limitation de débit par IP
+ * (RateLimitFilter) s'ajoute à cela en amont.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PublicDonationService {
 
+    private static final Logger log = LoggerFactory.getLogger(PublicDonationService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** MSISDN camerounais : indicatif 237 + mobile à 9 chiffres commençant par 6. */
+    private static final Pattern CAMEROON_MSISDN = Pattern.compile("^2376\\d{8}$");
+    private static final Duration PHONE_THROTTLE_WINDOW = Duration.ofMinutes(10);
 
     private final ProjectRepository projectRepository;
     private final PaymentChannelRepository paymentChannelRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final ContributionRepository contributionRepository;
-    private final PaymentProvider paymentProvider;
+    private final PaymentProviderResolver paymentProviderResolver;
+    private final PawaPayProperties pawaPayProperties;
 
     public List<PublicProjectResponse> activeProjects() {
         return projectRepository.findByStatus(ProjectStatus.ACTIVE).stream()
             .map(this::toPublicResponse)
             .toList();
+    }
+
+    /** Canaux proposés au public : actifs, sauf « Autre » (transferts internes), avec leur mode de paiement. */
+    public List<PublicPaymentChannelResponse> paymentChannels() {
+        return paymentChannelRepository.findByActiveTrueOrderBySortOrderAsc().stream()
+            .filter(c -> !LedgerLookup.OTHER_CHANNEL_CODE.equals(c.getCode()))
+            .map(c -> new PublicPaymentChannelResponse(c.getId(), c.getCode(), c.getLabel(), paymentProviderResolver.isOnline(c)))
+            .toList();
+    }
+
+    /** Suivi d'un don par son jeton opaque : statut et motif d'échec seulement, rien d'interne. */
+    public PublicDonationStatusResponse status(String trackingToken) {
+        PaymentTransaction tx = paymentTransactionRepository.findByTrackingToken(trackingToken)
+            .orElseThrow(() -> new EntityNotFoundException("Don introuvable."));
+        return new PublicDonationStatusResponse(tx.getReference(), tx.getStatus().name(), tx.getFailureCode(),
+            tx.getStatus() == PaymentTransactionStatus.FAILED ? publicFailureMessage(tx.getFailureCode()) : null);
     }
 
     public PublicStatsResponse stats() {
@@ -80,6 +119,9 @@ public class PublicDonationService {
             throw new BusinessRuleViolationException("DON-02", "Le nom du donateur est requis, sauf pour un don anonyme.");
         }
 
+        PaymentProvider provider = paymentProviderResolver.resolve(channel);
+        boolean online = paymentProviderResolver.isOnline(channel);
+
         PaymentTransaction transaction = PaymentTransaction.builder()
             .project(project)
             .paymentChannel(channel)
@@ -88,15 +130,113 @@ public class PublicDonationService {
             .donorName(request.anonymous() ? null : request.donorName())
             .donorContact(request.anonymous() ? null : request.donorContact())
             .reference(generateReference())
+            .trackingToken(UUID.randomUUID().toString())
             .status(PaymentTransactionStatus.PENDING)
+            .provider(provider.code())
             .build();
 
-        PaymentInitiationResult result = paymentProvider.initiate(transaction);
-        transaction.setProvider(paymentProvider.code());
-        transaction.setProviderReference(result.providerReference());
+        if (online) {
+            String msisdn = normalizeMsisdn(request.payerPhone());
+            validateOnlineAmount(request.amount());
+            throttlePhone(msisdn);
+            transaction.setPayerPhone(msisdn);
+            // Clé d'idempotence RG-20 : générée et PERSISTÉE avant l'appel au prestataire, pour que
+            // toute relecture (callback, polling) retrouve la transaction même si la réponse à
+            // l'initiation se perd — et pour qu'un rejeu de la requête ne crée jamais deux dépôts.
+            transaction.setDepositId(UUID.randomUUID().toString());
+            transaction.setStatus(PaymentTransactionStatus.PROCESSING);
+            transaction.setNextCheckAt(Instant.now().plusSeconds(15));
+        }
+        PaymentTransaction saved = paymentTransactionRepository.saveAndFlush(transaction);
 
-        PaymentTransaction saved = paymentTransactionRepository.save(transaction);
-        return new PublicDonationResponse(saved.getReference(), saved.getStatus().name());
+        PaymentInitiationResult result;
+        try {
+            result = provider.initiate(saved);
+        } catch (RuntimeException e) {
+            // Jamais de rollback ici : la demande a peut-être atteint le prestataire. On garde la
+            // ligne (depositId persisté) et la réconciliation tranchera.
+            log.error("Initiation du paiement {} : erreur inattendue du prestataire {}", saved.getReference(), provider.code(), e);
+            result = online ? PaymentInitiationResult.processing(saved.getDepositId(), "UNKNOWN") : PaymentInitiationResult.manual();
+        }
+        saved.setStatus(result.status());
+        saved.setProviderStatus(result.providerStatus());
+        if (result.providerReference() != null) {
+            saved.setProviderReference(result.providerReference());
+        }
+        if (result.status() == PaymentTransactionStatus.FAILED) {
+            saved.setFailureCode(result.failureCode());
+            saved.setFailureMessage(result.failureMessage());
+            saved.setNextCheckAt(null);
+            log.info("Don {} refusé à l'initiation par {} : {}", saved.getReference(), provider.code(), result.failureCode());
+        } else if (result.status() == PaymentTransactionStatus.PENDING) {
+            saved.setNextCheckAt(null);
+        }
+        saved = paymentTransactionRepository.save(saved);
+
+        return new PublicDonationResponse(saved.getReference(), saved.getStatus().name(), online ? "ONLINE" : "MANUAL",
+            saved.getTrackingToken(),
+            saved.getStatus() == PaymentTransactionStatus.FAILED ? publicFailureMessage(saved.getFailureCode()) : null);
+    }
+
+    /** Accepte 6XXXXXXXX, 06..., +237 6..., 237 6... (espaces, points, tirets ignorés) ; renvoie 2376XXXXXXXX. */
+    static String normalizeMsisdn(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new BusinessRuleViolationException("DON-04", "Indiquez le numéro Mobile Money à débiter.");
+        }
+        String digits = raw.replaceAll("[\\s().-]", "");
+        if (digits.startsWith("+")) {
+            digits = digits.substring(1);
+        }
+        if (digits.startsWith("00237")) {
+            digits = digits.substring(2);
+        }
+        if (!digits.startsWith("237")) {
+            if (digits.startsWith("0") && digits.length() == 10) {
+                digits = digits.substring(1);
+            }
+            digits = "237" + digits;
+        }
+        if (!CAMEROON_MSISDN.matcher(digits).matches()) {
+            throw new BusinessRuleViolationException("DON-04",
+                "Numéro Mobile Money invalide : attendu un numéro camerounais à 9 chiffres commençant par 6 (ex. 6xx xx xx xx).");
+        }
+        return digits;
+    }
+
+    private void validateOnlineAmount(BigDecimal amount) {
+        if (amount.stripTrailingZeros().scale() > 0) {
+            throw new BusinessRuleViolationException("DON-05", "Un don Mobile Money doit être un montant entier en FCFA.");
+        }
+        if (amount.compareTo(pawaPayProperties.getMinAmount()) < 0 || amount.compareTo(pawaPayProperties.getMaxAmount()) > 0) {
+            throw new BusinessRuleViolationException("DON-05", "Un don Mobile Money doit être compris entre "
+                + pawaPayProperties.getMinAmount().toPlainString() + " et " + pawaPayProperties.getMaxAmount().toPlainString() + " FCFA.");
+        }
+    }
+
+    private void throttlePhone(String msisdn) {
+        long recent = paymentTransactionRepository.countByPayerPhoneAndCreatedAtAfter(msisdn, Instant.now().minus(PHONE_THROTTLE_WINDOW));
+        if (recent >= pawaPayProperties.getMaxInitiationsPerPhone()) {
+            log.warn("Anti-abus : {} demandes de paiement en 10 min vers {}", recent, PawaPayClient.maskPhone(msisdn));
+            throw new BusinessRuleViolationException("DON-06",
+                "Trop de demandes de paiement récentes pour ce numéro. Patientez quelques minutes avant de réessayer.");
+        }
+    }
+
+    /** Message montré au donateur selon le code d'échec PawaPay (jamais le message brut du prestataire). */
+    static String publicFailureMessage(String failureCode) {
+        if (failureCode == null) {
+            return "Le paiement n'a pas abouti. Vous pouvez réessayer.";
+        }
+        return switch (failureCode) {
+            case "PAYMENT_NOT_APPROVED" -> "Le paiement n'a pas été validé sur votre téléphone. Vous pouvez réessayer.";
+            case "INSUFFICIENT_BALANCE" -> "Solde insuffisant sur le compte Mobile Money.";
+            case "PAYER_LIMIT_REACHED" -> "Plafond de votre compte Mobile Money atteint pour ce paiement.";
+            case "PAYER_NOT_FOUND" -> "Ce numéro n'a pas de compte Mobile Money actif chez cet opérateur.";
+            case "PAYMENT_IN_PROGRESS" -> "Une autre demande de paiement est déjà en cours sur ce numéro. Terminez-la puis réessayez.";
+            case "DEPOSIT_NOT_FOUND" -> "La demande de paiement n'a pas pu être transmise. Vous pouvez réessayer.";
+            case "PROVIDER_TEMPORARILY_UNAVAILABLE" -> "L'opérateur est momentanément indisponible. Réessayez dans quelques minutes.";
+            default -> "Le paiement n'a pas abouti. Vous pouvez réessayer ou choisir un autre moyen.";
+        };
     }
 
     private PublicProjectResponse toPublicResponse(Project project) {

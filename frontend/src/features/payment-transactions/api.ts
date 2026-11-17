@@ -21,6 +21,8 @@ export const paymentTransactionsApi = {
   list: (filters: PaymentTransactionFilters) =>
     apiClient.get<PageResponse<PaymentTransactionResponse>>(`/payment-transactions${toQueryString(filters)}`),
   confirm: (id: number) => apiClient.post<PaymentTransactionResponse>(`/payment-transactions/${id}/confirm`),
+  /** Relecture immédiate du statut chez PawaPay (don en ligne). */
+  recheck: (id: number) => apiClient.post<PaymentTransactionResponse>(`/payment-transactions/${id}/recheck`),
   cancel: (id: number, input: PaymentTransactionCancelInput) =>
     apiClient.post<PaymentTransactionResponse>(`/payment-transactions/${id}/cancel`, input),
 }

@@ -19,6 +19,8 @@ export interface PublicPaymentChannel {
   id: number
   code: string
   label: string
+  /** true : demande de paiement poussée sur le téléphone (PawaPay) ; false : paiement manuel. */
+  online: boolean
 }
 
 export interface PublicDonationInput {
@@ -28,11 +30,27 @@ export interface PublicDonationInput {
   anonymous: boolean
   donorName?: string
   donorContact?: string
+  /** Numéro Mobile Money à débiter, requis pour un canal en ligne. */
+  payerPhone?: string
 }
+
+/** PENDING : manuel, en attente du secrétariat ; PROCESSING : validation sur le téléphone en cours. */
+export type PublicDonationStatus = 'PENDING' | 'PROCESSING' | 'CONFIRMED' | 'FAILED' | 'CANCELLED'
 
 export interface PublicDonationResult {
   reference: string
-  status: string
+  status: PublicDonationStatus
+  mode: 'ONLINE' | 'MANUAL'
+  /** Jeton opaque pour suivre le don (GET /public/donations/{token}). */
+  trackingToken: string
+  failureMessage: string | null
+}
+
+export interface PublicDonationStatusResult {
+  reference: string
+  status: PublicDonationStatus
+  failureCode: string | null
+  failureMessage: string | null
 }
 
 /** Collecte publique : montants agrégés seulement (GET /public/collections). */

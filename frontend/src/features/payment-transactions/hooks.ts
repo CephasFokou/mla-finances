@@ -30,6 +30,14 @@ export function useConfirmPaymentTransactionMutation() {
   })
 }
 
+export function useRecheckPaymentTransactionMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => paymentTransactionsApi.recheck(id),
+    onSuccess: () => invalidateDerivedQueries(queryClient),
+  })
+}
+
 export function useCancelPaymentTransactionMutation() {
   const queryClient = useQueryClient()
   return useMutation({

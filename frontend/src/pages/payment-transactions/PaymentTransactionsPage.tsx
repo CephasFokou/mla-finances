@@ -7,6 +7,7 @@ import {
   useCancelPaymentTransactionMutation,
   useConfirmPaymentTransactionMutation,
   usePaymentTransactionsQuery,
+  useRecheckPaymentTransactionMutation,
 } from '../../features/payment-transactions/hooks'
 import type {
   PaymentTransactionResponse,
@@ -17,20 +18,24 @@ import { formatDateTime, formatFcfa } from '../../lib/format'
 import styles from './PaymentTransactionsPage.module.scss'
 
 const PAGE_SIZE = 20
-const STATUSES: PaymentTransactionStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED']
+const STATUSES: PaymentTransactionStatus[] = ['PENDING', 'PROCESSING', 'CONFIRMED', 'FAILED', 'CANCELLED']
 
 const PILL_VARIANT: Record<PaymentTransactionStatus, string | undefined> = {
   PENDING: ui.pillAmber,
+  PROCESSING: ui.pillNavy,
   CONFIRMED: ui.pillGreen,
+  FAILED: ui.pillRed,
   CANCELLED: ui.pillGrey,
 }
 
 type PendingConfirm = { transaction: PaymentTransactionResponse }
 type PendingCancel = { transaction: PaymentTransactionResponse }
 
-// Vue back-office des dons publics (PaymentTransaction) : confirmer un don crée une Contribution
-// réelle (voir PaymentTransactionService.confirm côté backend) ; annuler ne touche jamais le solde
-// puisqu'aucune Contribution n'a encore été créée tant que le don est PENDING.
+// Vue back-office des dons publics (PaymentTransaction). Mode manuel (PENDING) : confirmer crée une
+// Contribution réelle, annuler ne touche jamais le solde. Mode en ligne (PawaPay, PROCESSING) : le
+// statut est piloté par le prestataire — ici on peut seulement forcer une relecture (« Vérifier le
+// statut ») et, si le don est resté sans réponse au-delà du délai de réconciliation (« à vérifier »),
+// l'abandonner.
 export function PaymentTransactionsPage() {
   const { t } = useTranslation()
   const [page, setPage] = useState(0)
@@ -44,6 +49,20 @@ export function PaymentTransactionsPage() {
 
   const confirmMutation = useConfirmPaymentTransactionMutation()
   const cancelMutation = useCancelPaymentTransactionMutation()
+  const recheckMutation = useRecheckPaymentTransactionMutation()
+  const [rowError, setRowError] = useState<{ id: number; message: string } | null>(null)
+
+  const runRecheck = async (transaction: PaymentTransactionResponse) => {
+    setRowError(null)
+    try {
+      await recheckMutation.mutateAsync(transaction.id)
+    } catch (error) {
+      setRowError({
+        id: transaction.id,
+        message: error instanceof ApiError ? error.message : t('paymentTransactions.actionError'),
+      })
+    }
+  }
 
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
   const [pendingCancel, setPendingCancel] = useState<PendingCancel | null>(null)
@@ -191,15 +210,55 @@ export function PaymentTransactionsPage() {
                       )}
                     </td>
                     <td>{transaction.project?.name ?? transaction.category?.name ?? '—'}</td>
-                    <td>{transaction.paymentChannel.label}</td>
+                    <td>
+                      <div className={ui.cellMain}>{transaction.paymentChannel.label}</div>
+                      {transaction.online && (
+                        <div className={ui.cellSub}>
+                          {t('paymentTransactions.viaPawaPay')}
+                          {transaction.payerPhone ? ` · ${transaction.payerPhone}` : ''}
+                        </div>
+                      )}
+                    </td>
                     <td className={ui.cellSub}>{formatDateTime(transaction.createdAt)}</td>
                     <td>
                       <span className={`${ui.pill} ${PILL_VARIANT[transaction.status]}`}>
                         {t(`paymentTransactions.status.${transaction.status}`)}
                       </span>
+                      {transaction.needsReview && (
+                        <span className={`${ui.pill} ${ui.pillAmber}`} style={{ marginLeft: 6 }}>
+                          {t('paymentTransactions.needsReview')}
+                        </span>
+                      )}
+                      {transaction.status === 'FAILED' && transaction.failureCode && (
+                        <div className={ui.cellSub}>{transaction.failureCode}</div>
+                      )}
+                      {rowError?.id === transaction.id && <div className={ui.error}>{rowError.message}</div>}
                     </td>
                     <td className={`${ui.num} ${ui.cellMain}`}>{formatFcfa(transaction.amount)}</td>
                     <td>
+                      {transaction.status === 'PROCESSING' && (
+                        <div className={styles.rowActions}>
+                          {transaction.needsReview && (
+                            <button
+                              type="button"
+                              className={`${ui.btn} ${ui.btnSecondary} ${ui.btnSm}`}
+                              onClick={() => setPendingCancel({ transaction })}
+                            >
+                              <Icon name="x" strokeWidth={2.4} />
+                              {t('paymentTransactions.abandon')}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className={`${ui.btn} ${ui.btnPrimary} ${ui.btnSm}`}
+                            disabled={recheckMutation.isPending}
+                            onClick={() => void runRecheck(transaction)}
+                          >
+                            <Icon name="repeat" strokeWidth={2.4} />
+                            {t('paymentTransactions.recheck')}
+                          </button>
+                        </div>
+                      )}
                       {transaction.status === 'PENDING' && (
                         <div className={styles.rowActions}>
                           <button

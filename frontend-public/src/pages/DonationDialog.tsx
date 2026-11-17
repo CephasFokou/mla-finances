@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { IccLogo } from '../components/IccLogo'
-import { usePublicPaymentChannelsQuery, useSubmitPublicDonationMutation } from '../features/public/hooks'
-import type { PublicCollection } from '../features/public/types'
+import {
+  useDonationStatusQuery,
+  usePublicPaymentChannelsQuery,
+  useSubmitPublicDonationMutation,
+} from '../features/public/hooks'
+import type { PublicCollection, PublicDonationStatus } from '../features/public/types'
 import { ApiError } from '../lib/apiClient'
 import { formatFcfa } from '../lib/format'
 import styles from './DonationDialog.module.scss'
@@ -25,10 +29,15 @@ interface DonationDialogProps {
   initialCollectionId: number | null
 }
 
+/** Au-delà de ce délai d'attente de la validation Mobile Money, on explique au donateur qu'il peut fermer. */
+const LONG_WAIT_MS = 120_000
+
 /**
  * Parcours de don en trois étapes (collecte, montant, paiement), puis « l'éclosion » : le logo se
- * redéploie autour de la confirmation. Le don crée une intention de paiement que le secrétariat
- * confirme à réception des fonds (aucun prestataire de paiement branché pour l'instant).
+ * redéploie autour de la confirmation. Deux modes selon le canal choisi : en ligne (Orange Money /
+ * MTN MoMo via PawaPay — une demande de paiement est poussée sur le téléphone, la page suit le
+ * statut jusqu'à la confirmation ou l'échec) ou manuel (le donateur paie de son côté, le
+ * secrétariat confirme à réception des fonds).
  */
 /** Monté seulement quand il est ouvert : chaque ouverture repart d'un parcours vierge. */
 export function DonationDialog({
@@ -50,7 +59,9 @@ export function DonationDialog({
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
   const [channelId, setChannelId] = useState<number | null>(null)
+  const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [longWait, setLongWait] = useState(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -62,11 +73,31 @@ export function DonationDialog({
   const collection = collections.find((c) => c.id === collectionId)
   const channel = channels?.find((c) => c.id === channelId)
   const result = mutation.data
+  const online = !!channel?.online
+  const phoneDigits = phone.replace(/\D/g, '')
+  const phoneLooksValid =
+    phoneDigits.length === 9 || (phoneDigits.length === 12 && phoneDigits.startsWith('237'))
+
+  // Suivi d'un don en ligne tant qu'il n'est pas final (voir useDonationStatusQuery).
+  const tracking =
+    result && result.mode === 'ONLINE' && result.status === 'PROCESSING' ? result.trackingToken : null
+  const statusQuery = useDonationStatusQuery(tracking)
+  const liveStatus: PublicDonationStatus | undefined = statusQuery.data?.status ?? result?.status
+  const failureMessage = statusQuery.data?.failureMessage ?? result?.failureMessage ?? null
+
+  useEffect(() => {
+    if (!tracking) return
+    const timer = window.setTimeout(() => setLongWait(true), LONG_WAIT_MS)
+    return () => {
+      window.clearTimeout(timer)
+      setLongWait(false)
+    }
+  }, [tracking])
 
   const canContinue =
     (step === 1 && !!collection) ||
     (step === 2 && value > 0 && (anonymous || name.trim().length > 0)) ||
-    (step === 3 && !!channel && !mutation.isPending)
+    (step === 3 && !!channel && (!online || phoneLooksValid) && !mutation.isPending)
 
   const reset = () => {
     mutation.reset()
@@ -74,7 +105,15 @@ export function DonationDialog({
     setAmount(null)
     setCustom('')
     setChannelId(null)
+    setPhone('')
     setError(null)
+  }
+
+  /** Après un échec Mobile Money : on garde la collecte, le montant et le nom, on revient au paiement. */
+  const retry = () => {
+    mutation.reset()
+    setError(null)
+    setStep(3)
   }
 
   const close = () => onClose()
@@ -85,6 +124,7 @@ export function DonationDialog({
     if (step === 2 && !anonymous && !name.trim()) return setError(t('public.dialog.nameRequired'))
     if (step < 3) return setStep(step + 1)
     if (!collection || !channel) return
+    if (online && !phoneLooksValid) return setError(t('public.dialog.phoneInvalid'))
     try {
       await mutation.mutateAsync({
         projectId: collection.id,
@@ -93,6 +133,7 @@ export function DonationDialog({
         anonymous,
         donorName: anonymous ? undefined : name.trim(),
         donorContact: anonymous ? undefined : contact.trim() || undefined,
+        payerPhone: online ? phoneDigits : undefined,
       })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('public.dialog.error'))
@@ -109,21 +150,74 @@ export function DonationDialog({
         close()
       }}
     >
-      {result ? (
+      {result && result.mode === 'ONLINE' && liveStatus === 'PROCESSING' ? (
+        <div className={styles.waiting} aria-live="polite">
+          <span className={styles.spinner} aria-hidden="true" />
+          <h2 id="donation-title" className={styles.successTitle}>
+            {t('public.dialog.waitingTitle')}
+          </h2>
+          <p className={styles.successText}>
+            {t('public.dialog.waitingText', {
+              amount: formatFcfa(value),
+              phone: phoneDigits.replace(/^237/, ''),
+              channel: channel?.label ?? '',
+            })}
+          </p>
+          <p className={styles.successText}>
+            {longWait ? t('public.dialog.waitingLong') : t('public.dialog.waitingHint')}
+          </p>
+          <div className={styles.reference}>
+            {t('public.dialog.reference')} <strong>{result.reference}</strong>
+          </div>
+          <div className={styles.successActions}>
+            <button type="button" className={styles.ctaGhost} onClick={close}>
+              {t('public.dialog.close')}
+            </button>
+          </div>
+        </div>
+      ) : result && result.mode === 'ONLINE' && (liveStatus === 'FAILED' || liveStatus === 'CANCELLED') ? (
+        <div className={styles.failure} role="alert">
+          <span className={styles.failureIcon} aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 8v5M12 16.5v.5M4.5 19h15L12 5z" />
+            </svg>
+          </span>
+          <h2 id="donation-title" className={styles.failureTitle}>
+            {t('public.dialog.failedTitle')}
+          </h2>
+          <p className={styles.failureText}>{failureMessage ?? t('public.dialog.failedText')}</p>
+          <div className={styles.reference}>
+            {t('public.dialog.reference')} <strong>{result.reference}</strong>
+          </div>
+          <div className={styles.successActions}>
+            <button type="button" className={styles.ctaGold} onClick={retry}>
+              {t('public.dialog.retry')}
+            </button>
+            <button type="button" className={styles.ctaGhost} onClick={close}>
+              {t('public.dialog.done')}
+            </button>
+          </div>
+        </div>
+      ) : result ? (
         <div className={styles.success}>
           <span className={styles.ring} aria-hidden="true" />
           <IccLogo animated letterColor="#FFFFFF" className={styles.successLogo} />
           <h2 id="donation-title" className={styles.successTitle}>
-            {t('public.dialog.successTitle')}
+            {result.mode === 'ONLINE' ? t('public.dialog.paidTitle') : t('public.dialog.successTitle')}
           </h2>
           <p className={styles.successText}>
-            {t('public.dialog.successText', {
-              amount: formatFcfa(value),
-              collection: collection?.name ?? '',
-              channel: channel?.label ?? '',
-            })}
+            {result.mode === 'ONLINE'
+              ? t('public.dialog.paidText', {
+                  amount: formatFcfa(value),
+                  collection: collection?.name ?? '',
+                })
+              : t('public.dialog.successText', {
+                  amount: formatFcfa(value),
+                  collection: collection?.name ?? '',
+                  channel: channel?.label ?? '',
+                })}
           </p>
-          {PAYMENT_NUMBER && (
+          {result.mode === 'MANUAL' && PAYMENT_NUMBER && (
             <p className={styles.successText}>{t('public.dialog.payTo', { number: PAYMENT_NUMBER })}</p>
           )}
           <div className={styles.reference}>
@@ -310,7 +404,23 @@ export function DonationDialog({
                     )
                   })}
                 </div>
-                <p className={styles.note}>{t('public.dialog.manualNote')}</p>
+                {online && (
+                  <label className={styles.field}>
+                    {t('public.dialog.phone', { channel: channel?.label ?? '' })}
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      value={phone}
+                      placeholder={t('public.dialog.phonePlaceholder')}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                    <span className={styles.hint}>{t('public.dialog.phoneHint')}</span>
+                  </label>
+                )}
+                <p className={styles.note}>
+                  {online ? t('public.dialog.onlineNote') : t('public.dialog.manualNote')}
+                </p>
               </div>
             )}
 
@@ -326,8 +436,12 @@ export function DonationDialog({
               {step < 3
                 ? t('public.dialog.continue')
                 : mutation.isPending
-                  ? t('public.dialog.submitting')
-                  : t('public.dialog.submit')}
+                  ? online
+                    ? t('public.dialog.paying')
+                    : t('public.dialog.submitting')
+                  : online
+                    ? t('public.dialog.pay', { amount: formatFcfa(value) })
+                    : t('public.dialog.submit')}
             </button>
           </footer>
         </div>

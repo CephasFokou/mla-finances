@@ -13,6 +13,8 @@ public record PublicDonationRequest(
     @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 12, fraction = 2) BigDecimal amount,
     boolean anonymous,
     @Size(max = 160) String donorName,
-    @Size(max = 160) String donorContact
+    @Size(max = 160) String donorContact,
+    /** Numéro Mobile Money à débiter, requis uniquement pour un canal payé en ligne (ex. 6xxxxxxxx ou 2376xxxxxxxx). */
+    @Size(max = 20) String payerPhone
 ) {
 }

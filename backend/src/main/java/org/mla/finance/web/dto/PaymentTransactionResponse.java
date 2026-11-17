@@ -21,7 +21,15 @@ public record PaymentTransactionResponse(
     Long contributionId,
     String cancelReason,
     Instant createdAt,
-    Instant confirmedAt
+    Instant confirmedAt,
+    boolean online,
+    String payerPhone,
+    String providerStatus,
+    String failureCode,
+    String failureMessage,
+    boolean needsReview,
+    Instant nextCheckAt,
+    Instant updatedAt
 ) {
     public static PaymentTransactionResponse from(PaymentTransaction t) {
         return new PaymentTransactionResponse(
@@ -39,7 +47,15 @@ public record PaymentTransactionResponse(
             t.getContribution() != null ? t.getContribution().getId() : null,
             t.getCancelReason(),
             t.getCreatedAt(),
-            t.getConfirmedAt()
+            t.getConfirmedAt(),
+            t.isOnline(),
+            t.getPayerPhone(),
+            t.getProviderStatus(),
+            t.getFailureCode(),
+            t.getFailureMessage(),
+            t.isNeedsReview(),
+            t.getNextCheckAt(),
+            t.getUpdatedAt()
         );
     }
 }

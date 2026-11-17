@@ -3,6 +3,15 @@ spring:
     name: mla-finance-backend
   profiles:
     default: dev
+  config:
+    # Variables locales : backend/.env (ignoré par git, modèle dans backend/.env.example) est lu
+    # comme un fichier .properties — chaque ligne CLE=valeur devient une propriété que les
+    # ${CLE:...} ci-dessous résolvent. Les vraies variables d'environnement gardent la priorité
+    # (Railway en prod). Aucune dépendance (pas de dotenv), et "optional:" évite toute erreur si
+    # le fichier n'existe pas (CI, prod). spring.profiles.active ne peut PAS y être défini
+    # (interdit par Spring dans un fichier importé) : passer les profils en ligne de commande, ou
+    # via scripts/dev-backend.sh qui le fait pour vous.
+    import: optional:file:.env[.properties]
   jpa:
     open-in-view: false
     hibernate:
@@ -41,6 +50,50 @@ management:
 app:
   jwt:
     expiration-minutes: 480
+  payment:
+    pawapay:
+      # Intégration PawaPay (Orange Money / MTN MoMo). Désactivée par défaut : tous les dons
+      # restent alors en mode « manuel » (confirmation par le secrétariat). Voir
+      # payment/pawapay/* et claude/module-paiement-pawapay-spec.md.
+      enabled: ${PAWAPAY_ENABLED:false}
+      # Sandbox par défaut : https://api.sandbox.pawapay.io ; production : https://api.pawapay.io
+      # (les jetons diffèrent entre les deux — ne jamais pointer la prod avec un jeton sandbox).
+      base-url: ${PAWAPAY_BASE_URL:https://api.sandbox.pawapay.io}
+      api-token: ${PAWAPAY_API_TOKEN:}
+      # Segment secret de l'URL de callback (/api/v1/webhooks/pawapay/{secret}) : un callback
+      # dont le secret ne correspond pas est ignoré (404). Le contenu du callback n'est de toute
+      # façon jamais cru sur parole : le statut est toujours re-lu auprès de PawaPay.
+      callback-secret: ${PAWAPAY_CALLBACK_SECRET:}
+      currency: XAF
+      country: CMR
+      # Correspondance canal MLA (code payment_channels) -> code opérateur PawaPay. Un canal
+      # absent de cette liste reste en mode manuel (carte, espèces, virement).
+      providers:
+        "[ORANGE_MONEY]": ORANGE_CMR
+        "[MTN_MOMO]": MTN_MOMO_CMR
+      # Bornes d'un don en ligne (FCFA, entiers : le XAF n'a pas de décimales chez PawaPay).
+      min-amount: ${PAWAPAY_MIN_AMOUNT:100}
+      max-amount: ${PAWAPAY_MAX_AMOUNT:500000}
+      # Anti-abus : nombre maximal de demandes de paiement envoyées au même numéro sur 10 minutes
+      # (un attaquant ne doit pas pouvoir inonder un téléphone de demandes de validation).
+      max-initiations-per-phone: 3
+      # Réconciliation : fréquence du job qui relit les statuts non finaux, et délai au-delà
+      # duquel on cesse d'interroger automatiquement (le don passe alors « à vérifier » dans le
+      # back-office — jamais marqué échoué d'office tant que PawaPay ne l'a pas dit).
+      poll-interval-ms: 15000
+      pending-timeout-minutes: 30
+      connect-timeout-ms: 5000
+      read-timeout-ms: 15000
+  rate-limit:
+    # Limitation de débit par adresse IP sur les surfaces non authentifiées (voir
+    # security/RateLimitFilter). Fenêtre glissante d'une minute, 429 + Retry-After au-delà.
+    enabled: true
+    # Faire confiance à X-Forwarded-For (première IP) uniquement derrière un proxy maîtrisé
+    # (Railway, Netlify) : en local la valeur est l'adresse TCP réelle.
+    trust-proxy: ${RATE_LIMIT_TRUST_PROXY:false}
+    public-requests-per-minute: ${RATE_LIMIT_PUBLIC_PER_MINUTE:60}
+    auth-requests-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:20}
+    webhook-requests-per-minute: ${RATE_LIMIT_WEBHOOK_PER_MINUTE:120}
 
 # Niveaux de log paramétrables sans recompiler : exporter LOG_LEVEL_APP/LOG_LEVEL_SECURITY/
 # LOG_LEVEL_CORS avant de lancer le backend (n'importe quel profil, y compris prod pour du
@@ -71,20 +124,22 @@ app:
   media:
     storage-dir: ./data/media-storage
   jwt:
-    # Secret de développement uniquement : fixe, versionné, jamais utilisé en prod (voir bloc prod
-    # ci-dessous où il est obligatoire via JWT_SECRET). >= 32 caractères pour HS256.
-    secret: dev-only-insecure-secret-key-do-not-use-in-prod-1234567890
+    # JWT_SECRET (backend/.env) si défini, sinon un secret de développement fixe et versionné,
+    # jamais utilisé en prod (bloc prod ci-dessous : JWT_SECRET obligatoire). >= 32 caractères
+    # pour HS256.
+    secret: ${JWT_SECRET:dev-only-insecure-secret-key-do-not-use-in-prod-1234567890}
   email:
     # Vide par défaut (EmailService journalise un avertissement et n'envoie rien) ; renseigner
-    # RESEND_API_KEY localement pour tester l'envoi réel avec la clé Resend de test de Cephas.
+    # RESEND_API_KEY dans backend/.env pour tester l'envoi réel avec la clé Resend de Cephas.
     resend-api-key: ${RESEND_API_KEY:}
-    from: "MLA Finance <no-reply@mla-finance.dev>"
-  frontend-base-url: http://localhost:5173
+    from: "${EMAIL_FROM:MLA Finance <no-reply@mla-finance.dev>}"
+  frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   cors:
-    # Pattern, pas une origine exacte : Vite choisit un port différent dès que 5173 est occupé
-    # (5174 observé en test), setAllowedOriginPatterns gère ça sans qu'il faille le mettre à jour
-    # à chaque fois (voir security.SecurityConfig.corsConfigurationSource).
-    allowed-origins: http://localhost:*
+    # Mêmes variables qu'en prod (FRONTEND_ORIGIN, PUBLIC_FRONTEND_ORIGIN — voir backend/.env),
+    # avec un repli sur le pattern http://localhost:* : Vite choisit un port différent dès que
+    # 5173 est occupé (5174 observé en test), setAllowedOriginPatterns gère ça (voir
+    # security.SecurityConfig.corsConfigurationSource).
+    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:*},${PUBLIC_FRONTEND_ORIGIN:}
 
 # Par défaut en dev : logs applicatifs + sécurité + CORS en DEBUG, pour voir tout de suite un rejet
 # CORS, un 401 ou un jeton invalide plutôt que de deviner. Reste surchargeable (LOG_LEVEL_APP=INFO

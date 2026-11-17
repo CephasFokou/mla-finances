@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { publicDonationApi } from './api'
-import type { PublicDonationInput } from './types'
+import type { PublicDonationInput, PublicDonationStatus } from './types'
+
+const FINAL_STATUSES: PublicDonationStatus[] = ['CONFIRMED', 'FAILED', 'CANCELLED']
+/** Fréquence du suivi d'un don en ligne : 3 s (≈ 20 req/min, sous la limite publique de 60/min). */
+const STATUS_POLL_INTERVAL_MS = 3000
 
 export function usePublicProjectsQuery() {
   return useQuery({ queryKey: ['public-projects'], queryFn: publicDonationApi.projects })
@@ -20,6 +24,24 @@ export function useSubmitPublicDonationMutation() {
   return useMutation({
     mutationFn: (input: PublicDonationInput) => publicDonationApi.donate(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['public-collections'] }),
+  })
+}
+
+/**
+ * Suivi d'un don en ligne pendant que le donateur valide sur son téléphone : interroge le statut
+ * toutes les 3 s jusqu'à un statut final, puis s'arrête. Désactivé sans jeton.
+ */
+export function useDonationStatusQuery(trackingToken: string | null) {
+  return useQuery({
+    queryKey: ['public-donation-status', trackingToken],
+    queryFn: () => publicDonationApi.donationStatus(trackingToken as string),
+    enabled: !!trackingToken,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status && FINAL_STATUSES.includes(status) ? false : STATUS_POLL_INTERVAL_MS
+    },
+    refetchIntervalInBackground: true,
+    retry: 2,
   })
 }
 

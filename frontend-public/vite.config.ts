@@ -10,5 +10,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5180,
+    // Strict : PUBLIC_FRONTEND_ORIGIN (backend/.env) est une origine CORS exacte.
+    strictPort: true,
   },
 })

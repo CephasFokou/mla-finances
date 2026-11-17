@@ -1,7 +1,8 @@
 // Vue back-office des dons publics (PaymentTransaction) — voir features/public pour le formulaire
 // côté donateur.
 
-export type PaymentTransactionStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+/** PENDING : manuel, à confirmer ; PROCESSING : en ligne (PawaPay), validation en cours sur le téléphone. */
+export type PaymentTransactionStatus = 'PENDING' | 'PROCESSING' | 'CONFIRMED' | 'FAILED' | 'CANCELLED'
 
 export interface RefOption {
   id: number
@@ -30,6 +31,16 @@ export interface PaymentTransactionResponse {
   cancelReason: string | null
   createdAt: string
   confirmedAt: string | null
+  /** true : payé en ligne via PawaPay (statut piloté par le prestataire, pas de confirmation manuelle). */
+  online: boolean
+  payerPhone: string | null
+  providerStatus: string | null
+  failureCode: string | null
+  failureMessage: string | null
+  /** Sans réponse du prestataire après le délai de réconciliation, ou anomalie : à regarder. */
+  needsReview: boolean
+  nextCheckAt: string | null
+  updatedAt: string | null
 }
 
 export interface PageResponse<T> {

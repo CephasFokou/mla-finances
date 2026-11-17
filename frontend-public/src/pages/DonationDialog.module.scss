@@ -498,3 +498,90 @@
     display: none;
   }
 }
+
+// Attente de la validation Mobile Money : même fond que la réussite, un anneau qui tourne à la
+// place du logo (l'éclosion est réservée au paiement effectivement reçu).
+.waiting {
+  @extend .success;
+}
+
+.spinner {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 5px solid rgb(255 255 255 / 18%);
+  border-top-color: $gold;
+  animation: spin 1s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 3s;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Échec du paiement : fond clair, pas de cérémonie, un bouton pour réessayer.
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100%;
+  padding: 40px 28px;
+  background: $paper;
+  color: $ink;
+  text-align: center;
+  box-sizing: border-box;
+
+  @media (min-width: 640px) {
+    min-height: 520px;
+  }
+
+  .reference {
+    background: $violet-tint;
+    color: $ink;
+  }
+
+  .ctaGhost {
+    color: $violet;
+    box-shadow: inset 0 0 0 1.5px $violet;
+  }
+}
+
+.failureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgb(223 58 58 / 12%);
+  color: $red;
+
+  svg {
+    width: 36px;
+    height: 36px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.failureTitle {
+  margin: 8px 0 0;
+  font: 800 26px/1.15 $font-display;
+}
+
+.failureText {
+  max-width: 340px;
+  margin: 0;
+  color: $ink-soft;
+  font: 400 17px/1.55 $font-body;
+}

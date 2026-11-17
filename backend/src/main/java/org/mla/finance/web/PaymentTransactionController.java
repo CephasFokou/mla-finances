@@ -3,6 +3,8 @@ package org.mla.finance.web;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.PaymentTransactionStatus;
+import org.mla.finance.exception.BusinessRuleViolationException;
+import org.mla.finance.payment.pawapay.PawaPayReconciliationService;
 import org.mla.finance.service.PaymentTransactionService;
 import org.mla.finance.web.dto.CancelRequest;
 import org.mla.finance.web.dto.PaymentTransactionResponse;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentTransactionController {
 
     private final PaymentTransactionService paymentTransactionService;
+    private final PawaPayReconciliationService reconciliationService;
 
     @GetMapping
     public Page<PaymentTransactionResponse> list(
@@ -44,6 +47,23 @@ public class PaymentTransactionController {
     @PreAuthorize("hasAuthority('MANAGE_CONTRIBUTIONS')")
     public PaymentTransactionResponse confirm(@PathVariable Long id) {
         return paymentTransactionService.confirm(id);
+    }
+
+    /**
+     * Relecture immédiate du statut chez PawaPay pour un don en ligne (callback perdu, don « à
+     * vérifier »...). Idempotent : ne fait que ce que le polling aurait fait.
+     */
+    @PostMapping("/{id}/recheck")
+    @PreAuthorize("hasAuthority('MANAGE_CONTRIBUTIONS')")
+    public PaymentTransactionResponse recheck(@PathVariable Long id) {
+        PaymentTransactionResponse current = paymentTransactionService.get(id);
+        if (!current.online()) {
+            throw new BusinessRuleViolationException("DON-07", "Ce don n'est pas payé en ligne : confirmez-le ou annulez-le manuellement.");
+        }
+        reconciliationService.reconcile(id);
+        // Relecture dans une transaction dédiée : l'entité renvoyée par la réconciliation est détachée
+        // (associations paresseuses non chargeables ici, open-in-view désactivé).
+        return paymentTransactionService.get(id);
     }
 
     @PostMapping("/{id}/cancel")
