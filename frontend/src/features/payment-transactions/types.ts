@@ -41,6 +41,23 @@ export interface PaymentTransactionResponse {
   needsReview: boolean
   nextCheckAt: string | null
   updatedAt: string | null
+  /** DONATION : don à une collecte ; MONTHLY_CONTRIBUTION : contribution mensuelle d'un membre (caisse). */
+  kind: PaymentTransactionKind
+  /** Membre qui paie (contribution mensuelle). */
+  member: MemberRef | null
+  /** Mois couverts « YYYY-MM » (contribution mensuelle). */
+  months: string[]
+  amountPerMonth: number | null
+  /** Mois déjà payés par ce membre en dehors de ce don : simple avertissement. */
+  alreadyPaidMonths: string[]
+}
+
+export type PaymentTransactionKind = 'DONATION' | 'MONTHLY_CONTRIBUTION'
+
+export interface MemberRef {
+  id: number
+  fullName: string | null
+  displayName: string | null
 }
 
 export interface PageResponse<T> {

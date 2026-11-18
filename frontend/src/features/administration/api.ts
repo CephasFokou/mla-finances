@@ -1,5 +1,7 @@
 import { apiClient } from '../../lib/apiClient'
 import type {
+  MonthlyContributionSettings,
+  MonthlyContributionSettingsInput,
   RolePermissionsUpdateInput,
   RoleResponse,
   UserInviteInput,
@@ -24,6 +26,12 @@ export const administrationApi = {
   reactivateUser: (id: number) => apiClient.post<UserResponse>(`/users/${id}/reactivate`),
 
   resetUserPassword: (id: number) => apiClient.post<void>(`/users/${id}/reset-password`),
+
+  getMonthlyContributionSettings: () =>
+    apiClient.get<MonthlyContributionSettings>('/settings/monthly-contribution'),
+
+  updateMonthlyContributionSettings: (input: MonthlyContributionSettingsInput) =>
+    apiClient.put<MonthlyContributionSettings>('/settings/monthly-contribution', input),
 
   listRoles: () => apiClient.get<RoleResponse[]>('/roles'),
 

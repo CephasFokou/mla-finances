@@ -539,7 +539,8 @@
     "tabs": {
       "users": "Utilisateurs",
       "roles": "Rôles & permissions",
-      "channels": "Canaux de paiement"
+      "channels": "Canaux de paiement",
+      "monthlyContribution": "Contribution mensuelle"
     },
     "permissions": {
       "VIEW_DASHBOARD": "Tableau de bord",
@@ -705,7 +706,7 @@
     "columns": {
       "reference": "Référence",
       "donor": "Donateur",
-      "envelope": "Projet",
+      "envelope": "Objet",
       "channel": "Canal",
       "amount": "Montant",
       "status": "Statut",
@@ -737,7 +738,15 @@
     "viaPawaPay": "via PawaPay",
     "needsReview": "À vérifier",
     "recheck": "Vérifier le statut",
-    "abandon": "Abandonner"
+    "abandon": "Abandonner",
+    "kind": {
+      "DONATION": "Collecte",
+      "MONTHLY_CONTRIBUTION": "Contribution mensuelle"
+    },
+    "monthsCount": "{{count}} mois × {{amount}}",
+    "alreadyPaid": "Déjà payé : {{months}}",
+    "alreadyPaidHint": "Ce membre a déjà une contribution pour ce mois. Elle sera créée quand même : corrigez ensuite si c'est un doublon.",
+    "confirmHintMonthly": "La confirmation crée {{count}} contributions mensuelles de {{amount}} pour {{member}} ({{months}})."
   },
   "nature": {
     "MONTHLY_CONTRIBUTION": "Contribution mensuelle",
@@ -852,5 +861,17 @@
     "activate": "Réactiver",
     "deactivate": "Désactiver",
     "genericError": "Opération impossible."
+  },
+  "monthlyContributionSettings": {
+    "intro": "Sur le site de don public, chaque membre actif peut payer sa contribution mensuelle à la caisse MLA : il choisit son nom, un ou plusieurs mois, puis paie. Le montant par mois est prérempli selon son rôle et reste modifiable.",
+    "enabled": "Proposer la contribution mensuelle sur le site public",
+    "enabledHint": "Désactivée, la carte disparaît du site et aucun nom de membre n'est exposé.",
+    "responsableAmount": "Montant suggéré pour un responsable (FCFA / mois)",
+    "memberAmount": "Montant suggéré pour un membre (FCFA / mois)",
+    "save": "Enregistrer",
+    "saved": "Réglages enregistrés.",
+    "error": "Impossible de charger les réglages.",
+    "genericError": "L'enregistrement a échoué.",
+    "invalidAmount": "Indiquez des montants entiers supérieurs à zéro."
   }
 }

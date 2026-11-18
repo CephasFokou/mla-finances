@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import ui from '../../components/ui/ui.module.scss'
+import { MonthlyContributionPanel } from './MonthlyContributionPanel'
 import { PaymentChannelsPanel } from './PaymentChannelsPanel'
 import { RolesPanel } from './RolesPanel'
 import styles from './AdministrationPage.module.scss'
 import { UsersPanel } from './UsersPanel'
 
-type Tab = 'users' | 'roles' | 'channels'
+type Tab = 'users' | 'roles' | 'channels' | 'monthly'
 
 export function AdministrationPage() {
   const { t } = useTranslation()
@@ -49,12 +50,22 @@ export function AdministrationPage() {
         >
           {t('administration.tabs.channels')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'monthly'}
+          className={tab === 'monthly' ? ui.segActive : undefined}
+          onClick={() => setTab('monthly')}
+        >
+          {t('administration.tabs.monthlyContribution')}
+        </button>
       </div>
 
       <div className={styles.tabPanel}>
         {tab === 'users' && <UsersPanel />}
         {tab === 'roles' && <RolesPanel />}
         {tab === 'channels' && <PaymentChannelsPanel />}
+        {tab === 'monthly' && <MonthlyContributionPanel />}
       </div>
     </section>
   )

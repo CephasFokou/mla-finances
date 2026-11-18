@@ -14,7 +14,7 @@ import type {
   PaymentTransactionStatus,
 } from '../../features/payment-transactions/types'
 import { ApiError } from '../../lib/apiClient'
-import { formatDateTime, formatFcfa } from '../../lib/format'
+import { formatDateTime, formatFcfa, formatMonthKeyWithYear, personLabel } from '../../lib/format'
 import styles from './PaymentTransactionsPage.module.scss'
 
 const PAGE_SIZE = 20
@@ -29,6 +29,8 @@ const PILL_VARIANT: Record<PaymentTransactionStatus, string | undefined> = {
 }
 
 type PendingConfirm = { transaction: PaymentTransactionResponse }
+
+const monthsLabel = (months: string[]) => months.map(formatMonthKeyWithYear).join(', ')
 type PendingCancel = { transaction: PaymentTransactionResponse }
 
 // Vue back-office des dons publics (PaymentTransaction). Mode manuel (PENDING) : confirmer crée une
@@ -201,15 +203,51 @@ export function PaymentTransactionsPage() {
                     <td className={ui.cellSub}>{transaction.reference}</td>
                     <td>
                       <div className={ui.cellMain}>
-                        {transaction.anonymous
-                          ? t('paymentTransactions.anonymousLabel')
-                          : (transaction.donorName ?? '—')}
+                        {transaction.member
+                          ? personLabel(transaction.member)
+                          : transaction.anonymous
+                            ? t('paymentTransactions.anonymousLabel')
+                            : (transaction.donorName ?? '—')}
                       </div>
                       {transaction.donorContact && !transaction.anonymous && (
                         <div className={ui.cellSub}>{transaction.donorContact}</div>
                       )}
                     </td>
-                    <td>{transaction.project?.name ?? transaction.category?.name ?? '—'}</td>
+                    <td>
+                      <span
+                        className={`${ui.pill} ${transaction.kind === 'MONTHLY_CONTRIBUTION' ? ui.pillNavy : ui.pillGrey}`}
+                      >
+                        {t(`paymentTransactions.kind.${transaction.kind}`)}
+                      </span>
+                      {transaction.kind === 'MONTHLY_CONTRIBUTION' ? (
+                        <>
+                          <div className={ui.cellSub}>{monthsLabel(transaction.months)}</div>
+                          {transaction.amountPerMonth !== null && (
+                            <div className={ui.cellSub}>
+                              {t('paymentTransactions.monthsCount', {
+                                count: transaction.months.length,
+                                amount: formatFcfa(transaction.amountPerMonth),
+                              })}
+                            </div>
+                          )}
+                          {transaction.alreadyPaidMonths.length > 0 && (
+                            <span
+                              className={`${ui.pill} ${ui.pillAmber}`}
+                              title={t('paymentTransactions.alreadyPaidHint')}
+                              style={{ marginTop: 4 }}
+                            >
+                              {t('paymentTransactions.alreadyPaid', {
+                                months: monthsLabel(transaction.alreadyPaidMonths),
+                              })}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <div className={ui.cellSub}>
+                          {transaction.project?.name ?? transaction.category?.name ?? '—'}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <div className={ui.cellMain}>{transaction.paymentChannel.label}</div>
                       {transaction.online && (
@@ -328,7 +366,19 @@ export function PaymentTransactionsPage() {
               <h3 id="confirm-donation-title">{t('paymentTransactions.confirm')}</h3>
             </div>
             <div className={styles.modalBody}>
-              <p>{t('paymentTransactions.confirmHint')}</p>
+              <p>
+                {pendingConfirm.transaction.kind === 'MONTHLY_CONTRIBUTION'
+                  ? t('paymentTransactions.confirmHintMonthly', {
+                      count: pendingConfirm.transaction.months.length,
+                      amount: formatFcfa(pendingConfirm.transaction.amountPerMonth ?? 0),
+                      member: personLabel(pendingConfirm.transaction.member),
+                      months: monthsLabel(pendingConfirm.transaction.months),
+                    })
+                  : t('paymentTransactions.confirmHint')}
+              </p>
+              {pendingConfirm.transaction.alreadyPaidMonths.length > 0 && (
+                <p className={ui.cellSub}>{t('paymentTransactions.alreadyPaidHint')}</p>
+              )}
               <p className={ui.cellMain}>
                 {formatFcfa(pendingConfirm.transaction.amount)} — {pendingConfirm.transaction.reference}
               </p>

@@ -49,3 +49,13 @@ export interface UserRolesUpdateInput {
 export interface RolePermissionsUpdateInput {
   permissions: Permission[]
 }
+
+/** Parcours « Contribution mensuelle » du site public : activé et montants suggérés par rôle (FCFA). */
+export interface MonthlyContributionSettings {
+  enabled: boolean
+  responsableAmount: number
+  memberAmount: number
+  updatedAt: string | null
+}
+
+export type MonthlyContributionSettingsInput = Omit<MonthlyContributionSettings, 'updatedAt'>

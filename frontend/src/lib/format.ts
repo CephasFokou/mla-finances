@@ -53,6 +53,13 @@ export function formatMonthKey(monthKey: string): string {
   return shortMonthFormatter.format(new Date(`${monthKey}-01T12:00:00`))
 }
 
+const monthYearFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' })
+
+/** « nov. 2026 » à partir de « 2026-11 ». */
+export function formatMonthKeyWithYear(monthKey: string): string {
+  return monthYearFormatter.format(new Date(`${monthKey}-01T12:00:00`))
+}
+
 /** Nom à afficher pour une personne : nom usuel du journal, sinon nom complet. */
 export function personLabel(
   person: { displayName?: string | null; fullName?: string | null } | null | undefined,

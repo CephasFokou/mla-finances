@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { administrationApi } from './api'
-import type { RolePermissionsUpdateInput, UserInviteInput, UserRolesUpdateInput } from './types'
+import type {
+  MonthlyContributionSettingsInput,
+  RolePermissionsUpdateInput,
+  UserInviteInput,
+  UserRolesUpdateInput,
+} from './types'
 
 export function useUsersQuery() {
   return useQuery({ queryKey: ['administration', 'users'], queryFn: administrationApi.listUsers })
@@ -60,5 +65,21 @@ export function useUpdateRolePermissionsMutation(id: number) {
   return useMutation({
     mutationFn: (input: RolePermissionsUpdateInput) => administrationApi.updateRolePermissions(id, input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['administration', 'roles'] }),
+  })
+}
+
+export function useMonthlyContributionSettingsQuery() {
+  return useQuery({
+    queryKey: ['administration', 'monthly-contribution'],
+    queryFn: administrationApi.getMonthlyContributionSettings,
+  })
+}
+
+export function useUpdateMonthlyContributionSettingsMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: MonthlyContributionSettingsInput) =>
+      administrationApi.updateMonthlyContributionSettings(input),
+    onSuccess: (data) => queryClient.setQueryData(['administration', 'monthly-contribution'], data),
   })
 }
