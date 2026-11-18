@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
-# Réinitialise la base PostgreSQL LOCALE de MLA Finance et la recharge avec les données du fichier
-# de suivi (MLA-ICC-YDE-FINANCE-2026). ATTENTION : toutes les données de la base sont effacées.
+# Réinitialise une base PostgreSQL de MLA Finance (locale ou en ligne) et la recharge avec les
+# données du fichier de suivi (MLA-ICC-YDE-FINANCE-2026). ATTENTION : toutes les données de la base
+# sont effacées, comptes utilisateurs compris.
+#
+# Le script ne crée AUCUN compte : en mode app.migrate-only, ni DevAdminSeeder (admin1234) ni
+# BootstrapAdminRunner (prod) ne tournent, et il échoue si la table users n'est pas vide à la fin.
+#   - en local : le premier démarrage en profil dev crée le compte admin@mla-finance.dev ;
+#   - en ligne : redémarrer le service, BootstrapAdminRunner crée le SUPER_ADMIN à partir de
+#     BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (variables Railway).
 #
 # Usage :
 #   ./scripts/reset-local-db.sh [source] [--yes]
@@ -12,11 +19,16 @@
 # Connexion (variables d'environnement, valeurs par défaut entre parenthèses) :
 #   PGHOST (localhost)  PGPORT (5432)  PGDATABASE (mla_finance)  PGUSER (utilisateur courant)  PGPASSWORD
 #
+# La base visée par les migrations Java est forcée sur PG* (arguments en ligne de commande) : un
+# DATABASE_URL ou un .env ne peut pas les envoyer ailleurs que psql.
+#
 # Étapes : base créée si besoin, schéma vidé, migrations Liquibase appliquées par le backend
 # (app.migrate-only), données chargées en une transaction, puis contrôle des totaux.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+unset DATABASE_URL DATABASE_USERNAME DATABASE_PASSWORD SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_PROFILES_ACTIVE
 export PGHOST="${PGHOST:-localhost}" PGPORT="${PGPORT:-5432}" PGDATABASE="${PGDATABASE:-mla_finance}" PGUSER="${PGUSER:-$USER}"
 
 SOURCE=""
@@ -39,7 +51,8 @@ need psql "client PostgreSQL : brew install libpq && brew link --force libpq"
 need java "Java 21 : brew install openjdk@21"
 need mvn "Maven : brew install maven"
 
-echo "Base cible : postgresql://$PGUSER@$PGHOST:$PGPORT/$PGDATABASE"
+case "$PGHOST" in localhost|127.0.0.1|::1) REMOTE=0 ;; *) REMOTE=1 ;; esac
+echo "Base cible : postgresql://$PGUSER@$PGHOST:$PGPORT/$PGDATABASE$([[ $REMOTE -eq 1 ]] && echo '   (EN LIGNE)')"
 echo "Source     : $SOURCE"
 if [[ $ASSUME_YES -ne 1 ]]; then
   read -r -p "Toutes les données de cette base vont être effacées. Continuer ? [o/N] " answer
@@ -60,8 +73,13 @@ say "2/5 Compilation du backend"
 (cd "$ROOT/backend" && mvn -q -DskipTests package)
 JAR="$(ls "$ROOT"/backend/target/mla-finance-backend-*.jar | head -1)"
 
-say "3/5 Migrations Liquibase (structure + données de référence + compte admin de dev)"
+say "3/5 Migrations Liquibase (structure + données de référence, aucun compte)"
+# app.migrate-only désactive DevAdminSeeder (aucun compte admin1234) ; BootstrapAdminRunner n'existe
+# qu'en profil prod. Le mot de passe passe par l'environnement, jamais en argument visible.
+SPRING_DATASOURCE_PASSWORD="${PGPASSWORD:-}" \
 java -jar "$JAR" --spring.profiles.active=dev,local --app.migrate-only=true \
+  --spring.datasource.url="jdbc:postgresql://$PGHOST:$PGPORT/$PGDATABASE" \
+  --spring.datasource.username="$PGUSER" \
   --spring.main.web-application-type=none --logging.level.root=WARN \
   --logging.level.org.mla.finance=INFO > "$ROOT/data/import/migrate.log" 2>&1 \
   || { echo "Échec des migrations, voir data/import/migrate.log" >&2; tail -20 "$ROOT/data/import/migrate.log" >&2; exit 1; }
@@ -76,6 +94,9 @@ if [[ "$SOURCE" != *.sql ]]; then
 fi
 psql -q -v ON_ERROR_STOP=1 -f "$SQL" >/dev/null
 echo "Données chargées."
+USERS="$(psql -tAc "SELECT count(*) FROM users")"
+[[ "$USERS" == 0 ]] || { echo "ANOMALIE : $USERS compte(s) utilisateur présent(s) après l'import, alors qu'aucun ne doit être créé." >&2; exit 1; }
+echo "Aucun compte utilisateur créé (users = 0)."
 
 say "5/5 Contrôle (à comparer avec l'onglet Synthèse du fichier)"
 psql -q -P footer=off <<'SQL'
@@ -94,10 +115,16 @@ SELECT
                                                                                    AS "Contrib. mensuelles (année)";
 SQL
 
-cat <<EOF
+if [[ $REMOTE -eq 1 ]]; then cat <<EOF
+
+Base en ligne prête, sans aucun compte. Redémarrer le service applicatif (Railway) : au démarrage,
+BootstrapAdminRunner crée le SUPER_ADMIN défini par BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD.
+EOF
+else cat <<EOF
 
 Base prête. Pour lancer l'application sur cette base :
   cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev,local
   cd frontend && npm run dev
-Connexion : admin@mla-finance.dev / admin1234 (compte de développement).
+Au premier démarrage en profil dev : admin@mla-finance.dev / admin1234 (compte de développement).
 EOF
+fi

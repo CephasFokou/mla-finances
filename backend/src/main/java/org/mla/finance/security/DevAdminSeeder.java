@@ -9,6 +9,7 @@ import org.mla.finance.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,9 @@ import java.util.Set;
  */
 @Component
 @Profile("dev")
+// Jamais en mode « migration seule » : scripts/reset-local-db.sh peut viser une base en ligne, où
+// un compte au mot de passe connu ne doit pas apparaître.
+@ConditionalOnProperty(name = "app.migrate-only", havingValue = "false", matchIfMissing = true)
 @RequiredArgsConstructor
 public class DevAdminSeeder implements CommandLineRunner {
 
