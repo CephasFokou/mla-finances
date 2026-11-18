@@ -585,3 +585,70 @@
   color: $ink-soft;
   font: 400 17px/1.55 $font-body;
 }
+
+// Contribution mensuelle : liste de noms plus dense (une trentaine de membres), initiale en pastille.
+.choiceCompact {
+  min-height: 56px;
+  padding: 8px 16px;
+  border-radius: 16px;
+}
+
+.initial {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: $violet-tint;
+  color: $violet-night;
+  font: 800 15px $font-display;
+}
+
+// Cases à cocher des mois : trois colonnes sur téléphone, cibles de 52 px de haut.
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.month {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 14px;
+  background: $violet-tint;
+  color: $violet-night;
+  font: 700 15px $font-display;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+
+  input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &:has(input:checked) {
+    background: $violet;
+    color: #fff;
+  }
+
+  &:has(input:focus-visible) {
+    outline: 3px solid $gold;
+    outline-offset: 3px;
+  }
+}
+
+.summary small {
+  color: $ink-soft;
+  font: 400 14px $font-body;
+}

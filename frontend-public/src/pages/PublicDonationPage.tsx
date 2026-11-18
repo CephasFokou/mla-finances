@@ -3,10 +3,12 @@ import { Trans, useTranslation } from 'react-i18next'
 
 import { IccLogo } from '../components/IccLogo'
 import { RibbonProgress } from '../components/RibbonProgress'
-import { usePublicCollectionsQuery } from '../features/public/hooks'
+import { usePublicCollectionsQuery, usePublicMonthlyOfferQuery } from '../features/public/hooks'
 import type { PublicCollection } from '../features/public/types'
 import { formatAmount, formatDayMonth, formatFcfa, formatPeriod } from '../lib/format'
+import { LANGUAGES, setLanguage } from '../i18n/i18n'
 import { DonationDialog } from './DonationDialog'
+import { MonthlyContributionDialog } from './MonthlyContributionDialog'
 import styles from './PublicDonationPage.module.scss'
 
 /** Couleurs des rubans du logo, attribuées aux collectes dans l'ordre (violet, bleu, rouge, vert, jaune). */
@@ -18,9 +20,13 @@ const STEPS = ['s1', 's2', 's3'] as const
  * couleur, et la transparence sur ce qui a été remis. Montants agrégés uniquement (aucun donateur).
  */
 export function PublicDonationPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data: collections, isLoading, isError } = usePublicCollectionsQuery()
+  const { data: monthlyOffer } = usePublicMonthlyOfferQuery()
   const [dialog, setDialog] = useState<{ collectionId: number | null } | null>(null)
+  const [monthlyOpen, setMonthlyOpen] = useState(false)
+  // Carte permanente, masquée si le parcours est désactivé (ou s'il n'y a aucun membre à proposer).
+  const showMonthly = !!monthlyOffer?.enabled && monthlyOffer.members.length > 0
 
   const { open, upcoming, closed, totalCollected, fundedCount } = useMemo(() => {
     const list = collections ?? []
@@ -59,9 +65,27 @@ export function PublicDonationPage() {
             <a href="#donner">{t('public.nav.how')}</a>
             <a href="#transparence">{t('public.nav.impact')}</a>
           </div>
-          <button type="button" className={`${styles.btn} ${styles.btnGold}`} onClick={() => give(null)}>
-            {t('public.nav.cta')}
-          </button>
+          <div className={styles.navActions}>
+            <div className={styles.lang} role="group" aria-label={t('public.language.label')}>
+              {LANGUAGES.map((language) => (
+                <button
+                  key={language}
+                  type="button"
+                  lang={language}
+                  aria-pressed={i18n.language === language}
+                  aria-label={t('public.language.switchTo', {
+                    language: t(`public.language.names.${language}`),
+                  })}
+                  onClick={() => setLanguage(language)}
+                >
+                  {t(`public.language.${language}`)}
+                </button>
+              ))}
+            </div>
+            <button type="button" className={`${styles.btn} ${styles.btnGold}`} onClick={() => give(null)}>
+              {t('public.nav.cta')}
+            </button>
+          </div>
         </nav>
 
         <div className={`${styles.wrap} ${styles.heroGrid}`} id="top">
@@ -117,6 +141,23 @@ export function PublicDonationPage() {
             <p className={styles.status}>{t('public.collections.empty')}</p>
           )}
           <div className={styles.collects}>
+            {showMonthly && (
+              <article className={`${styles.collect} ${styles.collectMonthly}`}>
+                <div className={styles.collectTop}>
+                  <span className={`${styles.pill} ${styles.pillMembers}`}>{t('public.monthly.pill')}</span>
+                  <span className={styles.collectMeta}>{t('public.monthly.meta')}</span>
+                </div>
+                <h3>{t('public.monthly.title')}</h3>
+                <p className={styles.collectAmount}>{t('public.monthly.text')}</p>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnGold} ${styles.btnStart}`}
+                  onClick={() => setMonthlyOpen(true)}
+                >
+                  {t('public.monthly.give')}
+                </button>
+              </article>
+            )}
             {open.map((c) => (
               <OpenCollection key={c.id} collection={c} color={ribbonColor(c.id)} onGive={() => give(c.id)} />
             ))}
@@ -225,6 +266,9 @@ export function PublicDonationPage() {
           ribbonColor={ribbonColor}
           initialCollectionId={dialog.collectionId}
         />
+      )}
+      {monthlyOpen && monthlyOffer && (
+        <MonthlyContributionDialog offer={monthlyOffer} onClose={() => setMonthlyOpen(false)} />
       )}
     </div>
   )

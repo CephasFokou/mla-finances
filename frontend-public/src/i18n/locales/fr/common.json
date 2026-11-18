@@ -113,6 +113,56 @@
       "reference": "Référence",
       "again": "Faire un autre don",
       "done": "Terminer"
+    },
+    "period": "{{from}} à {{to}}",
+    "language": {
+      "label": "Langue",
+      "fr": "FR",
+      "en": "EN",
+      "switchTo": "Afficher le site en {{language}}",
+      "names": {
+        "fr": "français",
+        "en": "anglais"
+      }
+    },
+    "monthly": {
+      "pill": "Membres du MLA",
+      "meta": "toute l'année",
+      "title": "Contribution mensuelle MLA",
+      "text": "Membres et responsables : payez votre contribution à la caisse du MLA, pour un ou plusieurs mois en une fois.",
+      "give": "Payer ma contribution",
+      "dialog": {
+        "step": "Étape {{step}} sur 4",
+        "titles": {
+          "1": "Qui contribue ?",
+          "2": "Pour quels mois ?",
+          "3": "Montant par mois",
+          "4": "Paiement"
+        },
+        "search": "Rechercher mon nom",
+        "searchPlaceholder": "Tapez les premières lettres",
+        "noMatch": "Aucun membre ne correspond. Vérifiez l'orthographe ou contactez le secrétariat.",
+        "monthsHint": "Le mois en cours est coché. Vous pouvez payer les mois en retard ou jusqu'à 3 mois d'avance.",
+        "monthsSelected_one": "{{count}} mois choisi",
+        "monthsSelected_other": "{{count}} mois choisis",
+        "amountPerMonth": "Montant par mois (FCFA)",
+        "amountHint": "Prérempli selon votre rôle au MLA. Vous pouvez le modifier.",
+        "total": "{{count}} mois × {{amount}}",
+        "totalLabel": "Total à payer",
+        "summary": "Contribution de {{member}}",
+        "memberRequired": "Choisissez votre nom dans la liste.",
+        "monthsRequired": "Choisissez au moins un mois.",
+        "amountRequired": "Indiquez un montant entier supérieur à 0.",
+        "manualNote": "Après l'envoi, payez par le canal choisi en indiquant la référence. Le secrétariat confirme la réception, puis votre contribution est enregistrée.",
+        "onlineNote": "Une demande de paiement sera envoyée sur ce numéro. Validez-la avec votre code secret Mobile Money : votre contribution est enregistrée automatiquement.",
+        "paidTitle": "Merci !",
+        "paidText": "Merci, ta contribution pour {{months}} a été reçue.",
+        "successTitle": "Merci, ta contribution est enregistrée.",
+        "successText": "{{amount}} pour {{months}}. Paie maintenant par {{channel}} en indiquant ta référence ; le secrétariat confirmera la réception.",
+        "error": "La contribution n'a pas pu être enregistrée. Vérifiez votre connexion puis réessayez.",
+        "unavailable": "La contribution mensuelle en ligne n'est pas disponible pour le moment.",
+        "submit": "Enregistrer ma contribution"
+      }
     }
   }
 }

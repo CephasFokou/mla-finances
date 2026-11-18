@@ -24,6 +24,7 @@ export interface PublicPaymentChannel {
 }
 
 export interface PublicDonationInput {
+  type?: 'DONATION'
   projectId: number
   paymentChannelId: number
   amount: number
@@ -32,6 +33,24 @@ export interface PublicDonationInput {
   donorContact?: string
   /** Numéro Mobile Money à débiter, requis pour un canal en ligne. */
   payerPhone?: string
+}
+
+/** Contribution mensuelle d'un membre à la caisse MLA : plusieurs mois en un seul paiement. */
+export interface PublicMonthlyContributionInput {
+  type: 'MONTHLY_CONTRIBUTION'
+  donorId: number
+  /** « YYYY-MM » */
+  months: string[]
+  amountPerMonth: number
+  paymentChannelId: number
+  payerPhone?: string
+}
+
+/** Offre publique (GET /public/monthly-contribution) : nom usuel et montant suggéré, jamais le rôle. */
+export interface PublicMonthlyOffer {
+  enabled: boolean
+  members: { id: number; displayName: string; suggestedAmount: number }[]
+  months: string[]
 }
 
 /** PENDING : manuel, en attente du secrétariat ; PROCESSING : validation sur le téléphone en cours. */

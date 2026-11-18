@@ -509,3 +509,69 @@ $ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
     animation: none;
   }
 }
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+// Choix de la langue : deux pastilles compactes, la langue active en doré.
+.lang {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+
+  button {
+    min-width: 40px;
+    min-height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: $lilac-text;
+    font: 700 13px $font-body;
+    cursor: pointer;
+
+    &[aria-pressed='true'] {
+      background: $gold;
+      color: $violet-night;
+    }
+
+    &:focus-visible {
+      outline: 3px solid $gold;
+      outline-offset: 2px;
+    }
+  }
+}
+
+// Contribution mensuelle : carte permanente des membres, en tête de liste, fond violet profond pour
+// la distinguer des collectes (l'argent va à la caisse, pas à une collecte).
+.collectMonthly {
+  background: $hero-gradient;
+  box-shadow: none;
+  color: #fff;
+
+  h3 {
+    color: #fff;
+  }
+
+  .collectAmount {
+    margin: 0;
+    color: $lilac-text;
+  }
+
+  .collectMeta {
+    color: $lilac-text;
+  }
+}
+
+.pillMembers {
+  background: rgb(249 208 59 / 18%);
+  color: $gold;
+}
+
+.btnStart {
+  align-self: flex-start;
+  margin-top: 6px;
+}

@@ -1,26 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { IccLogo } from '../components/IccLogo'
-import {
-  useDonationStatusQuery,
-  usePublicPaymentChannelsQuery,
-  useSubmitPublicDonationMutation,
-} from '../features/public/hooks'
-import type { PublicCollection, PublicDonationStatus } from '../features/public/types'
+import { usePublicPaymentChannelsQuery, useSubmitPublicDonationMutation } from '../features/public/hooks'
+import { phoneDigitsOf, useOnlinePaymentTracking } from '../features/public/payment'
+import type { PublicCollection } from '../features/public/types'
 import { ApiError } from '../lib/apiClient'
 import { formatFcfa } from '../lib/format'
 import styles from './DonationDialog.module.scss'
+import { ChannelPicker, FailureScreen, FlowHeader, SuccessScreen, WaitingScreen } from './PaymentParts'
 
 const AMOUNT_PRESETS = [1000, 2000, 5000, 10000]
 /** Numéro où envoyer le paiement, affiché après l'enregistrement s'il est configuré au déploiement. */
 const PAYMENT_NUMBER: string | undefined = import.meta.env.VITE_MLA_PAYMENT_NUMBER
-
-/** Pastilles des opérateurs Mobile Money ; les autres canaux gardent une pastille neutre. */
-const OPERATOR_BADGES: Record<string, { label: string; background: string; color: string }> = {
-  ORANGE_MONEY: { label: 'OM', background: '#FF7900', color: '#FFFFFF' },
-  MTN_MOMO: { label: 'MoMo', background: '#FFCB05', color: '#23122F' },
-}
 
 interface DonationDialogProps {
   onClose: () => void
@@ -28,9 +19,6 @@ interface DonationDialogProps {
   ribbonColor: (id: number) => string
   initialCollectionId: number | null
 }
-
-/** Au-delà de ce délai d'attente de la validation Mobile Money, on explique au donateur qu'il peut fermer. */
-const LONG_WAIT_MS = 120_000
 
 /**
  * Parcours de don en trois étapes (collecte, montant, paiement), puis « l'éclosion » : le logo se
@@ -61,7 +49,6 @@ export function DonationDialog({
   const [channelId, setChannelId] = useState<number | null>(null)
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [longWait, setLongWait] = useState(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -74,25 +61,10 @@ export function DonationDialog({
   const channel = channels?.find((c) => c.id === channelId)
   const result = mutation.data
   const online = !!channel?.online
-  const phoneDigits = phone.replace(/\D/g, '')
-  const phoneLooksValid =
-    phoneDigits.length === 9 || (phoneDigits.length === 12 && phoneDigits.startsWith('237'))
+  const { digits: phoneDigits, valid: phoneLooksValid } = phoneDigitsOf(phone)
 
-  // Suivi d'un don en ligne tant qu'il n'est pas final (voir useDonationStatusQuery).
-  const tracking =
-    result && result.mode === 'ONLINE' && result.status === 'PROCESSING' ? result.trackingToken : null
-  const statusQuery = useDonationStatusQuery(tracking)
-  const liveStatus: PublicDonationStatus | undefined = statusQuery.data?.status ?? result?.status
-  const failureMessage = statusQuery.data?.failureMessage ?? result?.failureMessage ?? null
-
-  useEffect(() => {
-    if (!tracking) return
-    const timer = window.setTimeout(() => setLongWait(true), LONG_WAIT_MS)
-    return () => {
-      window.clearTimeout(timer)
-      setLongWait(false)
-    }
-  }, [tracking])
+  // Suivi d'un don en ligne tant qu'il n'est pas final (voir useOnlinePaymentTracking).
+  const { liveStatus, failureMessage, longWait } = useOnlinePaymentTracking(result)
 
   const canContinue =
     (step === 1 && !!collection) ||
@@ -151,60 +123,38 @@ export function DonationDialog({
       }}
     >
       {result && result.mode === 'ONLINE' && liveStatus === 'PROCESSING' ? (
-        <div className={styles.waiting} aria-live="polite">
-          <span className={styles.spinner} aria-hidden="true" />
-          <h2 id="donation-title" className={styles.successTitle}>
-            {t('public.dialog.waitingTitle')}
-          </h2>
-          <p className={styles.successText}>
-            {t('public.dialog.waitingText', {
-              amount: formatFcfa(value),
-              phone: phoneDigits.replace(/^237/, ''),
-              channel: channel?.label ?? '',
-            })}
-          </p>
-          <p className={styles.successText}>
-            {longWait ? t('public.dialog.waitingLong') : t('public.dialog.waitingHint')}
-          </p>
-          <div className={styles.reference}>
-            {t('public.dialog.reference')} <strong>{result.reference}</strong>
-          </div>
-          <div className={styles.successActions}>
-            <button type="button" className={styles.ctaGhost} onClick={close}>
-              {t('public.dialog.close')}
-            </button>
-          </div>
-        </div>
+        <WaitingScreen
+          text={t('public.dialog.waitingText', {
+            amount: formatFcfa(value),
+            phone: phoneDigits.replace(/^237/, ''),
+            channel: channel?.label ?? '',
+          })}
+          longWait={longWait}
+          reference={result.reference}
+          onClose={close}
+        />
       ) : result && result.mode === 'ONLINE' && (liveStatus === 'FAILED' || liveStatus === 'CANCELLED') ? (
-        <div className={styles.failure} role="alert">
-          <span className={styles.failureIcon} aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 8v5M12 16.5v.5M4.5 19h15L12 5z" />
-            </svg>
-          </span>
-          <h2 id="donation-title" className={styles.failureTitle}>
-            {t('public.dialog.failedTitle')}
-          </h2>
-          <p className={styles.failureText}>{failureMessage ?? t('public.dialog.failedText')}</p>
-          <div className={styles.reference}>
-            {t('public.dialog.reference')} <strong>{result.reference}</strong>
-          </div>
-          <div className={styles.successActions}>
-            <button type="button" className={styles.ctaGold} onClick={retry}>
-              {t('public.dialog.retry')}
-            </button>
-            <button type="button" className={styles.ctaGhost} onClick={close}>
-              {t('public.dialog.done')}
-            </button>
-          </div>
-        </div>
+        <FailureScreen
+          message={failureMessage}
+          reference={result.reference}
+          onRetry={retry}
+          onClose={close}
+        />
       ) : result ? (
-        <div className={styles.success}>
-          <span className={styles.ring} aria-hidden="true" />
-          <IccLogo animated letterColor="#FFFFFF" className={styles.successLogo} />
-          <h2 id="donation-title" className={styles.successTitle}>
-            {result.mode === 'ONLINE' ? t('public.dialog.paidTitle') : t('public.dialog.successTitle')}
-          </h2>
+        <SuccessScreen
+          title={result.mode === 'ONLINE' ? t('public.dialog.paidTitle') : t('public.dialog.successTitle')}
+          reference={result.reference}
+          actions={
+            <>
+              <button type="button" className={styles.ctaGold} onClick={reset}>
+                {t('public.dialog.again')}
+              </button>
+              <button type="button" className={styles.ctaGhost} onClick={close}>
+                {t('public.dialog.done')}
+              </button>
+            </>
+          }
+        >
           <p className={styles.successText}>
             {result.mode === 'ONLINE'
               ? t('public.dialog.paidText', {
@@ -220,54 +170,17 @@ export function DonationDialog({
           {result.mode === 'MANUAL' && PAYMENT_NUMBER && (
             <p className={styles.successText}>{t('public.dialog.payTo', { number: PAYMENT_NUMBER })}</p>
           )}
-          <div className={styles.reference}>
-            {t('public.dialog.reference')} <strong>{result.reference}</strong>
-          </div>
-          <div className={styles.successActions}>
-            <button type="button" className={styles.ctaGold} onClick={reset}>
-              {t('public.dialog.again')}
-            </button>
-            <button type="button" className={styles.ctaGhost} onClick={close}>
-              {t('public.dialog.done')}
-            </button>
-          </div>
-        </div>
+        </SuccessScreen>
       ) : (
         <div className={styles.flow}>
-          <header className={styles.head}>
-            <div className={styles.headRow}>
-              <button
-                type="button"
-                className={styles.iconBtn}
-                aria-label={t('public.dialog.back')}
-                onClick={() => setStep(Math.max(1, step - 1))}
-                disabled={step === 1}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M15 5l-7 7 7 7" />
-                </svg>
-              </button>
-              <span className={styles.stepLabel}>{t('public.dialog.step', { step })}</span>
-              <button
-                type="button"
-                className={styles.iconBtn}
-                aria-label={t('public.dialog.close')}
-                onClick={close}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            </div>
-            <div className={styles.segments} aria-hidden="true">
-              {[1, 2, 3].map((n) => (
-                <span key={n} className={n <= step ? styles.segOn : undefined} />
-              ))}
-            </div>
-            <h2 id="donation-title" className={styles.title}>
-              {t(`public.dialog.titles.${step}`)}
-            </h2>
-          </header>
+          <FlowHeader
+            step={step}
+            steps={3}
+            stepLabel={t('public.dialog.step', { step })}
+            title={t(`public.dialog.titles.${step}`)}
+            onBack={() => setStep(Math.max(1, step - 1))}
+            onClose={close}
+          />
 
           <div className={styles.body} key={step}>
             {step === 1 && (
@@ -373,54 +286,14 @@ export function DonationDialog({
                   <span>{collection?.name}</span>
                   <strong>{formatFcfa(value)}</strong>
                 </div>
-                <div className={styles.label} id="channel-label">
-                  {t('public.dialog.payWith')}
-                </div>
-                <div className={styles.stack} role="radiogroup" aria-labelledby="channel-label">
-                  {channels?.map((c) => {
-                    const badge = OPERATOR_BADGES[c.code]
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={channelId === c.id}
-                        className={styles.choice}
-                        onClick={() => setChannelId(c.id)}
-                      >
-                        <span
-                          className={styles.operator}
-                          style={badge ? { background: badge.background, color: badge.color } : undefined}
-                        >
-                          {badge?.label ?? (
-                            <svg viewBox="0 0 24 24" className={styles.walletIcon} aria-hidden="true">
-                              <path d="M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm0 0V6a2 2 0 0 1 2-2h10M16 13h1" />
-                            </svg>
-                          )}
-                        </span>
-                        <span className={styles.choiceTitle}>{c.label}</span>
-                        <span className={styles.radio} />
-                      </button>
-                    )
-                  })}
-                </div>
-                {online && (
-                  <label className={styles.field}>
-                    {t('public.dialog.phone', { channel: channel?.label ?? '' })}
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel-national"
-                      value={phone}
-                      placeholder={t('public.dialog.phonePlaceholder')}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                    <span className={styles.hint}>{t('public.dialog.phoneHint')}</span>
-                  </label>
-                )}
-                <p className={styles.note}>
-                  {online ? t('public.dialog.onlineNote') : t('public.dialog.manualNote')}
-                </p>
+                <ChannelPicker
+                  channels={channels}
+                  channelId={channelId}
+                  onSelect={setChannelId}
+                  phone={phone}
+                  onPhoneChange={setPhone}
+                  note={online ? t('public.dialog.onlineNote') : t('public.dialog.manualNote')}
+                />
               </div>
             )}
 

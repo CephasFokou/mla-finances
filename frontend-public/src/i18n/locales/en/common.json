@@ -1,0 +1,168 @@
+{
+  "public": {
+    "brand": "MLA Finances",
+    "brandSub": "ICC Yaoundé",
+    "nav": {
+      "label": "Main navigation",
+      "collections": "Collections",
+      "how": "How to give",
+      "impact": "What your gifts made possible",
+      "cta": "Give"
+    },
+    "hero": {
+      "title": "Every gift goes where it was promised.",
+      "lede": "Hand-raisings, weddings, family projects: choose a collection, give with Mobile Money, then see what was handed over.",
+      "ctaMain": "Give to a collection",
+      "ctaSecondary": "See what was handed over",
+      "proof_one": "In total, <b>{{amount}}</b> raised for {{count}} collection, handed over to the beneficiaries or being handed over.",
+      "proof_other": "In total, <b>{{amount}}</b> raised for {{count}} collections, handed over to the beneficiaries or being handed over."
+    },
+    "collections": {
+      "title": "Open collections",
+      "intro": "A collection's money is kept apart: it never mixes with the MLA fund.",
+      "live": "Open",
+      "soon": "Coming soon",
+      "since": "since {{date}}",
+      "soonMeta": "opening soon",
+      "received_one": "FCFA received from one donor",
+      "received_other": "FCFA received from {{count}} donors",
+      "receivedNone": "No gifts yet: be the first.",
+      "upcomingText": "No gifts yet",
+      "give": "Give to this collection",
+      "opensSoon": "Opens soon",
+      "empty": "No collection is open right now. Come back soon.",
+      "loading": "Loading collections…",
+      "error": "Collections can't be loaded right now. Try again in a moment."
+    },
+    "how": {
+      "title": "How to give",
+      "intro": "Three steps, under a minute, from your phone.",
+      "s1": {
+        "title": "Choose the collection",
+        "text": "Each collection has its own ribbon colour and its own total."
+      },
+      "s2": {
+        "title": "Enter your amount",
+        "text": "With your name or anonymously: it's up to you."
+      },
+      "s3": {
+        "title": "Pay with Mobile Money",
+        "text": "Orange Money or MTN MoMo: a payment request arrives on your phone, you approve it, and your gift is added to the total."
+      }
+    },
+    "impact": {
+      "title": "What your gifts made possible",
+      "intro": "Closed collections, from the total received to what was handed over. Any difference comes from an advance or a transfer between collections, which are recorded too.",
+      "collection": "Collection",
+      "received": "Received (FCFA)",
+      "handedOver": "Handed over (FCFA)",
+      "empty": "Closed collections will appear here."
+    },
+    "footer": {
+      "name": "MLA, Impact Centre Chrétien Yaoundé",
+      "contact": "A question about a gift? Contact the MLA secretariat."
+    },
+    "period": "{{from}} to {{to}}",
+    "language": {
+      "label": "Language",
+      "fr": "FR",
+      "en": "EN",
+      "switchTo": "Show the site in {{language}}",
+      "names": {
+        "fr": "French",
+        "en": "English"
+      }
+    },
+    "monthly": {
+      "pill": "MLA members",
+      "meta": "all year round",
+      "title": "MLA monthly contribution",
+      "text": "Members and leaders: pay your contribution to the MLA fund, for one or several months at once.",
+      "give": "Pay my contribution",
+      "dialog": {
+        "step": "Step {{step}} of 4",
+        "titles": {
+          "1": "Who is contributing?",
+          "2": "For which months?",
+          "3": "Amount per month",
+          "4": "Payment"
+        },
+        "search": "Find my name",
+        "searchPlaceholder": "Type the first letters",
+        "noMatch": "No member matches. Check the spelling or contact the secretariat.",
+        "monthsHint": "The current month is ticked. You can pay overdue months or up to 3 months in advance.",
+        "monthsSelected_one": "{{count}} month selected",
+        "monthsSelected_other": "{{count}} months selected",
+        "amountPerMonth": "Amount per month (FCFA)",
+        "amountHint": "Pre-filled according to your role in the MLA. You can change it.",
+        "total": "{{count}} months × {{amount}}",
+        "totalLabel": "Total to pay",
+        "summary": "Contribution from {{member}}",
+        "memberRequired": "Choose your name in the list.",
+        "monthsRequired": "Choose at least one month.",
+        "amountRequired": "Enter a whole amount greater than 0.",
+        "manualNote": "After sending, pay through the chosen channel and quote the reference. The secretariat confirms receipt, then your contribution is recorded.",
+        "onlineNote": "A payment request will be sent to this number. Approve it with your Mobile Money PIN: your contribution is recorded automatically.",
+        "paidTitle": "Thank you!",
+        "paidText": "Thank you, your contribution for {{months}} has been received.",
+        "successTitle": "Thank you, your contribution is registered.",
+        "successText": "{{amount}} for {{months}}. Now pay through {{channel}} and quote your reference; the secretariat will confirm receipt.",
+        "error": "The contribution couldn't be registered. Check your connection and try again.",
+        "unavailable": "The online monthly contribution isn't available right now.",
+        "submit": "Register my contribution"
+      }
+    },
+    "dialog": {
+      "close": "Close",
+      "back": "Previous step",
+      "step": "Step {{step}} of 3",
+      "titles": {
+        "1": "Choose a collection",
+        "2": "Your gift",
+        "3": "Payment"
+      },
+      "collectionSub_one": "{{amount}} received from one donor",
+      "collectionSub_other": "{{amount}} received from {{count}} donors",
+      "collectionSubNone": "No gifts yet",
+      "separate": "A collection's money is kept apart from the MLA fund and will be handed over to the beneficiaries.",
+      "amount": "Amount",
+      "otherAmount": "Other amount (FCFA)",
+      "otherAmountPlaceholder": "e.g. 3,000",
+      "name": "Your name",
+      "namePlaceholder": "As people call you at the MLA",
+      "contact": "Phone or email (optional)",
+      "contactHint": "So the secretariat can reach you about your gift.",
+      "anonymous": "Give anonymously",
+      "payWith": "Pay with",
+      "manualNote": "After sending, make your payment through the chosen channel and quote the gift reference. The secretariat confirms receipt, then your gift is added to the total.",
+      "onlineNote": "A payment request will be sent to this number. Approve it with your Mobile Money PIN: your gift is confirmed automatically.",
+      "phone": "{{channel}} number to charge",
+      "phonePlaceholder": "6xx xx xx xx",
+      "phoneHint": "Cameroonian 9-digit number (with or without 237).",
+      "phoneInvalid": "Enter a valid Mobile Money number: 9 digits starting with 6.",
+      "continue": "Continue",
+      "submit": "Register my gift",
+      "submitting": "Registering…",
+      "pay": "Pay {{amount}}",
+      "paying": "Sending the request…",
+      "nameRequired": "Enter your name, or tick “Give anonymously”.",
+      "amountRequired": "Enter an amount greater than 0.",
+      "error": "The gift couldn't be registered. Check your connection and try again.",
+      "successTitle": "Thank you, your gift is registered.",
+      "successText": "{{amount}} for {{collection}}. Now pay through {{channel}} and quote your reference; the secretariat will confirm receipt.",
+      "paidTitle": "Thank you, your gift has been received.",
+      "paidText": "{{amount}} for {{collection}}. The payment is confirmed: your gift is added to the collection's total right away.",
+      "waitingTitle": "Approve the payment on your phone",
+      "waitingText": "A payment request for {{amount}} was sent to {{phone}} ({{channel}}). Enter your PIN to confirm it.",
+      "waitingHint": "This page updates automatically as soon as the operator confirms. Nothing received? Check your phone's notifications.",
+      "waitingLong": "Still waiting. You can close this page: if you approve the payment, it will be recorded automatically. Keep your reference.",
+      "failedTitle": "The payment didn't go through",
+      "failedText": "Nothing was charged. You can try again or choose another payment method.",
+      "retry": "Try again",
+      "payTo": "MLA payment number: {{number}}",
+      "reference": "Reference",
+      "again": "Give again",
+      "done": "Done"
+    }
+  }
+}

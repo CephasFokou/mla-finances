@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { publicDonationApi } from './api'
-import type { PublicDonationInput, PublicDonationStatus } from './types'
+import type { PublicDonationInput, PublicDonationStatus, PublicMonthlyContributionInput } from './types'
 
 const FINAL_STATUSES: PublicDonationStatus[] = ['CONFIRMED', 'FAILED', 'CANCELLED']
 /** Fréquence du suivi d'un don en ligne : 3 s (≈ 20 req/min, sous la limite publique de 60/min). */
@@ -22,7 +22,8 @@ export function usePublicStatsQuery() {
 export function useSubmitPublicDonationMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: PublicDonationInput) => publicDonationApi.donate(input),
+    mutationFn: (input: PublicDonationInput | PublicMonthlyContributionInput) =>
+      publicDonationApi.donate(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['public-collections'] }),
   })
 }
@@ -47,4 +48,11 @@ export function useDonationStatusQuery(trackingToken: string | null) {
 
 export function usePublicCollectionsQuery() {
   return useQuery({ queryKey: ['public-collections'], queryFn: publicDonationApi.collections })
+}
+
+export function usePublicMonthlyOfferQuery() {
+  return useQuery({
+    queryKey: ['public-monthly-contribution'],
+    queryFn: publicDonationApi.monthlyContribution,
+  })
 }

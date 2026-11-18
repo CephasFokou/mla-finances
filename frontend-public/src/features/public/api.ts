@@ -4,6 +4,8 @@ import type {
   PublicDonationInput,
   PublicDonationResult,
   PublicDonationStatusResult,
+  PublicMonthlyContributionInput,
+  PublicMonthlyOffer,
   PublicPaymentChannel,
   PublicProject,
   PublicStats,
@@ -14,7 +16,9 @@ export const publicDonationApi = {
   paymentChannels: () => apiClient.get<PublicPaymentChannel[]>('/public/payment-channels'),
   stats: () => apiClient.get<PublicStats>('/public/stats'),
   collections: () => apiClient.get<PublicCollection[]>('/public/collections'),
-  donate: (input: PublicDonationInput) => apiClient.post<PublicDonationResult>('/public/donations', input),
+  monthlyContribution: () => apiClient.get<PublicMonthlyOffer>('/public/monthly-contribution'),
+  donate: (input: PublicDonationInput | PublicMonthlyContributionInput) =>
+    apiClient.post<PublicDonationResult>('/public/donations', input),
   donationStatus: (trackingToken: string) =>
     apiClient.get<PublicDonationStatusResult>(`/public/donations/${encodeURIComponent(trackingToken)}`),
 }
