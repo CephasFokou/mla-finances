@@ -58,4 +58,20 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
     @Override
     @EntityGraph(attributePaths = {"project", "category", "donor", "paymentChannel", "activity"})
     List<Contribution> findAll(Specification<Contribution> spec, Sort sort);
+
+    /**
+     * Mois déjà payés par un membre (contributions mensuelles, ajustements déduits), hors celles
+     * créées par le don en ligne {@code excludeTransactionId} : sert à avertir le secrétariat d'un
+     * doublon possible, jamais à refuser un paiement.
+     */
+    @Query("""
+        select c.periodMonth from Contribution c left join c.paymentTransaction pt
+        where c.donor.id = :donorId
+          and c.nature = org.mla.finance.domain.MovementNature.MONTHLY_CONTRIBUTION
+          and c.periodMonth in :months
+          and (pt is null or pt.id <> :excludeTransactionId)
+        group by c.periodMonth
+        having sum(c.amount) > 0
+        """)
+    List<LocalDate> paidMonths(Long donorId, Collection<LocalDate> months, Long excludeTransactionId);
 }

@@ -4,6 +4,9 @@ import org.mla.finance.domain.PaymentTransaction;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 
 /** Vue back-office d'une intention de don public, en attente ou déjà traitée. */
 public record PaymentTransactionResponse(
@@ -29,9 +32,22 @@ public record PaymentTransactionResponse(
     String failureMessage,
     boolean needsReview,
     Instant nextCheckAt,
-    Instant updatedAt
+    Instant updatedAt,
+    /** DONATION (collecte) ou MONTHLY_CONTRIBUTION (caisse MLA). */
+    String kind,
+    /** Membre qui paie (contribution mensuelle). */
+    DonorRef member,
+    /** Mois couverts « YYYY-MM » (contribution mensuelle). */
+    List<String> months,
+    BigDecimal amountPerMonth,
+    /** Mois déjà payés par ce membre en dehors de ce don : avertissement, le secrétariat corrige si besoin. */
+    List<String> alreadyPaidMonths
 ) {
     public static PaymentTransactionResponse from(PaymentTransaction t) {
+        return from(t, List.of());
+    }
+
+    public static PaymentTransactionResponse from(PaymentTransaction t, List<LocalDate> alreadyPaidMonths) {
         return new PaymentTransactionResponse(
             t.getId(),
             t.getReference(),
@@ -55,7 +71,12 @@ public record PaymentTransactionResponse(
             t.getFailureMessage(),
             t.isNeedsReview(),
             t.getNextCheckAt(),
-            t.getUpdatedAt()
+            t.getUpdatedAt(),
+            t.getKind().name(),
+            DonorRef.from(t.getDonor()),
+            t.getCoveredMonths().stream().map(m -> YearMonth.from(m).toString()).toList(),
+            t.getAmountPerMonth(),
+            alreadyPaidMonths.stream().sorted().map(m -> YearMonth.from(m).toString()).toList()
         );
     }
 }

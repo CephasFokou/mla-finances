@@ -2,19 +2,24 @@ package org.mla.finance.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.mla.finance.domain.DonationCategory;
+import org.mla.finance.domain.Donor;
 import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.PaymentChannel;
 import org.mla.finance.domain.PaymentTransaction;
+import org.mla.finance.domain.PaymentTransactionKind;
 import org.mla.finance.domain.PaymentTransactionStatus;
 import org.mla.finance.domain.Project;
 import org.mla.finance.domain.ProjectStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
+import org.mla.finance.exception.InvalidRequestException;
 import org.mla.finance.payment.PaymentInitiationResult;
 import org.mla.finance.payment.PaymentProvider;
 import org.mla.finance.payment.PaymentProviderResolver;
 import org.mla.finance.payment.pawapay.PawaPayClient;
 import org.mla.finance.payment.pawapay.PawaPayProperties;
 import org.mla.finance.repository.ContributionRepository;
+import org.mla.finance.repository.DonationCategoryRepository;
 import org.mla.finance.repository.PaymentChannelRepository;
 import org.mla.finance.repository.PaymentTransactionRepository;
 import org.mla.finance.repository.ProjectRepository;
@@ -34,6 +39,7 @@ import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -70,6 +76,8 @@ public class PublicDonationService {
     private final ContributionRepository contributionRepository;
     private final PaymentProviderResolver paymentProviderResolver;
     private final PawaPayProperties pawaPayProperties;
+    private final DonationCategoryRepository categoryRepository;
+    private final MonthlyContributionService monthlyContributionService;
 
     public List<PublicProjectResponse> activeProjects() {
         return projectRepository.findByStatus(ProjectStatus.ACTIVE).stream()
@@ -103,41 +111,34 @@ public class PublicDonationService {
             activeProjectCount);
     }
 
+    /**
+     * Crée l'intention de paiement d'un don à une collecte ou d'une contribution mensuelle, puis
+     * l'envoie au prestataire. Mêmes garde-fous pour les deux : canal actif (RG-15), et en ligne
+     * numéro payeur valide (DON-04), montant total dans les bornes (DON-05) et anti-abus par
+     * numéro (DON-06).
+     */
     @Transactional
     public PublicDonationResponse submit(PublicDonationRequest request) {
-        Project project = projectRepository.findById(request.projectId())
-            .orElseThrow(() -> new EntityNotFoundException("Projet introuvable : " + request.projectId()));
-        if (project.getStatus() != ProjectStatus.ACTIVE) {
-            throw new BusinessRuleViolationException("DON-01", "Ce projet n'accepte plus de dons pour le moment.");
-        }
+        PaymentTransaction transaction = request.kind() == PaymentTransactionKind.MONTHLY_CONTRIBUTION
+            ? monthlyContributionIntent(request)
+            : donationIntent(request);
         PaymentChannel channel = paymentChannelRepository.findById(request.paymentChannelId())
             .orElseThrow(() -> new EntityNotFoundException("Canal de paiement introuvable : " + request.paymentChannelId()));
         if (!channel.isActive()) {
             throw new BusinessRuleViolationException("RG-15", "Le canal de paiement '" + channel.getLabel() + "' est désactivé.");
         }
-        if (!request.anonymous() && (request.donorName() == null || request.donorName().isBlank())) {
-            throw new BusinessRuleViolationException("DON-02", "Le nom du donateur est requis, sauf pour un don anonyme.");
-        }
-
         PaymentProvider provider = paymentProviderResolver.resolve(channel);
         boolean online = paymentProviderResolver.isOnline(channel);
 
-        PaymentTransaction transaction = PaymentTransaction.builder()
-            .project(project)
-            .paymentChannel(channel)
-            .amount(request.amount())
-            .anonymous(request.anonymous())
-            .donorName(request.anonymous() ? null : request.donorName())
-            .donorContact(request.anonymous() ? null : request.donorContact())
-            .reference(generateReference())
-            .trackingToken(UUID.randomUUID().toString())
-            .status(PaymentTransactionStatus.PENDING)
-            .provider(provider.code())
-            .build();
+        transaction.setPaymentChannel(channel);
+        transaction.setReference(generateReference());
+        transaction.setTrackingToken(UUID.randomUUID().toString());
+        transaction.setStatus(PaymentTransactionStatus.PENDING);
+        transaction.setProvider(provider.code());
 
         if (online) {
             String msisdn = normalizeMsisdn(request.payerPhone());
-            validateOnlineAmount(request.amount());
+            validateOnlineAmount(transaction.getAmount());
             throttlePhone(msisdn);
             transaction.setPayerPhone(msisdn);
             // Clé d'idempotence RG-20 : générée et PERSISTÉE avant l'appel au prestataire, pour que
@@ -176,6 +177,71 @@ public class PublicDonationService {
         return new PublicDonationResponse(saved.getReference(), saved.getStatus().name(), online ? "ONLINE" : "MANUAL",
             saved.getTrackingToken(),
             saved.getStatus() == PaymentTransactionStatus.FAILED ? publicFailureMessage(saved.getFailureCode()) : null);
+    }
+
+    /** Don à une collecte ouverte : projectId et amount requis (400), collecte active (DON-01), nom sauf anonymat (DON-02). */
+    private PaymentTransaction donationIntent(PublicDonationRequest request) {
+        if (request.projectId() == null) {
+            throw new InvalidRequestException("projectId", "Choisissez la collecte à soutenir.");
+        }
+        if (request.amount() == null) {
+            throw new InvalidRequestException("amount", "Indiquez le montant du don.");
+        }
+        Project project = projectRepository.findById(request.projectId())
+            .orElseThrow(() -> new EntityNotFoundException("Projet introuvable : " + request.projectId()));
+        if (project.getStatus() != ProjectStatus.ACTIVE) {
+            throw new BusinessRuleViolationException("DON-01", "Ce projet n'accepte plus de dons pour le moment.");
+        }
+        if (!request.anonymous() && (request.donorName() == null || request.donorName().isBlank())) {
+            throw new BusinessRuleViolationException("DON-02", "Le nom du donateur est requis, sauf pour un don anonyme.");
+        }
+        return PaymentTransaction.builder()
+            .kind(PaymentTransactionKind.DONATION)
+            .project(project)
+            .amount(request.amount())
+            .anonymous(request.anonymous())
+            .donorName(request.anonymous() ? null : request.donorName())
+            .donorContact(request.anonymous() ? null : request.donorContact())
+            .build();
+    }
+
+    /**
+     * Contribution mensuelle d'un membre à la caisse MLA : donorId, mois et montant par mois requis
+     * (400) ; parcours activé (DON-09), membre actif (DON-10), mois dans la plage proposée (DON-11),
+     * montant entier (DON-05). Jamais anonyme : le membre est connu, c'est lui qui alimente le
+     * calendrier des contributions.
+     */
+    private PaymentTransaction monthlyContributionIntent(PublicDonationRequest request) {
+        if (request.donorId() == null) {
+            throw new InvalidRequestException("donorId", "Choisissez votre nom dans la liste des membres.");
+        }
+        if (request.months() == null || request.months().isEmpty()) {
+            throw new InvalidRequestException("months", "Choisissez au moins un mois.");
+        }
+        if (request.amountPerMonth() == null) {
+            throw new InvalidRequestException("amountPerMonth", "Indiquez le montant par mois.");
+        }
+        if (!monthlyContributionService.settings().isEnabled()) {
+            throw new BusinessRuleViolationException("DON-09", "La contribution mensuelle en ligne est momentanément désactivée.");
+        }
+        Donor member = monthlyContributionService.payingMember(request.donorId());
+        List<LocalDate> months = monthlyContributionService.requestedMonths(request.months());
+        if (request.amountPerMonth().stripTrailingZeros().scale() > 0) {
+            throw new BusinessRuleViolationException("DON-05", "Le montant par mois doit être un montant entier en FCFA.");
+        }
+        DonationCategory caisse = categoryRepository.findFirstByMainFundTrue()
+            .orElseThrow(() -> new BusinessRuleViolationException("DON-09", "La caisse du MLA n'est pas configurée."));
+        PaymentTransaction transaction = PaymentTransaction.builder()
+            .kind(PaymentTransactionKind.MONTHLY_CONTRIBUTION)
+            .category(caisse)
+            .donor(member)
+            .donorName(member.getLabel())
+            .anonymous(false)
+            .amountPerMonth(request.amountPerMonth())
+            .amount(request.amountPerMonth().multiply(BigDecimal.valueOf(months.size())))
+            .build();
+        transaction.getCoveredMonths().addAll(months);
+        return transaction;
     }
 
     /** Accepte 6XXXXXXXX, 06..., +237 6..., 237 6... (espaces, points, tirets ignorés) ; renvoie 2376XXXXXXXX. */

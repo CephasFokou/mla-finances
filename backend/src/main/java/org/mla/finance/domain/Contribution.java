@@ -88,6 +88,11 @@ public class Contribution {
     @JoinColumn(name = "activity_id")
     private Activity activity;
 
+    /** Don en ligne (site public) qui a créé cette contribution, s'il y en a un. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_transaction_id")
+    private PaymentTransaction paymentTransaction;
+
     /** Justification (colonne « Remarque » du fichier de suivi), distincte de la description (notes). */
     @Column(length = 500)
     private String remark;

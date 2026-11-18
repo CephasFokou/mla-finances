@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Contribution mensuelle payée sur le site public. Un don public (payment_transactions) vise
+         soit une collecte (project_id), soit la caisse (category_id = Caisse MLA) : les deux
+         colonnes sont déjà nullables et exclusives (chk_payment_tx_project_xor_category, 0011).
+         Tout est ajouté avec une valeur par défaut ou nullable : les lignes existantes deviennent
+         des dons de type DONATION sans rien changer à leur sens. -->
+    <changeSet id="0014-01-payment-tx-kind-donor-amount-per-month" author="mla-finance">
+        <addColumn tableName="payment_transactions">
+            <column name="kind" type="VARCHAR(30)" defaultValue="DONATION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="donor_id" type="BIGINT"/>
+            <column name="amount_per_month" type="NUMERIC(14,2)"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="payment_transactions" baseColumnNames="donor_id"
+            constraintName="fk_payment_tx_donor" referencedTableName="donors" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <sql>
+            ALTER TABLE payment_transactions
+                ADD CONSTRAINT chk_payment_tx_monthly
+                CHECK (
+                    kind = 'DONATION'
+                    OR (kind = 'MONTHLY_CONTRIBUTION' AND project_id IS NULL AND donor_id IS NOT NULL
+                        AND amount_per_month IS NOT NULL)
+                );
+        </sql>
+    </changeSet>
+
+    <!-- Mois couverts par une contribution mensuelle (period_month = 1er du mois). -->
+    <changeSet id="0014-02-payment-tx-months" author="mla-finance">
+        <createTable tableName="payment_transaction_months">
+            <column name="payment_transaction_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="period_month" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="payment_transaction_months" columnNames="payment_transaction_id, period_month"
+            constraintName="pk_payment_tx_months"/>
+        <addForeignKeyConstraint baseTableName="payment_transaction_months" baseColumnNames="payment_transaction_id"
+            constraintName="fk_payment_tx_months_tx" referencedTableName="payment_transactions" referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- Contributions créées par un don en ligne : une contribution mensuelle en crée une par mois,
+         toutes rattachées à la même transaction (payment_transactions.contribution_id garde la
+         première, pour la compatibilité). -->
+    <changeSet id="0014-03-contributions-payment-tx" author="mla-finance">
+        <addColumn tableName="contributions">
+            <column name="payment_transaction_id" type="BIGINT"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="contributions" baseColumnNames="payment_transaction_id"
+            constraintName="fk_contributions_payment_tx" referencedTableName="payment_transactions" referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        <createIndex tableName="contributions" indexName="idx_contributions_payment_tx">
+            <column name="payment_transaction_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Réglages du parcours public (une seule ligne, id = 1) : activé, montants suggérés par rôle. -->
+    <changeSet id="0014-04-monthly-contribution-settings" author="mla-finance">
+        <createTable tableName="monthly_contribution_settings">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="enabled" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="responsable_amount" type="NUMERIC(14,2)" defaultValueNumeric="5000">
+                <constraints nullable="false"/>
+            </column>
+            <column name="member_amount" type="NUMERIC(14,2)" defaultValueNumeric="2000">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <insert tableName="monthly_contribution_settings">
+            <column name="id" valueNumeric="1"/>
+            <column name="enabled" valueBoolean="true"/>
+            <column name="responsable_amount" valueNumeric="5000"/>
+            <column name="member_amount" valueNumeric="2000"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

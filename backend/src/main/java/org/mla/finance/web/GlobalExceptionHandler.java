@@ -3,6 +3,7 @@ package org.mla.finance.web;
 import jakarta.persistence.EntityNotFoundException;
 import org.mla.finance.exception.AuthenticationFailedException;
 import org.mla.finance.exception.BusinessRuleViolationException;
+import org.mla.finance.exception.InvalidRequestException;
 import org.mla.finance.exception.ConflictException;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,12 @@ public class GlobalExceptionHandler {
             .map(e -> Map.of("field", e.getField(), "message", String.valueOf(e.getDefaultMessage())))
             .toList();
         return ResponseEntity.badRequest().body(Map.of("errors", errors));
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidRequest(InvalidRequestException ex) {
+        return ResponseEntity.badRequest()
+            .body(Map.of("errors", List.of(Map.of("field", ex.getField(), "message", ex.getMessage()))));
     }
 
     @ExceptionHandler(BusinessRuleViolationException.class)

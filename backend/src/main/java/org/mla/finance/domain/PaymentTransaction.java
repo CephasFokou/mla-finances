@@ -1,6 +1,8 @@
 package org.mla.finance.domain;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -21,6 +23,9 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Une intention de don reçue via le front-office public, avant qu'elle ne devienne une
@@ -66,9 +71,32 @@ public class PaymentTransaction {
     @JoinColumn(name = "payment_channel_id", nullable = false)
     private PaymentChannel paymentChannel;
 
+    /** Première contribution créée à la confirmation (une contribution mensuelle en crée une par mois). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "contribution_id")
     private Contribution contribution;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private PaymentTransactionKind kind = PaymentTransactionKind.DONATION;
+
+    /** Membre qui paie sa contribution mensuelle (MONTHLY_CONTRIBUTION uniquement). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "donor_id")
+    private Donor donor;
+
+    /** Montant par mois (MONTHLY_CONTRIBUTION) ; amount = amountPerMonth × nombre de mois. */
+    @Column(name = "amount_per_month", precision = 14, scale = 2)
+    private BigDecimal amountPerMonth;
+
+    /** Mois couverts (1er du mois), triés (MONTHLY_CONTRIBUTION uniquement). */
+    @ElementCollection
+    @CollectionTable(name = "payment_transaction_months", joinColumns = @JoinColumn(name = "payment_transaction_id"))
+    @Column(name = "period_month", nullable = false)
+    @jakarta.persistence.OrderBy
+    @Builder.Default
+    private List<LocalDate> coveredMonths = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "confirmed_by_id")
@@ -167,6 +195,10 @@ public class PaymentTransaction {
     @PreUpdate
     void onUpdate() {
         updatedAt = Instant.now();
+    }
+
+    public boolean isMonthlyContribution() {
+        return kind == PaymentTransactionKind.MONTHLY_CONTRIBUTION;
     }
 
     public boolean isOnline() {

@@ -4,11 +4,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.ProjectStatus;
 import org.mla.finance.service.LedgerReportsService;
+import org.mla.finance.service.MonthlyContributionService;
 import org.mla.finance.service.PublicDonationService;
 import org.mla.finance.web.dto.PublicCollectionResponse;
 import org.mla.finance.web.dto.PublicDonationRequest;
 import org.mla.finance.web.dto.PublicDonationResponse;
 import org.mla.finance.web.dto.PublicDonationStatusResponse;
+import org.mla.finance.web.dto.PublicMonthlyContributionResponse;
 import org.mla.finance.web.dto.PublicPaymentChannelResponse;
 import org.mla.finance.web.dto.PublicProjectResponse;
 import org.mla.finance.web.dto.PublicStatsResponse;
@@ -35,6 +37,7 @@ public class PublicController {
 
     private final PublicDonationService publicDonationService;
     private final LedgerReportsService ledgerReportsService;
+    private final MonthlyContributionService monthlyContributionService;
 
     @GetMapping("/projects")
     public List<PublicProjectResponse> projects() {
@@ -66,6 +69,16 @@ public class PublicController {
                 r.firstMovementDate(),
                 r.lastMovementDate()))
             .toList();
+    }
+
+    /**
+     * Contribution mensuelle des membres (caisse MLA) : membres actifs par leur nom usuel avec le
+     * montant suggéré, et mois proposés. Seule exception à la règle « aucune donnée individuelle »,
+     * décidée par Cephas : le nom usuel, jamais le téléphone, le nom complet ni le rôle.
+     */
+    @GetMapping("/monthly-contribution")
+    public PublicMonthlyContributionResponse monthlyContribution() {
+        return monthlyContributionService.publicOffer();
     }
 
     @GetMapping("/stats")

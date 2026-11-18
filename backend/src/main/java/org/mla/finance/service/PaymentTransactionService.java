@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Optional;
 
 /**
@@ -66,12 +69,21 @@ public class PaymentTransactionService {
         Page<PaymentTransaction> page = status != null
             ? paymentTransactionRepository.findByStatus(status, pageable)
             : paymentTransactionRepository.findAll(pageable);
-        return page.map(PaymentTransactionResponse::from);
+        return page.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public PaymentTransactionResponse get(Long id) {
-        return PaymentTransactionResponse.from(find(id));
+        return toResponse(find(id));
+    }
+
+    /** Vue back-office, avec pour une contribution mensuelle les mois déjà payés par ailleurs (avertissement). */
+    private PaymentTransactionResponse toResponse(PaymentTransaction t) {
+        List<LocalDate> alreadyPaid = List.of();
+        if (t.isMonthlyContribution() && t.getDonor() != null && !t.getCoveredMonths().isEmpty()) {
+            alreadyPaid = contributionRepository.paidMonths(t.getDonor().getId(), t.getCoveredMonths(), t.getId());
+        }
+        return PaymentTransactionResponse.from(t, alreadyPaid);
     }
 
     /** Confirmation manuelle (mode manuel uniquement) après vérification humaine de la réception des fonds. */
@@ -92,8 +104,8 @@ public class PaymentTransactionService {
 
         auditLogService.record("PAYMENT_TRANSACTION", saved.getId(), "CONFIRM",
             "Don en ligne " + saved.getReference() + " confirmé (" + saved.getAmount() + " FCFA pour " + envelopeName(saved)
-                + "), contribution #" + contribution.getId() + " créée");
-        return PaymentTransactionResponse.from(saved);
+                + "), " + createdLabel(saved, contribution));
+        return toResponse(saved);
     }
 
     /**
@@ -122,7 +134,7 @@ public class PaymentTransactionService {
 
         auditLogService.record("PAYMENT_TRANSACTION", saved.getId(), "CANCEL",
             "Don en ligne " + saved.getReference() + " annulé : " + request.reason());
-        return PaymentTransactionResponse.from(saved);
+        return toResponse(saved);
     }
 
     /**
@@ -178,7 +190,7 @@ public class PaymentTransactionService {
                 tx.setNeedsReview(false);
                 auditLogService.record("PAYMENT_TRANSACTION", tx.getId(), "AUTO_CONFIRM",
                     "Don en ligne " + tx.getReference() + " payé via PawaPay (" + tx.getAmount() + " FCFA pour " + envelopeName(tx)
-                        + "), contribution #" + contribution.getId() + " créée");
+                        + "), " + createdLabel(tx, contribution));
             }
             case FAILED, NOT_FOUND -> {
                 tx.setStatus(PaymentTransactionStatus.FAILED);
@@ -227,7 +239,17 @@ public class PaymentTransactionService {
         tx.setNextCheckAt(Instant.now().plus(delay));
     }
 
+    /**
+     * Crée les contributions d'un don confirmé, dans la transaction SQL de sa confirmation : une
+     * seule pour un don à une collecte, une par mois couvert pour une contribution mensuelle
+     * (montant par mois, catégorie caisse, donateur = le membre, period_month = le mois, date de
+     * l'opération = date du paiement). Appelé uniquement sur un don non final, sous verrou de
+     * ligne : une confirmation rejouée ne repasse jamais ici. Renvoie la première contribution.
+     */
     private Contribution createContribution(PaymentTransaction transaction, String notes) {
+        if (transaction.isMonthlyContribution()) {
+            return createMonthlyContributions(transaction, notes);
+        }
         LocalDate today = LocalDate.now();
         Contribution contribution = Contribution.builder()
             .project(transaction.getProject())
@@ -241,10 +263,39 @@ public class PaymentTransactionService {
             .nature(MovementNature.DONATION)
             .anonymous(transaction.isAnonymous())
             .notes(notes)
+            .paymentTransaction(transaction)
             .build();
         Contribution saved = contributionRepository.save(contribution);
         transaction.setContribution(saved);
         return saved;
+    }
+
+    private Contribution createMonthlyContributions(PaymentTransaction transaction, String notes) {
+        if (transaction.getCoveredMonths().isEmpty() || transaction.getDonor() == null || transaction.getAmountPerMonth() == null) {
+            throw new IllegalStateException("Contribution mensuelle " + transaction.getReference() + " incomplète (membre, mois ou montant).");
+        }
+        LocalDate paidOn = LocalDate.now(MonthlyContributionService.ZONE);
+        Contribution first = null;
+        for (LocalDate month : transaction.getCoveredMonths()) {
+            Contribution saved = contributionRepository.save(Contribution.builder()
+                .category(transaction.getCategory())
+                .donor(transaction.getDonor())
+                .paymentChannel(transaction.getPaymentChannel())
+                .amount(transaction.getAmountPerMonth())
+                .periodMonth(month)
+                .transactionDate(paidOn)
+                .movementType(MovementType.STANDARD)
+                .nature(MovementNature.MONTHLY_CONTRIBUTION)
+                .anonymous(false)
+                .notes(notes + " — " + YearMonth.from(month))
+                .paymentTransaction(transaction)
+                .build());
+            if (first == null) {
+                first = saved;
+            }
+        }
+        transaction.setContribution(first);
+        return first;
     }
 
     /**
@@ -284,7 +335,17 @@ public class PaymentTransactionService {
     }
 
     private static String envelopeName(PaymentTransaction tx) {
+        if (tx.isMonthlyContribution()) {
+            return "la contribution mensuelle de " + tx.getDonorName() + " ("
+                + tx.getCoveredMonths().stream().map(m -> YearMonth.from(m).toString()).collect(Collectors.joining(", ")) + ")";
+        }
         return tx.getProject() != null ? tx.getProject().getName() : tx.getCategory().getName();
+    }
+
+    private static String createdLabel(PaymentTransaction tx, Contribution first) {
+        return tx.isMonthlyContribution()
+            ? tx.getCoveredMonths().size() + " contribution(s) mensuelle(s) créée(s) à partir de #" + first.getId()
+            : "contribution #" + first.getId() + " créée";
     }
 
     private void requireStatus(PaymentTransaction transaction, PaymentTransactionStatus expected) {
