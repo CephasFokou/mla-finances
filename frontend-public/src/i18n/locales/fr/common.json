@@ -79,16 +79,11 @@
       "otherAmount": "Autre montant (FCFA)",
       "otherAmountPlaceholder": "Ex. 3 000",
       "name": "Votre nom",
-      "namePlaceholder": "Comme on vous appelle au MLA",
-      "contact": "Téléphone ou email (facultatif)",
-      "contactHint": "Pour que le secrétariat puisse vous joindre au sujet de votre don.",
+      "namePlaceholder": "Prénom et nom",
       "anonymous": "Donner anonymement",
-      "payWith": "Payer avec",
       "manualNote": "Après l'envoi, faites votre paiement par le canal choisi en indiquant la référence du don. Le secrétariat confirme la réception, puis votre don s'ajoute au total.",
       "onlineNote": "Une demande de paiement sera envoyée sur ce numéro. Validez-la avec votre code secret Mobile Money : votre don est confirmé automatiquement.",
-      "phone": "Numéro {{channel}} à débiter",
       "phonePlaceholder": "6xx xx xx xx",
-      "phoneHint": "Numéro camerounais à 9 chiffres (avec ou sans 237).",
       "phoneInvalid": "Indiquez un numéro Mobile Money valide : 9 chiffres commençant par 6.",
       "continue": "Continuer",
       "submit": "Enregistrer mon don",
@@ -114,7 +109,9 @@
       "again": "Faire un autre don",
       "done": "Terminer",
       "monthlyOption": "Donner ma contribution mensuelle (montant libre)",
-      "monthlyOptionSub": "Caisse du MLA — responsables et membres"
+      "monthlyOptionSub": "Caisse du MLA — responsables et membres",
+      "nameHint": "Votre nom figure uniquement sur votre reçu : il n'est jamais affiché sur le site.",
+      "paidTitleNamed": "Merci {{name}}, votre don a été reçu."
     },
     "period": "{{from}} à {{to}}",
     "language": {
@@ -163,8 +160,46 @@
         "successText": "{{amount}} pour {{months}}. Paie maintenant par {{channel}} en indiquant ta référence ; le secrétariat confirmera la réception.",
         "error": "La contribution n'a pas pu être enregistrée. Vérifiez votre connexion puis réessayez.",
         "unavailable": "La contribution mensuelle en ligne n'est pas disponible pour le moment.",
-        "submit": "Enregistrer ma contribution"
+        "submit": "Enregistrer ma contribution",
+        "paidTitleNamed": "Merci {{name}} !"
       }
+    },
+    "payment": {
+      "phone": "Votre numéro Orange Money ou MTN MoMo",
+      "phoneHint": "9 chiffres, avec ou sans 237. L'opérateur est reconnu automatiquement.",
+      "detected": "{{operator}} reconnu.",
+      "unavailable": "{{operator}} n'est pas disponible pour le moment. Utilisez un numéro de l'autre opérateur ou un autre moyen de paiement.",
+      "unsupported": "Ce numéro n'est ni Orange Money ni MTN MoMo. Utilisez un numéro Orange ou MTN, ou un autre moyen de paiement.",
+      "pickOperator": "Nous ne reconnaissons pas l'opérateur de ce numéro. Choisissez-le :",
+      "otherWay": "Payer autrement (espèces, virement…)",
+      "backToMobile": "Payer par Mobile Money",
+      "otherTitle": "Autre moyen de paiement",
+      "contactPhone": "Votre numéro de téléphone (facultatif)",
+      "contactHint": "Pour que le secrétariat puisse vous joindre au sujet de votre paiement.",
+      "operators": {
+        "ORANGE_MONEY": "Orange Money",
+        "MTN_MOMO": "MTN MoMo"
+      }
+    },
+    "receipt": {
+      "print": "Imprimer ou enregistrer mon reçu",
+      "site": "Reçu du site de don du MLA",
+      "title": "Reçu de don",
+      "titleMonthly": "Reçu de contribution mensuelle",
+      "amount": "Montant reçu",
+      "reference": "Référence",
+      "date": "Date du paiement",
+      "donor": "Donateur",
+      "anonymous": "Don anonyme",
+      "collection": "Collecte",
+      "fund": "Affectation",
+      "fundName": "Caisse du MLA",
+      "months": "Mois couverts",
+      "channel": "Moyen de paiement",
+      "status": "Statut",
+      "confirmed": "Paiement confirmé",
+      "thanks": "Merci pour votre générosité.",
+      "foot": "Pour toute question sur ce paiement, contactez le secrétariat du MLA en indiquant la référence."
     }
   }
 }

@@ -1,0 +1,97 @@
+@use '../tokens' as *;
+
+// Reçu imprimable (A4 ou feuille d'impression du téléphone). Invisible à l'écran : il n'apparaît
+// qu'à l'impression, à la place de la page (règles .mla-receipt dans global.scss).
+.receipt {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 8px;
+  color: $ink;
+  font: 400 15px/1.5 $font-body;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid $violet;
+}
+
+.logo {
+  display: block;
+  width: 64px;
+  flex: none;
+}
+
+.org {
+  display: block;
+  font: 700 17px $font-display;
+  color: $violet-night;
+}
+
+.sub {
+  display: block;
+  color: $ink-soft;
+  font-size: 14px;
+}
+
+.title {
+  margin: 28px 0 16px;
+  font: 800 26px $font-display;
+  color: $violet-night;
+}
+
+.amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: $violet-tint;
+  font-weight: 600;
+
+  strong {
+    font: 800 28px $font-display;
+    color: $violet-night;
+  }
+}
+
+.rows {
+  margin: 20px 0 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 38% 1fr;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid $line;
+
+  dt {
+    color: $ink-soft;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.ok {
+  color: #2e7d32;
+}
+
+.thanks {
+  margin: 28px 0 8px;
+  font: 600 16px $font-body;
+}
+
+.foot {
+  margin: 0;
+  color: $ink-soft;
+  font-size: 13px;
+}

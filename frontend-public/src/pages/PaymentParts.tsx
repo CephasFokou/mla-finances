@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { IccLogo } from '../components/IccLogo'
+import type { PaymentChoice } from '../features/public/payment'
 import type { PublicPaymentChannel } from '../features/public/types'
 import styles from './DonationDialog.module.scss'
 
@@ -15,71 +16,145 @@ const OPERATOR_BADGES: Record<string, { label: string; background: string; color
   MTN_MOMO: { label: 'MoMo', background: '#FFCB05', color: '#23122F' },
 }
 
-export function ChannelPicker({
-  channels,
-  channelId,
-  onSelect,
-  phone,
-  onPhoneChange,
-  note,
+/** Pastille d'un canal (OM, MoMo, ou icône portefeuille pour les canaux manuels). */
+function ChannelBadge({ channel }: { channel: PublicPaymentChannel }) {
+  const badge = OPERATOR_BADGES[channel.code]
+  return (
+    <span
+      className={styles.operator}
+      style={badge ? { background: badge.background, color: badge.color } : undefined}
+    >
+      {badge?.label ?? (
+        <svg viewBox="0 0 24 24" className={styles.walletIcon} aria-hidden="true">
+          <path d="M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm0 0V6a2 2 0 0 1 2-2h10M16 13h1" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
+/**
+ * Étape « Paiement », identique dans les deux parcours : un seul champ numéro, l'opérateur est
+ * reconnu à partir du préfixe (pas de choix Orange/MTN à faire), et un lien « Payer autrement »
+ * pour les canaux manuels. Toute la logique est dans usePaymentChoice.
+ */
+export function PaymentStep({
+  choice,
+  onlineNote,
+  manualNote,
 }: {
-  channels: PublicPaymentChannel[] | undefined
-  channelId: number | null
-  onSelect: (id: number) => void
-  phone: string
-  onPhoneChange: (value: string) => void
-  note: string
+  choice: PaymentChoice
+  onlineNote: string
+  manualNote: string
 }) {
   const { t } = useTranslation()
-  const channel = channels?.find((c) => c.id === channelId)
-  return (
-    <>
-      <div className={styles.label} id="channel-label">
-        {t('public.dialog.payWith')}
-      </div>
-      <div className={styles.stack} role="radiogroup" aria-labelledby="channel-label">
-        {channels?.map((c) => {
-          const badge = OPERATOR_BADGES[c.code]
-          return (
+  const operatorName = (code: string) => t(`public.payment.operators.${code}`)
+
+  if (choice.manualMode) {
+    return (
+      <>
+        <div className={styles.label} id="channel-label">
+          {t('public.payment.otherTitle')}
+        </div>
+        <div className={styles.stack} role="radiogroup" aria-labelledby="channel-label">
+          {choice.manualChannels.map((c) => (
             <button
               key={c.id}
               type="button"
               role="radio"
-              aria-checked={channelId === c.id}
+              aria-checked={choice.manualId === c.id}
               className={styles.choice}
-              onClick={() => onSelect(c.id)}
+              onClick={() => choice.setManualId(c.id)}
             >
-              <span
-                className={styles.operator}
-                style={badge ? { background: badge.background, color: badge.color } : undefined}
-              >
-                {badge?.label ?? (
-                  <svg viewBox="0 0 24 24" className={styles.walletIcon} aria-hidden="true">
-                    <path d="M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm0 0V6a2 2 0 0 1 2-2h10M16 13h1" />
-                  </svg>
-                )}
-              </span>
+              <ChannelBadge channel={c} />
               <span className={styles.choiceTitle}>{c.label}</span>
               <span className={styles.radio} />
             </button>
-          )
-        })}
-      </div>
-      {channel?.online && (
+          ))}
+        </div>
         <label className={styles.field}>
-          {t('public.dialog.phone', { channel: channel.label })}
+          {t('public.payment.contactPhone')}
           <input
             type="tel"
             inputMode="tel"
             autoComplete="tel-national"
-            value={phone}
+            value={choice.phone}
             placeholder={t('public.dialog.phonePlaceholder')}
-            onChange={(e) => onPhoneChange(e.target.value)}
+            onChange={(e) => choice.setPhone(e.target.value)}
           />
-          <span className={styles.hint}>{t('public.dialog.phoneHint')}</span>
+          <span className={styles.hint}>{t('public.payment.contactHint')}</span>
         </label>
+        <p className={styles.note}>{manualNote}</p>
+        {choice.canSwitch && (
+          <button type="button" className={styles.linkBtn} onClick={() => choice.setOtherWay(false)}>
+            {t('public.payment.backToMobile')}
+          </button>
+        )}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <label className={styles.field}>
+        {t('public.payment.phone')}
+        <input
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          value={choice.phone}
+          placeholder={t('public.dialog.phonePlaceholder')}
+          onChange={(e) => choice.setPhone(e.target.value)}
+        />
+        {!choice.valid && <span className={styles.hint}>{t('public.payment.phoneHint')}</span>}
+      </label>
+
+      {choice.detectedChannel && (
+        <p className={styles.detected} aria-live="polite">
+          <ChannelBadge channel={choice.detectedChannel} />
+          <span>{t('public.payment.detected', { operator: choice.detectedChannel.label })}</span>
+        </p>
       )}
-      <p className={styles.note}>{note}</p>
+      {choice.issue === 'unavailable' && choice.detected && choice.detected !== 'UNSUPPORTED' && (
+        <p className={styles.warn} role="alert">
+          {t('public.payment.unavailable', { operator: operatorName(choice.detected) })}
+        </p>
+      )}
+      {choice.issue === 'unsupported' && (
+        <p className={styles.warn} role="alert">
+          {t('public.payment.unsupported')}
+        </p>
+      )}
+      {choice.issue === 'pickOperator' && (
+        <>
+          <div className={styles.label} id="operator-label">
+            {t('public.payment.pickOperator')}
+          </div>
+          <div className={styles.stack} role="radiogroup" aria-labelledby="operator-label">
+            {choice.onlineChannels.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                role="radio"
+                aria-checked={choice.pickedOnlineId === c.id}
+                className={styles.choice}
+                onClick={() => choice.setPickedOnlineId(c.id)}
+              >
+                <ChannelBadge channel={c} />
+                <span className={styles.choiceTitle}>{c.label}</span>
+                <span className={styles.radio} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <p className={styles.note}>{onlineNote}</p>
+      {choice.canSwitch && (
+        <button type="button" className={styles.linkBtn} onClick={() => choice.setOtherWay(true)}>
+          {t('public.payment.otherWay')}
+        </button>
+      )}
     </>
   )
 }

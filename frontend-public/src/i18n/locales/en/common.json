@@ -109,7 +109,8 @@
         "successText": "{{amount}} for {{months}}. Now pay through {{channel}} and quote your reference; the secretariat will confirm receipt.",
         "error": "The contribution couldn't be registered. Check your connection and try again.",
         "unavailable": "The online monthly contribution isn't available right now.",
-        "submit": "Register my contribution"
+        "submit": "Register my contribution",
+        "paidTitleNamed": "Thank you {{name}}!"
       }
     },
     "dialog": {
@@ -129,16 +130,11 @@
       "otherAmount": "Other amount (FCFA)",
       "otherAmountPlaceholder": "e.g. 3,000",
       "name": "Your name",
-      "namePlaceholder": "As people call you at the MLA",
-      "contact": "Phone or email (optional)",
-      "contactHint": "So the secretariat can reach you about your gift.",
+      "namePlaceholder": "First and last name",
       "anonymous": "Give anonymously",
-      "payWith": "Pay with",
       "manualNote": "After sending, make your payment through the chosen channel and quote the gift reference. The secretariat confirms receipt, then your gift is added to the total.",
       "onlineNote": "A payment request will be sent to this number. Approve it with your Mobile Money PIN: your gift is confirmed automatically.",
-      "phone": "{{channel}} number to charge",
       "phonePlaceholder": "6xx xx xx xx",
-      "phoneHint": "Cameroonian 9-digit number (with or without 237).",
       "phoneInvalid": "Enter a valid Mobile Money number: 9 digits starting with 6.",
       "continue": "Continue",
       "submit": "Register my gift",
@@ -164,7 +160,46 @@
       "again": "Give again",
       "done": "Done",
       "monthlyOption": "Give my monthly contribution (any amount)",
-      "monthlyOptionSub": "MLA fund — leaders and members"
+      "monthlyOptionSub": "MLA fund — leaders and members",
+      "nameHint": "Your name only appears on your receipt: it is never shown on the site.",
+      "paidTitleNamed": "Thank you {{name}}, your gift has been received."
+    },
+    "payment": {
+      "phone": "Your Orange Money or MTN MoMo number",
+      "phoneHint": "9 digits, with or without 237. The operator is detected automatically.",
+      "detected": "{{operator}} detected.",
+      "unavailable": "{{operator}} is not available right now. Use a number from the other operator or another payment method.",
+      "unsupported": "This number is neither Orange Money nor MTN MoMo. Use an Orange or MTN number, or another payment method.",
+      "pickOperator": "We don't recognise this number's operator. Choose it:",
+      "otherWay": "Pay another way (cash, transfer…)",
+      "backToMobile": "Pay by Mobile Money",
+      "otherTitle": "Other payment method",
+      "contactPhone": "Your phone number (optional)",
+      "contactHint": "So the secretariat can reach you about your payment.",
+      "operators": {
+        "ORANGE_MONEY": "Orange Money",
+        "MTN_MOMO": "MTN MoMo"
+      }
+    },
+    "receipt": {
+      "print": "Print or save my receipt",
+      "site": "Receipt from the MLA donation site",
+      "title": "Donation receipt",
+      "titleMonthly": "Monthly contribution receipt",
+      "amount": "Amount received",
+      "reference": "Reference",
+      "date": "Payment date",
+      "donor": "Donor",
+      "anonymous": "Anonymous gift",
+      "collection": "Collection",
+      "fund": "Allocated to",
+      "fundName": "MLA fund",
+      "months": "Months covered",
+      "channel": "Payment method",
+      "status": "Status",
+      "confirmed": "Payment confirmed",
+      "thanks": "Thank you for your generosity.",
+      "foot": "For any question about this payment, contact the MLA secretariat and quote the reference."
     }
   }
 }

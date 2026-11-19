@@ -174,6 +174,46 @@ class PawaPayFlowTest {
             .andExpect(jsonPath("$.reference").value(tx.getReference()));
     }
 
+    private PaymentTransaction confirmOnline(Map<String, Object> body) throws Exception {
+        JsonNode response = submit(body, 200);
+        PaymentTransaction tx = paymentTransactionRepository.findByTrackingToken(response.get("trackingToken").asText()).orElseThrow();
+        when(client.checkDeposit(tx.getDepositId())).thenReturn(DepositOutcome.completed("COMPLETED", "PROV-" + tx.getId()));
+        callback("cb-secret-test", tx.getDepositId(), 200);
+        return tx;
+    }
+
+    @Test
+    void confirmedDonationExposesItsReceiptAndTheSiteNeverNamesDonors() throws Exception {
+        Map<String, Object> named = donation(orangeMoney, 3000, "693456789");
+        named.put("donorName", "samuel PIEDJOU");
+        PaymentTransaction tx = confirmOnline(named);
+
+        // Reçu : lu par le jeton du payeur, numéro masqué.
+        mockMvc.perform(get("/api/v1/public/donations/" + tx.getTrackingToken()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CONFIRMED"))
+            .andExpect(jsonPath("$.kind").value("DONATION"))
+            .andExpect(jsonPath("$.purpose").value("Collecte test PawaPay"))
+            .andExpect(jsonPath("$.donorName").value("samuel PIEDJOU"))
+            .andExpect(jsonPath("$.payerPhone").value("6** ** 67 89"))
+            .andExpect(jsonPath("$.confirmedAt").isNotEmpty());
+        JsonNode receipt = objectMapper.readTree(mockMvc.perform(get("/api/v1/public/donations/" + tx.getTrackingToken()))
+            .andReturn().getResponse().getContentAsString());
+        assertThat(receipt.get("amount").decimalValue()).isEqualByComparingTo("3000");
+
+        Map<String, Object> anonymous = donation(orangeMoney, 1000, "693456788");
+        anonymous.put("anonymous", true);
+        anonymous.remove("donorName");
+        PaymentTransaction anon = confirmOnline(anonymous);
+        mockMvc.perform(get("/api/v1/public/donations/" + anon.getTrackingToken()))
+            .andExpect(jsonPath("$.donorName").value(org.hamcrest.Matchers.nullValue()));
+
+        // Site public : totaux seulement, aucun nom de donateur (anonymat pour tous).
+        String content = mockMvc.perform(get("/api/v1/public/collections")).andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        assertThat(content).doesNotContain("PIEDJOU").doesNotContain("Samuel").doesNotContain("recentDonors");
+    }
+
     @Test
     void completedDepositConfirmsOnceEvenWhenCallbackIsReplayed() throws Exception {
         BigDecimal before = collected();

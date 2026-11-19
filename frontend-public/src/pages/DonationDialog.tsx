@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { usePublicPaymentChannelsQuery, useSubmitPublicDonationMutation } from '../features/public/hooks'
-import { phoneDigitsOf, useOnlinePaymentTracking } from '../features/public/payment'
+import { useOnlinePaymentTracking, usePaymentChoice } from '../features/public/payment'
 import type { PublicCollection } from '../features/public/types'
 import { ApiError } from '../lib/apiClient'
 import { formatFcfa } from '../lib/format'
 import styles from './DonationDialog.module.scss'
-import { ChannelPicker, FailureScreen, FlowHeader, SuccessScreen, WaitingScreen } from './PaymentParts'
+import { FailureScreen, FlowHeader, PaymentStep, SuccessScreen, WaitingScreen } from './PaymentParts'
+import { ReceiptButton, type ReceiptData } from './Receipt'
 
 const AMOUNT_PRESETS = [1000, 2000, 5000, 10000]
 /** Numéro où envoyer le paiement, affiché après l'enregistrement s'il est configuré au déploiement. */
@@ -51,9 +52,7 @@ export function DonationDialog({
   const [custom, setCustom] = useState('')
   const [anonymous, setAnonymous] = useState(false)
   const [name, setName] = useState('')
-  const [contact, setContact] = useState('')
-  const [channelId, setChannelId] = useState<number | null>(null)
-  const [phone, setPhone] = useState('')
+  const payment = usePaymentChoice(channels)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -64,26 +63,36 @@ export function DonationDialog({
 
   const value = custom ? Number(custom) : (amount ?? 0)
   const collection = collections.find((c) => c.id === collectionId)
-  const channel = channels?.find((c) => c.id === channelId)
+  const { channel, online } = payment
   const result = mutation.data
-  const online = !!channel?.online
-  const { digits: phoneDigits, valid: phoneLooksValid } = phoneDigitsOf(phone)
 
   // Suivi d'un don en ligne tant qu'il n'est pas final (voir useOnlinePaymentTracking).
-  const { liveStatus, failureMessage, longWait } = useOnlinePaymentTracking(result)
+  const { liveStatus, failureMessage, longWait, receipt } = useOnlinePaymentTracking(result)
+  const firstName = anonymous ? '' : (name.trim().split(/\s+/)[0] ?? '')
+  const receiptData: ReceiptData | null = result
+    ? {
+        kind: 'DONATION',
+        reference: result.reference,
+        amount: receipt?.amount ?? value,
+        purpose: receipt?.purpose ?? collection?.name ?? '',
+        months: [],
+        donorName: receipt ? (receipt.donorName ?? null) : anonymous ? null : name.trim(),
+        channel: receipt?.channel ?? channel?.label ?? null,
+        payerPhone: receipt?.payerPhone ?? null,
+        confirmedAt: receipt?.confirmedAt ?? null,
+      }
+    : null
 
   const canContinue =
     (step === 1 && !!collection) ||
     (step === 2 && value > 0 && (anonymous || name.trim().length > 0)) ||
-    (step === 3 && !!channel && (!online || phoneLooksValid) && !mutation.isPending)
+    (step === 3 && payment.ready && !mutation.isPending)
 
   const reset = () => {
     mutation.reset()
     setStep(1)
     setAmount(null)
     setCustom('')
-    setChannelId(null)
-    setPhone('')
     setError(null)
   }
 
@@ -102,16 +111,17 @@ export function DonationDialog({
     if (step === 2 && !anonymous && !name.trim()) return setError(t('public.dialog.nameRequired'))
     if (step < 3) return setStep(step + 1)
     if (!collection || !channel) return
-    if (online && !phoneLooksValid) return setError(t('public.dialog.phoneInvalid'))
+    if (online && !payment.valid) return setError(t('public.dialog.phoneInvalid'))
     try {
+      // Un seul numéro : celui qui paie sert aussi à joindre le donateur (sauf don anonyme).
       await mutation.mutateAsync({
         projectId: collection.id,
         paymentChannelId: channel.id,
         amount: value,
         anonymous,
         donorName: anonymous ? undefined : name.trim(),
-        donorContact: anonymous ? undefined : contact.trim() || undefined,
-        payerPhone: online ? phoneDigits : undefined,
+        donorContact: anonymous ? undefined : payment.phoneToSend,
+        payerPhone: online ? payment.digits : undefined,
       })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('public.dialog.error'))
@@ -132,7 +142,7 @@ export function DonationDialog({
         <WaitingScreen
           text={t('public.dialog.waitingText', {
             amount: formatFcfa(value),
-            phone: phoneDigits.replace(/^237/, ''),
+            phone: payment.digits.replace(/^237/, ''),
             channel: channel?.label ?? '',
           })}
           longWait={longWait}
@@ -148,11 +158,24 @@ export function DonationDialog({
         />
       ) : result ? (
         <SuccessScreen
-          title={result.mode === 'ONLINE' ? t('public.dialog.paidTitle') : t('public.dialog.successTitle')}
+          title={
+            result.mode === 'ONLINE'
+              ? firstName
+                ? t('public.dialog.paidTitleNamed', { name: firstName })
+                : t('public.dialog.paidTitle')
+              : t('public.dialog.successTitle')
+          }
           reference={result.reference}
           actions={
             <>
-              <button type="button" className={styles.ctaGold} onClick={reset}>
+              {result.mode === 'ONLINE' && receiptData && (
+                <ReceiptButton receipt={receiptData} className={styles.ctaGold} />
+              )}
+              <button
+                type="button"
+                className={result.mode === 'ONLINE' ? styles.ctaGhost : styles.ctaGold}
+                onClick={reset}
+              >
                 {t('public.dialog.again')}
               </button>
               <button type="button" className={styles.ctaGhost} onClick={close}>
@@ -277,26 +300,16 @@ export function DonationDialog({
                   {t('public.dialog.anonymous')}
                 </label>
                 {!anonymous && (
-                  <>
-                    <label className={styles.field}>
-                      {t('public.dialog.name')}
-                      <input
-                        value={name}
-                        autoComplete="name"
-                        placeholder={t('public.dialog.namePlaceholder')}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </label>
-                    <label className={styles.field}>
-                      {t('public.dialog.contact')}
-                      <input
-                        value={contact}
-                        autoComplete="tel"
-                        onChange={(e) => setContact(e.target.value)}
-                      />
-                      <span className={styles.hint}>{t('public.dialog.contactHint')}</span>
-                    </label>
-                  </>
+                  <label className={styles.field}>
+                    {t('public.dialog.name')}
+                    <input
+                      value={name}
+                      autoComplete="name"
+                      placeholder={t('public.dialog.namePlaceholder')}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                    <span className={styles.hint}>{t('public.dialog.nameHint')}</span>
+                  </label>
                 )}
               </div>
             )}
@@ -307,13 +320,10 @@ export function DonationDialog({
                   <span>{collection?.name}</span>
                   <strong>{formatFcfa(value)}</strong>
                 </div>
-                <ChannelPicker
-                  channels={channels}
-                  channelId={channelId}
-                  onSelect={setChannelId}
-                  phone={phone}
-                  onPhoneChange={setPhone}
-                  note={online ? t('public.dialog.onlineNote') : t('public.dialog.manualNote')}
+                <PaymentStep
+                  choice={payment}
+                  onlineNote={t('public.dialog.onlineNote')}
+                  manualNote={t('public.dialog.manualNote')}
                 />
               </div>
             )}
@@ -330,10 +340,10 @@ export function DonationDialog({
               {step < 3
                 ? t('public.dialog.continue')
                 : mutation.isPending
-                  ? online
+                  ? !payment.manualMode
                     ? t('public.dialog.paying')
                     : t('public.dialog.submitting')
-                  : online
+                  : !payment.manualMode
                     ? t('public.dialog.pay', { amount: formatFcfa(value) })
                     : t('public.dialog.submit')}
             </button>
