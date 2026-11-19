@@ -43,4 +43,25 @@ class RateLimitFilterTest {
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isUnauthorized());
     }
+
+    /**
+     * Derrière Cloudflare, X-Forwarded-For peut être fourni par le client (Cloudflare y ajoute
+     * l'adresse réelle à la suite) : changer sa première valeur ne doit pas remettre le quota à zéro.
+     */
+    @Test
+    void cloudflareConnectingIpWinsOverAForgedForwardedFor() throws Exception {
+        String body = "{\"email\":\"nobody@mla-finance.dev\",\"password\":\"wrong\"}";
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                    .header("CF-Connecting-IP", "198.51.100.20")
+                    .header("X-Forwarded-For", "10.0.0." + i + ", 198.51.100.20")
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(post("/api/v1/auth/login")
+                .header("CF-Connecting-IP", "198.51.100.20")
+                .header("X-Forwarded-For", "10.0.0.99, 198.51.100.20")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isTooManyRequests());
+    }
 }
