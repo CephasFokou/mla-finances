@@ -38,3 +38,27 @@ button {
   outline: 3px solid $violet;
   outline-offset: 3px;
 }
+
+// Reçu de don : caché à l'écran ; à l'impression, il remplace la page et la fenêtre de don.
+.mla-receipt {
+  display: none;
+}
+
+@media print {
+  body > :not(.mla-receipt),
+  dialog {
+    display: none !important;
+  }
+
+  .mla-receipt {
+    display: block;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}

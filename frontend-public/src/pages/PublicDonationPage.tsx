@@ -33,7 +33,10 @@ export function PublicDonationPage() {
     return {
       open: list.filter((c) => c.state === 'OPEN'),
       upcoming: list.filter((c) => c.state === 'UPCOMING'),
-      closed: list.filter((c) => c.state === 'CLOSED'),
+      // Les plus récentes en haut (dernier mouvement), même si l'API ne les trie pas.
+      closed: list
+        .filter((c) => c.state === 'CLOSED')
+        .sort((a, b) => (b.lastMovementDate ?? '').localeCompare(a.lastMovementDate ?? '')),
       totalCollected: list.reduce((sum, c) => sum + c.collected, 0),
       fundedCount: list.filter((c) => c.collected > 0).length,
     }

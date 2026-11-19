@@ -70,6 +70,20 @@ export interface PublicDonationStatusResult {
   status: PublicDonationStatus
   failureCode: string | null
   failureMessage: string | null
+  /** Contenu du reçu (renseigné par l'API à partir du 19/11/2026). */
+  kind?: 'DONATION' | 'MONTHLY_CONTRIBUTION'
+  amount?: number
+  /** Collecte, ou caisse du MLA pour une contribution mensuelle. */
+  purpose?: string | null
+  /** « YYYY-MM », vide pour un don. */
+  months?: string[]
+  /** null pour un don anonyme. */
+  donorName?: string | null
+  channel?: string | null
+  /** Numéro débité, masqué (« 6** ** 67 89 »). */
+  payerPhone?: string | null
+  createdAt?: string | null
+  confirmedAt?: string | null
 }
 
 /** Collecte publique : montants agrégés seulement (GET /public/collections). */

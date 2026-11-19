@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { usePublicPaymentChannelsQuery, useSubmitPublicDonationMutation } from '../features/public/hooks'
-import { phoneDigitsOf, useOnlinePaymentTracking } from '../features/public/payment'
+import { useOnlinePaymentTracking, usePaymentChoice } from '../features/public/payment'
 import type { PublicMonthlyOffer } from '../features/public/types'
 import { ApiError } from '../lib/apiClient'
 import { currentMonthKey, formatFcfa, formatMonthList, formatMonthShort } from '../lib/format'
 import styles from './DonationDialog.module.scss'
-import { ChannelPicker, FailureScreen, FlowHeader, SuccessScreen, WaitingScreen } from './PaymentParts'
+import { FailureScreen, FlowHeader, PaymentStep, SuccessScreen, WaitingScreen } from './PaymentParts'
+import { ReceiptButton, type ReceiptData } from './Receipt'
 
 const STEPS = 4
 /** Numéro où envoyer le paiement, affiché après l'enregistrement s'il est configuré au déploiement. */
@@ -50,8 +51,7 @@ export function MonthlyContributionDialog({
   const [memberId, setMemberId] = useState<number | null>(null)
   const [months, setMonths] = useState<string[]>(defaultMonth ? [defaultMonth] : [])
   const [amount, setAmount] = useState('')
-  const [channelId, setChannelId] = useState<number | null>(null)
-  const [phone, setPhone] = useState('')
+  const payment = usePaymentChoice(channels)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -68,11 +68,22 @@ export function MonthlyContributionDialog({
   const perMonth = /^\d+$/.test(amount) ? Number(amount) : 0
   const sortedMonths = [...months].sort()
   const total = perMonth * months.length
-  const channel = channels?.find((c) => c.id === channelId)
-  const online = !!channel?.online
-  const { digits: phoneDigits, valid: phoneLooksValid } = phoneDigitsOf(phone)
+  const { channel, online } = payment
   const result = mutation.data
-  const { liveStatus, failureMessage, longWait } = useOnlinePaymentTracking(result)
+  const { liveStatus, failureMessage, longWait, receipt } = useOnlinePaymentTracking(result)
+  const receiptData: ReceiptData | null = result
+    ? {
+        kind: 'MONTHLY_CONTRIBUTION',
+        reference: result.reference,
+        amount: receipt?.amount ?? total,
+        purpose: receipt?.purpose ?? t('public.receipt.fundName'),
+        months: receipt?.months?.length ? receipt.months : sortedMonths,
+        donorName: receipt?.donorName ?? member?.displayName ?? null,
+        channel: receipt?.channel ?? channel?.label ?? null,
+        payerPhone: receipt?.payerPhone ?? null,
+        confirmedAt: receipt?.confirmedAt ?? null,
+      }
+    : null
 
   const chooseMember = (id: number) => {
     setMemberId(id)
@@ -88,7 +99,7 @@ export function MonthlyContributionDialog({
     (step === 1 && !!member) ||
     (step === 2 && months.length > 0) ||
     (step === 3 && perMonth > 0) ||
-    (step === 4 && !!channel && (!online || phoneLooksValid) && !mutation.isPending)
+    (step === 4 && payment.ready && !mutation.isPending)
 
   const retry = () => {
     mutation.reset()
@@ -103,7 +114,7 @@ export function MonthlyContributionDialog({
     if (step === 3 && !(perMonth > 0)) return setError(t('public.monthly.dialog.amountRequired'))
     if (step < STEPS) return setStep(step + 1)
     if (!member || !channel) return
-    if (online && !phoneLooksValid) return setError(t('public.dialog.phoneInvalid'))
+    if (online && !payment.valid) return setError(t('public.dialog.phoneInvalid'))
     try {
       await mutation.mutateAsync({
         type: 'MONTHLY_CONTRIBUTION',
@@ -111,7 +122,7 @@ export function MonthlyContributionDialog({
         months: sortedMonths,
         amountPerMonth: perMonth,
         paymentChannelId: channel.id,
-        payerPhone: online ? phoneDigits : undefined,
+        payerPhone: online ? payment.digits : undefined,
       })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('public.monthly.dialog.error'))
@@ -134,7 +145,7 @@ export function MonthlyContributionDialog({
         <WaitingScreen
           text={t('public.dialog.waitingText', {
             amount: formatFcfa(total),
-            phone: phoneDigits.replace(/^237/, ''),
+            phone: payment.digits.replace(/^237/, ''),
             channel: channel?.label ?? '',
           })}
           longWait={longWait}
@@ -152,14 +163,23 @@ export function MonthlyContributionDialog({
         <SuccessScreen
           title={
             result.mode === 'ONLINE'
-              ? t('public.monthly.dialog.paidTitle')
+              ? t('public.monthly.dialog.paidTitleNamed', { name: member?.displayName ?? '' })
               : t('public.monthly.dialog.successTitle')
           }
           reference={result.reference}
           actions={
-            <button type="button" className={styles.ctaGold} onClick={onClose}>
-              {t('public.dialog.done')}
-            </button>
+            <>
+              {result.mode === 'ONLINE' && receiptData && (
+                <ReceiptButton receipt={receiptData} className={styles.ctaGold} />
+              )}
+              <button
+                type="button"
+                className={result.mode === 'ONLINE' ? styles.ctaGhost : styles.ctaGold}
+                onClick={onClose}
+              >
+                {t('public.dialog.done')}
+              </button>
+            </>
           }
         >
           <p className={styles.successText}>
@@ -283,15 +303,10 @@ export function MonthlyContributionDialog({
                   </span>
                   <strong>{formatFcfa(total)}</strong>
                 </div>
-                <ChannelPicker
-                  channels={channels}
-                  channelId={channelId}
-                  onSelect={setChannelId}
-                  phone={phone}
-                  onPhoneChange={setPhone}
-                  note={
-                    online ? t('public.monthly.dialog.onlineNote') : t('public.monthly.dialog.manualNote')
-                  }
+                <PaymentStep
+                  choice={payment}
+                  onlineNote={t('public.monthly.dialog.onlineNote')}
+                  manualNote={t('public.monthly.dialog.manualNote')}
                 />
               </div>
             )}
@@ -308,10 +323,10 @@ export function MonthlyContributionDialog({
               {step < STEPS
                 ? t('public.dialog.continue')
                 : mutation.isPending
-                  ? online
+                  ? !payment.manualMode
                     ? t('public.dialog.paying')
                     : t('public.dialog.submitting')
-                  : online
+                  : !payment.manualMode
                     ? t('public.dialog.pay', { amount: formatFcfa(total) })
                     : t('public.monthly.dialog.submit')}
             </button>

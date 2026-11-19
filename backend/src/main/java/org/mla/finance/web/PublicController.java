@@ -6,6 +6,7 @@ import org.mla.finance.domain.ProjectStatus;
 import org.mla.finance.service.LedgerReportsService;
 import org.mla.finance.service.MonthlyContributionService;
 import org.mla.finance.service.PublicDonationService;
+import org.mla.finance.web.dto.LedgerReports;
 import org.mla.finance.web.dto.PublicCollectionResponse;
 import org.mla.finance.web.dto.PublicDonationRequest;
 import org.mla.finance.web.dto.PublicDonationResponse;
@@ -22,13 +23,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  * Endpoints du front-office public (page de don) — aucune authentification requise
  * (SecurityConfig exempte /api/v1/public/**). Ne jamais exposer ici de données individuelles (nom
  * de donateur, montant par donateur) : uniquement des projets actifs et des statistiques
- * agrégées.
+ * agrégées. Seule exception : le nom usuel des membres, pour la contribution mensuelle. Les dons
+ * restent anonymes pour tous sur le site (décision de Cephas, 19/11/2026).
  */
 @RestController
 @RequestMapping("/api/v1/public")
@@ -50,11 +54,16 @@ public class PublicController {
         return publicDonationService.paymentChannels();
     }
 
-    /** Collectes ouvertes, à venir et clôturées, avec leurs totaux agrégés (jamais par donateur). */
+    /**
+     * Collectes ouvertes, à venir et clôturées, avec leurs totaux agrégés, de la plus récente à la
+     * plus ancienne (dernier mouvement). Jamais de détail par donateur.
+     */
     @GetMapping("/collections")
     public List<PublicCollectionResponse> collections() {
         return ledgerReportsService.collections().stream()
             .filter(r -> r.status() != ProjectStatus.ARCHIVED)
+            .sorted(Comparator.comparing(LedgerReports.CollectionRow::lastMovementDate,
+                Comparator.nullsLast(Comparator.<LocalDate>reverseOrder())))
             .map(r -> new PublicCollectionResponse(
                 r.project().id(),
                 r.project().name(),

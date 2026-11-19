@@ -699,3 +699,41 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+// Étape « Paiement » commune : opérateur reconnu, opérateur indisponible, lien « payer autrement ».
+.detected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font: 600 15px/1.4 $font-body;
+  color: $ink;
+
+  .operator {
+    width: 48px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+}
+
+.warn {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff6db;
+  color: #6b4b00;
+  font: 500 15px/1.45 $font-body;
+}
+
+.linkBtn {
+  align-self: flex-start;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: $violet;
+  font: 700 15px $font-body;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}

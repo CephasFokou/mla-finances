@@ -93,12 +93,41 @@ public class PublicDonationService {
             .toList();
     }
 
-    /** Suivi d'un don par son jeton opaque : statut et motif d'échec seulement, rien d'interne. */
+    /**
+     * Suivi d'un don par son jeton opaque : statut, motif d'échec, et le contenu du reçu (montant,
+     * objet, mois, nom, canal, numéro masqué, dates). Rien d'interne.
+     */
     public PublicDonationStatusResponse status(String trackingToken) {
         PaymentTransaction tx = paymentTransactionRepository.findByTrackingToken(trackingToken)
             .orElseThrow(() -> new EntityNotFoundException("Don introuvable."));
+        boolean monthly = tx.getKind() == PaymentTransactionKind.MONTHLY_CONTRIBUTION;
+        String purpose = monthly
+            ? (tx.getCategory() != null ? tx.getCategory().getName() : "Caisse du MLA")
+            : (tx.getProject() != null ? tx.getProject().getName() : null);
+        List<String> months = tx.getCoveredMonths().stream()
+            .sorted()
+            .map(m -> m.toString().substring(0, 7))
+            .toList();
         return new PublicDonationStatusResponse(tx.getReference(), tx.getStatus().name(), tx.getFailureCode(),
-            tx.getStatus() == PaymentTransactionStatus.FAILED ? publicFailureMessage(tx.getFailureCode()) : null);
+            tx.getStatus() == PaymentTransactionStatus.FAILED ? publicFailureMessage(tx.getFailureCode()) : null,
+            tx.getKind().name(),
+            tx.getAmount(),
+            purpose,
+            months,
+            tx.isAnonymous() ? null : tx.getDonorName(),
+            tx.getPaymentChannel() != null ? tx.getPaymentChannel().getLabel() : null,
+            maskForReceipt(tx.getPayerPhone()),
+            tx.getCreatedAt(),
+            tx.getConfirmedAt());
+    }
+
+    /** 237677123456 → « 6** ** 34 56 » (assez pour se reconnaître, pas pour être réutilisé). */
+    static String maskForReceipt(String msisdn) {
+        if (msisdn == null || msisdn.length() < 9) {
+            return null;
+        }
+        String national = msisdn.substring(msisdn.length() - 9);
+        return national.charAt(0) + "** ** " + national.substring(5, 7) + " " + national.substring(7);
     }
 
     public PublicStatsResponse stats() {
