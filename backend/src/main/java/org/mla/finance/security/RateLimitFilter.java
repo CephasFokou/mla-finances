@@ -35,8 +35,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * local à l'instance : suffisant pour une seule instance (Railway) ; avec plusieurs instances la
  * limite effective serait N × instances, à remplacer alors par un compteur partagé (Redis).
  * <p>
- * Adresse client : X-Forwarded-For (première adresse) UNIQUEMENT si app.rate-limit.trust-proxy=true
- * (derrière Railway/Netlify) — sinon n'importe quel client pourrait se forger une IP différente à
+ * Adresse client : CF-Connecting-IP (Cloudflare), à défaut X-Forwarded-For (première adresse),
+ * UNIQUEMENT si app.rate-limit.trust-proxy=true (derrière Cloudflare/Railway) — sinon n'importe quel client pourrait se forger une IP différente à
  * chaque requête et contourner la limite. En local, c'est l'adresse TCP réelle.
  */
 @Component
@@ -107,6 +107,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private String clientIp(HttpServletRequest request) {
         if (properties.isTrustProxy()) {
+            // Derrière Cloudflare (api-mla.itc-services.xyz, nuage orange) : CF-Connecting-IP est
+            // posé par Cloudflare lui-même, alors que la première valeur de X-Forwarded-For peut
+            // venir du client (Cloudflare ajoute l'adresse réelle à la suite, sans l'écraser).
+            String cloudflare = request.getHeader("CF-Connecting-IP");
+            if (cloudflare != null && !cloudflare.isBlank()) {
+                return cloudflare.trim();
+            }
             String forwarded = request.getHeader("X-Forwarded-For");
             if (forwarded != null && !forwarded.isBlank()) {
                 return forwarded.split(",")[0].trim();
