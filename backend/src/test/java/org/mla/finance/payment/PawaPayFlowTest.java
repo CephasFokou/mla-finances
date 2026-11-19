@@ -213,13 +213,6 @@ class PawaPayFlowTest {
             .andReturn().getResponse().getContentAsString();
         assertThat(content).doesNotContain("PIEDJOU").doesNotContain("Samuel").doesNotContain("recentDonors");
     }
-        assertThat(mine).isNotNull();
-        List<String> names = new java.util.ArrayList<>();
-        for (JsonNode d : mine.get("recentDonors")) {
-            names.add(d.get("name").isNull() ? null : d.get("name").asText());
-        }
-        assertThat(names).containsExactlyInAnyOrder("Samuel P.", null);
-    }
 
     @Test
     void completedDepositConfirmsOnceEvenWhenCallbackIsReplayed() throws Exception {
