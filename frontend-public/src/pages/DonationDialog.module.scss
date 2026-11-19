@@ -652,3 +652,50 @@
   color: $ink-soft;
   font: 400 14px $font-body;
 }
+
+// Option « contribution mensuelle » en tête de l'étape 1 : même violet profond que la carte du site,
+// flèche plutôt que bouton radio (elle ouvre un autre parcours au lieu de cocher une collecte).
+.monthlyChoice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 76px;
+  margin-bottom: 12px;
+  padding: 14px 16px 14px 20px;
+  border: 0;
+  border-radius: 20px;
+  background: $hero-gradient;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.monthlyTitle {
+  display: block;
+  font: 700 17px/1.25 $font-display;
+}
+
+.monthlySub {
+  display: block;
+  margin-top: 2px;
+  color: $gold;
+  font: 500 14px/1.4 $font-body;
+}
+
+.monthlyArrow {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: $gold;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -112,7 +112,9 @@
       "payTo": "Numéro de paiement du MLA : {{number}}",
       "reference": "Référence",
       "again": "Faire un autre don",
-      "done": "Terminer"
+      "done": "Terminer",
+      "monthlyOption": "Donner ma contribution mensuelle (montant libre)",
+      "monthlyOptionSub": "Caisse du MLA — responsables et membres"
     },
     "period": "{{from}} à {{to}}",
     "language": {

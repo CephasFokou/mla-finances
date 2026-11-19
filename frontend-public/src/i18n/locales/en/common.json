@@ -162,7 +162,9 @@
       "payTo": "MLA payment number: {{number}}",
       "reference": "Reference",
       "again": "Give again",
-      "done": "Done"
+      "done": "Done",
+      "monthlyOption": "Give my monthly contribution (any amount)",
+      "monthlyOptionSub": "MLA fund — leaders and members"
     }
   }
 }

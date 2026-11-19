@@ -18,6 +18,10 @@ interface DonationDialogProps {
   collections: PublicCollection[]
   ribbonColor: (id: number) => string
   initialCollectionId: number | null
+  /** Affiche en tête de l'étape 1 l'option « contribution mensuelle » (offre activée). */
+  showMonthly?: boolean
+  /** Ferme ce parcours et ouvre celui de la contribution mensuelle. */
+  onChooseMonthly?: () => void
 }
 
 /**
@@ -33,6 +37,8 @@ export function DonationDialog({
   collections,
   ribbonColor,
   initialCollectionId,
+  showMonthly = false,
+  onChooseMonthly,
 }: DonationDialogProps) {
   const { t } = useTranslation()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -183,6 +189,17 @@ export function DonationDialog({
           />
 
           <div className={styles.body} key={step}>
+            {step === 1 && showMonthly && onChooseMonthly && (
+              <button type="button" className={styles.monthlyChoice} onClick={onChooseMonthly}>
+                <span className={styles.choiceText}>
+                  <span className={styles.monthlyTitle}>{t('public.dialog.monthlyOption')}</span>
+                  <span className={styles.monthlySub}>{t('public.dialog.monthlyOptionSub')}</span>
+                </span>
+                <svg viewBox="0 0 24 24" className={styles.monthlyArrow} aria-hidden="true">
+                  <path d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
             {step === 1 && (
               <div className={styles.stack} role="radiogroup" aria-labelledby="donation-title">
                 {collections.map((c) => (
@@ -209,7 +226,11 @@ export function DonationDialog({
                     <span className={styles.radio} />
                   </button>
                 ))}
-                <p className={styles.note}>{t('public.dialog.separate')}</p>
+                {collections.length > 0 ? (
+                  <p className={styles.note}>{t('public.dialog.separate')}</p>
+                ) : (
+                  <p className={styles.note}>{t('public.collections.empty')}</p>
+                )}
               </div>
             )}
 

@@ -96,7 +96,7 @@ export function PublicDonationPage() {
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnGold} ${styles.btnLg}`}
-                onClick={() => give(open.length === 1 ? (open[0]?.id ?? null) : null)}
+                onClick={() => give(null)}
               >
                 {t('public.hero.ctaMain')}
               </button>
@@ -265,6 +265,11 @@ export function PublicDonationPage() {
           collections={open}
           ribbonColor={ribbonColor}
           initialCollectionId={dialog.collectionId}
+          showMonthly={showMonthly}
+          onChooseMonthly={() => {
+            setDialog(null)
+            setMonthlyOpen(true)
+          }}
         />
       )}
       {monthlyOpen && monthlyOffer && (
