@@ -8,7 +8,11 @@ const KEYS = {
   detail: (id: number) => ['withdrawal', id] as const,
   projectBalance: (projectId: number) => ['project-balance', projectId] as const,
   categoryBalance: (categoryId: number) => ['category-balance', categoryId] as const,
+  payoutOptions: ['withdrawal-payout-options'] as const,
+  mobileMoneyBalance: ['mobile-money-balance'] as const,
 }
+
+const ACTIVE_PAYOUT_REFRESH_MS = 10_000
 
 export function useWithdrawalsQuery(filters: WithdrawalFilters) {
   return useQuery({
@@ -23,6 +27,28 @@ export function useWithdrawalQuery(id: number) {
     queryKey: KEYS.detail(id),
     queryFn: () => withdrawalsApi.get(id),
     enabled: Number.isFinite(id),
+    // Payout en cours : la fiche se rafraîchit seule (le webhook ou le polling backend tranche).
+    refetchInterval: (query) => {
+      const payoutStatus = query.state.data?.payoutStatus
+      return payoutStatus === 'PROCESSING' || payoutStatus === 'PENDING_APPROVAL'
+        ? ACTIVE_PAYOUT_REFRESH_MS
+        : false
+    },
+  })
+}
+
+export function usePayoutOptionsQuery() {
+  return useQuery({
+    queryKey: KEYS.payoutOptions,
+    queryFn: withdrawalsApi.payoutOptions,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useMobileMoneyBalanceQuery() {
+  return useQuery({
+    queryKey: KEYS.mobileMoneyBalance,
+    queryFn: withdrawalsApi.mobileMoneyBalance,
   })
 }
 
@@ -49,6 +75,7 @@ function invalidateDerivedQueries(queryClient: ReturnType<typeof useQueryClient>
   void queryClient.invalidateQueries({ queryKey: ['project-balance'] })
   void queryClient.invalidateQueries({ queryKey: ['category-balance'] })
   void queryClient.invalidateQueries({ queryKey: ['reports'] })
+  void queryClient.invalidateQueries({ queryKey: KEYS.mobileMoneyBalance })
 }
 
 export function useCreateWithdrawalMutation() {
@@ -90,4 +117,14 @@ export function useCancelWithdrawalMutation(id: number) {
 
 export function useProcessWithdrawalMutation(id: number) {
   return useWithdrawalDecisionMutation<void>(id, () => withdrawalsApi.process(id))
+}
+
+export function usePayoutWithdrawalMutation(id: number) {
+  return useWithdrawalDecisionMutation<string>(id, (_id, recipientKey) =>
+    withdrawalsApi.payout(id, recipientKey),
+  )
+}
+
+export function useRecheckPayoutMutation(id: number) {
+  return useWithdrawalDecisionMutation<void>(id, () => withdrawalsApi.recheckPayout(id))
 }

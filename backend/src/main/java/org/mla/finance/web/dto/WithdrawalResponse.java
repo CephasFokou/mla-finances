@@ -1,8 +1,10 @@
 package org.mla.finance.web.dto;
 
 import org.mla.finance.domain.MovementNature;
+import org.mla.finance.domain.PayoutStatus;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
+import org.mla.finance.payment.payout.MsisdnMask;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -28,7 +30,16 @@ public record WithdrawalResponse(
     String decidedByName,
     String rejectionReason,
     Instant processedAt,
-    String reference
+    String reference,
+    // Décaissement Mobile Money (null si aucun) — numéro toujours masqué.
+    String payoutId,
+    PayoutStatus payoutStatus,
+    String payoutPhoneMasked,
+    String payoutProvider,
+    String payoutFailureCode,
+    Instant payoutRequestedAt,
+    Instant payoutCompletedAt,
+    String payoutRequestedByName
 ) {
     public static WithdrawalResponse from(Withdrawal w) {
         return new WithdrawalResponse(
@@ -51,7 +62,15 @@ public record WithdrawalResponse(
             w.getDecidedBy() != null ? w.getDecidedBy().getFullName() : null,
             w.getRejectionReason(),
             w.getProcessedAt(),
-            w.getReference()
+            w.getReference(),
+            w.getPayoutId(),
+            w.getPayoutStatus(),
+            MsisdnMask.mask(w.getPayoutPhone()),
+            w.getPayoutProvider(),
+            w.getPayoutFailureCode(),
+            w.getPayoutRequestedAt(),
+            w.getPayoutCompletedAt(),
+            w.getPayoutRequestedBy() != null ? w.getPayoutRequestedBy().getFullName() : null
         );
     }
 }

@@ -56,3 +56,10 @@
   font-size: 0.9rem;
   color: var(--color-ink-soft);
 }
+
+.statusCell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}

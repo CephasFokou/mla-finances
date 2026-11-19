@@ -112,6 +112,46 @@ public class Withdrawal {
     @Column(length = 60, unique = true)
     private String reference;
 
+    // ------------------------------------------------------------------ décaissement Mobile Money
+    // Dernier payout wallet-ledger de ce retrait (voir PayoutStatus et WithdrawalPayoutService).
+
+    /** Notre UUID, généré et enregistré AVANT l'appel (idempotence : wallet-ledger ignore un doublon). */
+    @Column(name = "payout_id", length = 36, unique = true)
+    private String payoutId;
+
+    /** MSISDN complet (237...) d'un destinataire de la liste fermée app.payment.payout-recipients. */
+    @Column(name = "payout_phone", length = 20)
+    private String payoutPhone;
+
+    /** Code opérateur PawaPay (ORANGE_CMR, MTN_MOMO_CMR). */
+    @Column(name = "payout_provider", length = 30)
+    private String payoutProvider;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payout_status", length = 20)
+    private PayoutStatus payoutStatus;
+
+    @Column(name = "payout_failure_code", length = 60)
+    private String payoutFailureCode;
+
+    @Column(name = "payout_requested_at")
+    private Instant payoutRequestedAt;
+
+    @Column(name = "payout_completed_at")
+    private Instant payoutCompletedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payout_requested_by")
+    private User payoutRequestedBy;
+
+    /** Prochaine relecture due par le job de polling (null : rien à relire). */
+    @Column(name = "payout_next_check_at")
+    private Instant payoutNextCheckAt;
+
+    public boolean hasActivePayout() {
+        return payoutStatus != null && payoutStatus.isActive();
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

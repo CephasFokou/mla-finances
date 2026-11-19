@@ -5,6 +5,12 @@ import type { DonorRef, PaymentChannelRef } from '../contributions/types'
 
 export type WithdrawalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'CANCELLED'
 
+/** Décaissement Mobile Money (payout wallet-ledger) : distinct du statut du retrait. */
+export type PayoutStatus = 'PROCESSING' | 'PENDING_APPROVAL' | 'COMPLETED' | 'FAILED'
+
+/** Codes opérateur PawaPay des destinataires approuvés. */
+export type PayoutProvider = 'ORANGE_CMR' | 'MTN_MOMO_CMR'
+
 export interface RefOption {
   id: number
   name: string
@@ -31,6 +37,38 @@ export interface WithdrawalResponse {
   rejectionReason: string | null
   processedAt: string | null
   reference: string | null
+  payoutId: string | null
+  payoutStatus: PayoutStatus | null
+  /** Toujours masqué (« 6** ** 28 82 »). */
+  payoutPhoneMasked: string | null
+  payoutProvider: PayoutProvider | null
+  payoutFailureCode: string | null
+  payoutRequestedAt: string | null
+  payoutCompletedAt: string | null
+  payoutRequestedByName: string | null
+}
+
+export interface PayoutRecipient {
+  key: string
+  label: string
+  provider: PayoutProvider
+  maskedPhone: string
+}
+
+/** enabled=false en mode manuel (PAWAPAY_ENABLED=false) : l'action n'est pas proposée. */
+export interface PayoutOptions {
+  enabled: boolean
+  recipients: PayoutRecipient[]
+}
+
+export interface MobileMoneyBalance {
+  enabled: boolean
+  /** false si wallet-ledger n'a pas répondu (montants alors absents). */
+  reachable: boolean
+  currency: string | null
+  available: number | null
+  reserved: number | null
+  asOf: string | null
 }
 
 export interface PageResponse<T> {

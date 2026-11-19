@@ -3,7 +3,11 @@ package org.mla.finance.payment.pawapay;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.PaymentTransaction;
 import org.mla.finance.domain.PaymentTransactionStatus;
+import org.mla.finance.domain.PayoutStatus;
+import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.repository.PaymentTransactionRepository;
+import org.mla.finance.repository.WithdrawalRepository;
+import org.mla.finance.service.WithdrawalPayoutService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -16,7 +20,8 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Relecture périodique des dons PROCESSING dont la prochaine vérification est due. C'est ce qui
+ * Relecture périodique des dons PROCESSING et des décaissements de retraits non finaux dont la
+ * prochaine vérification est due. C'est ce qui
  * résout les paiements en local (PawaPay ne peut pas joindre un poste de développement pour
  * livrer son callback) et, en production, ce qui rattrape tout callback perdu. Le recul
  * exponentiel et l'arrêt après le délai de réconciliation sont décidés par
@@ -36,6 +41,8 @@ public class PawaPayPollingJob {
 
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PawaPayReconciliationService reconciliationService;
+    private final WithdrawalRepository withdrawalRepository;
+    private final WithdrawalPayoutService payoutService;
 
     @Scheduled(fixedDelayString = "${app.payment.pawapay.poll-interval-ms:15000}", initialDelayString = "${app.payment.pawapay.poll-initial-delay-ms:10000}")
     public void pollPendingDeposits() {
@@ -52,6 +59,20 @@ public class PawaPayPollingJob {
             } catch (RuntimeException e) {
                 // Un don en erreur ne doit pas bloquer les autres ; il sera repris au prochain tour.
                 log.error("Réconciliation du don {} échouée", tx.getReference(), e);
+            }
+        }
+    }
+
+    /** Décaissements de retraits PROCESSING / PENDING_APPROVAL dont la relecture est due (rattrape un webhook perdu). */
+    @Scheduled(fixedDelayString = "${app.payment.pawapay.poll-interval-ms:15000}", initialDelayString = "${app.payment.pawapay.poll-initial-delay-ms:10000}")
+    public void pollPendingPayouts() {
+        List<Withdrawal> due = withdrawalRepository.findByPayoutStatusInAndPayoutNextCheckAtLessThanEqualOrderByPayoutNextCheckAtAsc(
+            List.of(PayoutStatus.PROCESSING, PayoutStatus.PENDING_APPROVAL), Instant.now(), PageRequest.of(0, BATCH_SIZE));
+        for (Withdrawal w : due) {
+            try {
+                payoutService.reconcile(w.getId());
+            } catch (RuntimeException e) {
+                log.error("Relecture du payout du retrait #{} échouée", w.getId(), e);
             }
         }
     }

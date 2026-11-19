@@ -85,6 +85,26 @@ claude.ai).
   60 req/min sur `/api/v1/public/**`, 20 sur `/api/v1/auth/**`, 120 sur `/api/v1/webhooks/**` ;
   `RATE_LIMIT_TRUST_PROXY=true` derrière Railway pour lire `X-Forwarded-For`).
 
+### Décaissement des retraits par Mobile Money (payouts wallet-ledger)
+
+Avec `PAWAPAY_ENABLED=true`, un retrait **validé** peut être décaissé depuis sa fiche (« Décaisser par
+Mobile Money ») vers un numéro MLA de la liste fermée `app.payment.payout-recipients` (`application.yml` :
+libellé, MSISDN `237…`, opérateur `ORANGE_CMR` / `MTN_MOMO_CMR`), jamais vers un numéro saisi. Cette
+liste est le miroir de la liste blanche du projet MLA dans wallet-ledger, qui reste l'autorité.
+
+- Envoi : `POST /api/v1/withdrawals/{id}/payout` `{"recipientKey"}` (`MANAGE_WITHDRAWALS`) → `POST /v2/payouts`
+  (montant du retrait, XAF, `clientReferenceId = MLA-WD-<référence ou id>`). Le `payoutId` est enregistré
+  avant l'appel ; un seul payout actif par retrait.
+- Statut final : webhook wallet-ledger sur la même URL que les dons (`X-Ledger-Event: payout`, seul le
+  `payoutId` est lu) + job de polling + bouton « Vérifier le statut » ; tous relisent `GET /v2/payouts/{id}`.
+  `COMPLETED` ⇒ retrait **PROCESSED** automatiquement (canal Orange Money / MTN MoMo) ; `FAILED` ⇒ le retrait
+  reste validé, nouvelle tentative possible.
+- Au-dessus du seuil wallet-ledger (50 000 FCFA) : `PENDING_APPROVAL` jusqu'à validation dans la Trésorerie.
+- Pendant un payout en cours, annulation et « Marquer comme décaissé » sont refusés (409).
+- Solde affiché sur la page Retraits : `GET /api/v1/withdrawals/mobile-money-balance` → wallet-ledger
+  `GET /api/v1/balance` (route wallet-ledger, pas un chemin PawaPay).
+- Détail : `docs/module-retraits-spec.md`.
+
 ## Build
 
 ```bash

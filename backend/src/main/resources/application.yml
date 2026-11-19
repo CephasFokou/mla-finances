@@ -84,6 +84,17 @@ app:
       pending-timeout-minutes: 30
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
+    # Décaissement des retraits par Mobile Money (POST /v2/payouts sur wallet-ledger) : liste
+    # FERMÉE des numéros MLA proposés dans le back-office, jamais de saisie libre. Miroir de la liste
+    # blanche du projet MLA dans wallet-ledger, qui reste l'autorité (numéro absent là-bas =>
+    # RECIPIENT_NOT_ALLOWED). msisdn : 237 + 9 chiffres ; provider : ORANGE_CMR ou MTN_MOMO_CMR.
+    payout-recipients:
+      - label: Orange Money MLA
+        msisdn: "237697272882"
+        provider: ORANGE_CMR
+      - label: MTN MoMo MLA
+        msisdn: "237651059561"
+        provider: MTN_MOMO_CMR
   rate-limit:
     # Limitation de débit par adresse IP sur les surfaces non authentifiées (voir
     # security/RateLimitFilter). Fenêtre glissante d'une minute, 429 + Retry-After au-delà.
