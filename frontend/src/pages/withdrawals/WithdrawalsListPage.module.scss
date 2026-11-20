@@ -63,3 +63,14 @@
   align-items: center;
   gap: 4px;
 }
+
+// Case à cocher « Auto-validés seulement » : même pastille que les sélecteurs.
+.check {
+  padding: 4px 12px;
+  cursor: pointer;
+
+  input {
+    margin: 0;
+    accent-color: var(--color-brand);
+  }
+}

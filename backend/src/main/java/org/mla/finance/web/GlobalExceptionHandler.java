@@ -5,6 +5,7 @@ import org.mla.finance.exception.AuthenticationFailedException;
 import org.mla.finance.exception.BusinessRuleViolationException;
 import org.mla.finance.exception.InvalidRequestException;
 import org.mla.finance.exception.ConflictException;
+import org.mla.finance.exception.ForbiddenActionException;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<Map<String, String>> handleConflict(ConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ForbiddenActionException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", ex.getMessage()));
     }
 
     @ExceptionHandler(AuthenticationFailedException.class)

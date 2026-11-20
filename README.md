@@ -4,7 +4,9 @@ Système de gestion financière pour la chorale MLA (ICC Yaoundé) : suivi des c
 
 L'argent des dons en ligne est sur le portefeuille Mobile Money partagé, séparé par projet par le service
 `wallet-ledger` : les dons y entrent (dépôts) et un retrait validé peut en sortir par Mobile Money depuis le
-back-office (voir « Décaissement des retraits par Mobile Money » dans `backend/README.md`).
+back-office (voir « Décaissement des retraits par Mobile Money » dans `backend/README.md`). Chaque retrait
+décaissé a un bon de décaissement PDF téléchargeable, et un retrait est validé par une autre personne que
+celle qui l'a saisi (sauf super administrateur, auto-validation tracée).
 
 Monorepo :
 - `backend/` — API Spring Boot 3 / Java 21 / PostgreSQL / Liquibase (voir `backend/README.md`), sert aussi bien le back-office authentifié que les endpoints publics (`/api/v1/public/**`) consommés par le site de don.

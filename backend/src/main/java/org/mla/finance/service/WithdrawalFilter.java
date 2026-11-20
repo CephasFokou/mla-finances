@@ -18,9 +18,11 @@ public record WithdrawalFilter(
     LocalDate dateTo,
     MovementNature nature,
     Long activityId,
-    Long personId
+    Long personId,
+    /** true : seulement les retraits saisis et validés par la même personne (voir Withdrawal.isSelfApproved). */
+    Boolean selfApproved
 ) {
     public WithdrawalFilter(Long projectId, Long categoryId, WithdrawalStatus status, LocalDate dateFrom, LocalDate dateTo) {
-        this(projectId, categoryId, status, dateFrom, dateTo, null, null, null);
+        this(projectId, categoryId, status, dateFrom, dateTo, null, null, null, null);
     }
 }

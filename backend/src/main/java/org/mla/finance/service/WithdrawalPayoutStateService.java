@@ -109,7 +109,7 @@ public class WithdrawalPayoutStateService {
             return Optional.of(w);
         }
         switch (outcome.kind()) {
-            case COMPLETED -> complete(w);
+            case COMPLETED -> complete(w, outcome.providerTransactionId());
             case FAILED -> fail(w, outcome.failureCode(), outcome.failureMessage());
             case NOT_FOUND -> {
                 if (Instant.now().isAfter(w.getPayoutRequestedAt().plus(NOT_FOUND_GRACE))) {
@@ -136,9 +136,10 @@ public class WithdrawalPayoutStateService {
         return Optional.of(withdrawalRepository.save(w));
     }
 
-    private void complete(Withdrawal w) {
+    private void complete(Withdrawal w, String providerRef) {
         Instant now = Instant.now();
         w.setPayoutStatus(PayoutStatus.COMPLETED);
+        w.setPayoutProviderRef(providerRef != null ? truncate(providerRef, 100) : null);
         w.setPayoutCompletedAt(now);
         w.setPayoutNextCheckAt(null);
         w.setPayoutFailureCode(null);
@@ -168,6 +169,19 @@ public class WithdrawalPayoutStateService {
                 + (message != null ? " (" + truncate(message, 200) + ")" : "") + " — payout " + w.getPayoutId()
                 + ". Le retrait reste validé.");
         log.info("Payout {} FAILED ({}) : retrait #{} reste APPROVED", w.getPayoutId(), w.getPayoutFailureCode(), w.getId());
+    }
+
+    /**
+     * Payout déjà COMPLETED sans référence opérateur (décaissé avant son stockage) : enregistre celle
+     * relue chez wallet-ledger. Ne touche à rien d'autre.
+     */
+    public void storeProviderRef(Long withdrawalId, String providerRef) {
+        if (providerRef == null || providerRef.isBlank()) {
+            return;
+        }
+        withdrawalRepository.findByIdForUpdate(withdrawalId)
+            .filter(w -> w.getPayoutStatus() == PayoutStatus.COMPLETED && w.getPayoutProviderRef() == null)
+            .ifPresent(w -> w.setPayoutProviderRef(truncate(providerRef.trim(), 100)));
     }
 
     /** Recul progressif : un quart du temps écoulé depuis l'envoi, entre 15 s et 5 min. */

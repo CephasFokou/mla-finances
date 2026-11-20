@@ -4,10 +4,12 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.PaymentChannel;
+import org.mla.finance.domain.User;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
 import org.mla.finance.exception.ConflictException;
+import org.mla.finance.exception.ForbiddenActionException;
 import org.mla.finance.repository.DonationCategoryRepository;
 import org.mla.finance.repository.ProjectRepository;
 import org.mla.finance.repository.WithdrawalRepository;
@@ -25,8 +27,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Workflow retrait : demande (PENDING) -> validation (APPROVED/REJECTED, un rôle distinct du
- * demandeur via VALIDATE_WITHDRAWALS) -> décaissement effectif (PROCESSED, MANAGE_WITHDRAWALS).
+ * Workflow retrait : demande (PENDING) -> validation (APPROVED/REJECTED via VALIDATE_WITHDRAWALS, par
+ * une autre personne que celle qui l'a saisi, sauf SUPER_ADMIN : décision tracée WITHDRAWAL_SELF_APPROVED) -> décaissement effectif (PROCESSED, MANAGE_WITHDRAWALS).
  * Annulation possible tant que le retrait n'est pas décaissé (PENDING ou APPROVED -> CANCELLED).
  * Un retrait APPROVED peut aussi être décaissé par Mobile Money (WithdrawalPayoutService) : tant que
  * ce payout est actif, annulation et décaissement manuel sont refusés, et c'est la confirmation
@@ -46,6 +48,12 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional
 public class WithdrawalService {
+
+    public static final String SUPER_ADMIN = "SUPER_ADMIN";
+    static final String SELF_APPROVE_REFUSED =
+        "Vous ne pouvez pas valider un retrait que vous avez saisi : une autre personne doit le valider.";
+    static final String SELF_REJECT_REFUSED =
+        "Vous ne pouvez pas rejeter un retrait que vous avez saisi : une autre personne doit le traiter.";
 
     private static final Sort EXPORT_SORT = Sort.by(Sort.Direction.DESC, "requestedAt", "id");
 
@@ -142,20 +150,29 @@ public class WithdrawalService {
     public WithdrawalResponse approve(Long id) {
         Withdrawal withdrawal = find(id);
         requireStatus(withdrawal, WithdrawalStatus.PENDING, "valider");
+        User actor = currentUserProvider.currentOrNull();
+        boolean self = requireSeparation(withdrawal, actor, SELF_APPROVE_REFUSED);
         lockEnvelope(withdrawal);
         withdrawal.setStatus(WithdrawalStatus.APPROVED);
         withdrawal.setDecidedAt(Instant.now());
-        withdrawal.setDecidedBy(currentUserProvider.currentOrNull());
+        withdrawal.setDecidedBy(actor);
         auditLogService.record("WITHDRAWAL", id, "APPROVE", "Retrait #" + id + " validé");
+        if (self) {
+            auditLogService.record("WITHDRAWAL", id, "WITHDRAWAL_SELF_APPROVED",
+                "Retrait #" + id + " de " + withdrawal.getAmount().stripTrailingZeros().toPlainString()
+                    + " FCFA validé par la personne qui l'a saisi (super administrateur) : à revoir par le trésorier");
+        }
         return WithdrawalResponse.from(withdrawal);
     }
 
     public WithdrawalResponse reject(Long id, WithdrawalRejectRequest request) {
         Withdrawal withdrawal = find(id);
         requireStatus(withdrawal, WithdrawalStatus.PENDING, "rejeter");
+        User actor = currentUserProvider.currentOrNull();
+        requireSeparation(withdrawal, actor, SELF_REJECT_REFUSED);
         withdrawal.setStatus(WithdrawalStatus.REJECTED);
         withdrawal.setDecidedAt(Instant.now());
-        withdrawal.setDecidedBy(currentUserProvider.currentOrNull());
+        withdrawal.setDecidedBy(actor);
         withdrawal.setRejectionReason(request.reason());
         auditLogService.record("WITHDRAWAL", id, "REJECT", "Retrait #" + id + " rejeté : " + request.reason());
         return WithdrawalResponse.from(withdrawal);
@@ -201,6 +218,23 @@ public class WithdrawalService {
         if (channel != null) {
             withdrawal.setPaymentChannel(channel);
         }
+    }
+
+    /**
+     * Séparation des rôles : la personne qui a saisi un retrait ne le valide ni ne le rejette, sauf
+     * SUPER_ADMIN. Renvoie true si c'est bien elle (auto-décision d'un super administrateur, à tracer).
+     */
+    private boolean requireSeparation(Withdrawal withdrawal, User actor, String refusal) {
+        User requester = withdrawal.getRequestedBy();
+        boolean self = actor != null && requester != null && requester.getId().equals(actor.getId());
+        if (self && !isSuperAdmin(actor)) {
+            throw new ForbiddenActionException(refusal);
+        }
+        return self;
+    }
+
+    public static boolean isSuperAdmin(User user) {
+        return user != null && user.getRoles().stream().anyMatch(r -> SUPER_ADMIN.equals(r.getName()));
     }
 
     /** Pendant un payout PROCESSING / PENDING_APPROVAL, l'argent peut partir à tout moment : rien ne doit bouger. */

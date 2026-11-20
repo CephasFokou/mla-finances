@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Bon de décaissement : référence de la transaction chez l'opérateur Mobile Money
+        (providerTransactionId de PawaPay, relayé par wallet-ledger dans GET /v2/payouts/{payoutId}).
+        Nullable : stockée au passage du payout en COMPLETED, relue à la demande pour les plus anciens.
+    -->
+    <changeSet id="0016-payout-provider-ref" author="mla-finance">
+        <addColumn tableName="withdrawals">
+            <column name="payout_provider_ref" type="varchar(100)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

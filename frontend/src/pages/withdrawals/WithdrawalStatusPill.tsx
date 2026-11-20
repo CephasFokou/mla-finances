@@ -15,3 +15,13 @@ export function WithdrawalStatusPill({ status }: { status: WithdrawalStatus }) {
   const { t } = useTranslation()
   return <span className={`${ui.pill} ${VARIANTS[status]}`}>{t(`withdrawals.status.${status}`)}</span>
 }
+
+/** Badge « Auto-validé » : retrait saisi et validé par la même personne. */
+export function SelfApprovedPill() {
+  const { t } = useTranslation()
+  return (
+    <span className={`${ui.pill} ${ui.pillAmber}`} title={t('withdrawals.detail.selfApprovedHint')}>
+      {t('withdrawals.detail.selfApproved')}
+    </span>
+  )
+}

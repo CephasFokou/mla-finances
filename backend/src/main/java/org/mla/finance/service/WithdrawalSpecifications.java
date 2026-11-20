@@ -2,6 +2,7 @@ package org.mla.finance.service;
 
 import jakarta.persistence.criteria.Predicate;
 import org.mla.finance.domain.Withdrawal;
+import org.mla.finance.domain.WithdrawalStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
@@ -46,6 +47,11 @@ final class WithdrawalSpecifications {
             }
             if (f.personId() != null) {
                 predicates.add(cb.equal(root.get("person").get("id"), f.personId()));
+            }
+            if (Boolean.TRUE.equals(f.selfApproved())) {
+                // Même définition que Withdrawal.isSelfApproved : saisi par = validé par, décision positive.
+                predicates.add(cb.equal(root.get("requestedBy").get("id"), root.get("decidedBy").get("id")));
+                predicates.add(root.get("status").in(WithdrawalStatus.APPROVED, WithdrawalStatus.PROCESSED, WithdrawalStatus.CANCELLED));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };

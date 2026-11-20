@@ -31,6 +31,7 @@ export interface WithdrawalResponse {
   transferGroup: string | null
   status: WithdrawalStatus
   requestedAt: string
+  requestedById: number | null
   requestedByName: string | null
   decidedAt: string | null
   decidedByName: string | null
@@ -46,6 +47,10 @@ export interface WithdrawalResponse {
   payoutRequestedAt: string | null
   payoutCompletedAt: string | null
   payoutRequestedByName: string | null
+  /** Référence de la transaction chez l'opérateur (payout reçu), si communiquée. */
+  payoutProviderRef: string | null
+  /** Saisi et validé par la même personne. */
+  selfApproved: boolean
 }
 
 export interface PayoutRecipient {
@@ -86,6 +91,8 @@ export interface WithdrawalFilters {
   nature?: MovementNature
   activityId?: number
   personId?: number
+  /** true : seulement les retraits saisis et validés par la même personne. */
+  selfApproved?: boolean
   dateFrom?: string
   dateTo?: string
   page?: number

@@ -359,6 +359,7 @@
       "allMasculine": "Tous",
       "categories": "Catégories de don",
       "projects": "Projets",
+      "selfApproved": "Auto-validés seulement",
       "reset": "Réinitialiser les filtres"
     },
     "pagination": {
@@ -434,6 +435,11 @@
       "provisionalHint": "Solde réel moins les retraits en attente ou validés non encore décaissés (dépenses engagées).",
       "engagedAmount": "Dépenses engagées",
       "deficitAlert": "Solde prévisionnel négatif : les dépenses déjà engagées sur cette enveloppe dépassent le solde réel disponible.",
+      "voucher": "Télécharger le bon de décaissement",
+      "voucherError": "Le bon de décaissement n'a pas pu être généré. Réessayez dans un instant.",
+      "selfApproved": "Auto-validé",
+      "selfApprovedHint": "Saisi et validé par la même personne : à revoir par le trésorier.",
+      "ownWithdrawal": "Vous ne pouvez pas valider un retrait que vous avez saisi : une autre personne doit le valider.",
       "pendingCount_one": "{{count}} demande en attente sur cette enveloppe",
       "pendingCount_other": "{{count}} demandes en attente sur cette enveloppe",
       "people": "Saisie / validation",
@@ -461,6 +467,7 @@
       "completedAt": "Reçu le",
       "failureLabel": "Motif de l'échec",
       "payoutId": "Identifiant",
+      "providerRef": "Référence opérateur",
       "processingHint": "Envoi en cours : le statut se met à jour automatiquement.",
       "pendingApprovalHint": "En attente de validation dans la Trésorerie",
       "completedHint": "Argent reçu : le retrait a été marqué décaissé automatiquement.",
@@ -469,7 +476,7 @@
       "status": {
         "PROCESSING": "Envoi en cours",
         "PENDING_APPROVAL": "À valider (Trésorerie)",
-        "COMPLETED": "Envoyé",
+        "COMPLETED": "Reçu",
         "FAILED": "Échec"
       },
       "provider": {

@@ -13,7 +13,7 @@ import { downloadTextFile } from '../../lib/download'
 import { formatDate, formatFcfa, personLabel } from '../../lib/format'
 import { useHasPermission } from '../../store/authStore'
 import { MobileMoneyBalanceCard, PayoutStatusPill } from './WithdrawalPayout'
-import { WithdrawalStatusPill } from './WithdrawalStatusPill'
+import { SelfApprovedPill, WithdrawalStatusPill } from './WithdrawalStatusPill'
 import styles from './WithdrawalsListPage.module.scss'
 
 const PAGE_SIZE = 20
@@ -32,12 +32,14 @@ export function WithdrawalsListPage() {
   const [envelope, setEnvelope] = useState('')
   const [status, setStatus] = useState('')
   const [nature, setNature] = useState('')
+  const [selfApproved, setSelfApproved] = useState(false)
   const canTransfer = useHasPermission('MANAGE_WITHDRAWALS', 'VALIDATE_WITHDRAWALS')
 
   const activeFilters: WithdrawalFilters = {
     ...parseEnvelope(envelope),
     status: (status || undefined) as WithdrawalStatus | undefined,
     nature: (nature || undefined) as MovementNature | undefined,
+    selfApproved: selfApproved || undefined,
   }
   const { data, isLoading, isError, isFetching } = useWithdrawalsQuery({
     ...activeFilters,
@@ -49,7 +51,7 @@ export function WithdrawalsListPage() {
   const { data: categories } = useCategoriesQuery()
   const { data: mobileMoneyBalance } = useMobileMoneyBalanceQuery()
 
-  const hasFilters = !!(envelope || status || nature)
+  const hasFilters = !!(envelope || status || nature || selfApproved)
 
   const setFilter = (setter: (value: string) => void) => (value: string) => {
     setPage(0)
@@ -61,6 +63,7 @@ export function WithdrawalsListPage() {
     setEnvelope('')
     setStatus('')
     setNature('')
+    setSelfApproved(false)
   }
 
   const handleExport = async () => {
@@ -147,6 +150,17 @@ export function WithdrawalsListPage() {
             ))}
           </select>
         </label>
+        <label className={`${styles.filter} ${styles.check}`}>
+          <input
+            type="checkbox"
+            checked={selfApproved}
+            onChange={(e) => {
+              setPage(0)
+              setSelfApproved(e.target.checked)
+            }}
+          />
+          <span>{t('withdrawals.filters.selfApproved')}</span>
+        </label>
         {hasFilters && (
           <button type="button" className={styles.resetLink} onClick={resetFilters}>
             {t('withdrawals.filters.reset')}
@@ -227,6 +241,7 @@ export function WithdrawalsListPage() {
                     <td>
                       <div className={styles.statusCell}>
                         <WithdrawalStatusPill status={withdrawal.status} />
+                        {withdrawal.selfApproved && <SelfApprovedPill />}
                         {withdrawal.payoutStatus && (
                           <span title={t('withdrawals.payout.title')}>
                             <PayoutStatusPill status={withdrawal.payoutStatus} />

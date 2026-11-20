@@ -16,11 +16,13 @@ import {
   useWithdrawalProjectBalanceQuery,
   useWithdrawalQuery,
 } from '../../features/withdrawals/hooks'
+import { withdrawalsApi } from '../../features/withdrawals/api'
 import { ApiError } from '../../lib/apiClient'
+import { downloadBlob } from '../../lib/download'
 import { formatDate, formatDateTime, formatFcfa, personLabel } from '../../lib/format'
-import { useHasPermission } from '../../store/authStore'
+import { useAuthStore, useHasPermission } from '../../store/authStore'
 import { PayoutDialog, WithdrawalPayoutCard } from './WithdrawalPayout'
-import { WithdrawalStatusPill } from './WithdrawalStatusPill'
+import { SelfApprovedPill, WithdrawalStatusPill } from './WithdrawalStatusPill'
 import styles from './WithdrawalDetailPage.module.scss'
 
 type SimpleAction = 'approve' | 'process' | 'cancel'
@@ -39,6 +41,8 @@ export function WithdrawalDetailPage() {
   const recheckMutation = useRecheckPayoutMutation(id)
   const { data: payoutOptions } = usePayoutOptionsQuery()
   const canManage = useHasPermission('MANAGE_WITHDRAWALS')
+  const canValidate = useHasPermission('VALIDATE_WITHDRAWALS')
+  const currentUser = useAuthStore((state) => state.user)
   const projectBalance = useWithdrawalProjectBalanceQuery(withdrawal?.project?.id)
   const categoryBalance = useWithdrawalCategoryBalanceQuery(withdrawal?.category?.id)
   const balance = withdrawal?.project ? projectBalance.data : categoryBalance.data
@@ -48,6 +52,7 @@ export function WithdrawalDetailPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const [isPayingOut, setIsPayingOut] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   if (isLoading) {
     return (
@@ -116,11 +121,30 @@ export function WithdrawalDetailPage() {
     }
   }
 
+  const downloadVoucher = async () => {
+    setActionError(null)
+    setIsDownloading(true)
+    try {
+      const { blob, filename } = await withdrawalsApi.voucher(withdrawal.id)
+      downloadBlob(filename ?? `bon-decaissement-${withdrawal.reference ?? `RET-${withdrawal.id}`}.pdf`, blob)
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : t('withdrawals.detail.voucherError'))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  // Séparation des rôles (vérifiée aussi côté serveur) : on ne valide ni ne rejette un retrait qu'on
+  // a saisi, sauf super administrateur.
+  const isOwnWithdrawal = currentUser != null && withdrawal.requestedById === currentUser.id
+  const isSuperAdmin = currentUser?.roles.includes('SUPER_ADMIN') ?? false
+  const ownDecisionBlocked = isOwnWithdrawal && !isSuperAdmin
+
   // Payout en cours (PROCESSING / PENDING_APPROVAL) : l'argent peut partir à tout moment, donc
   // ni annulation ni décaissement manuel (le backend le refuse aussi).
   const payoutActive =
     withdrawal.payoutStatus === 'PROCESSING' || withdrawal.payoutStatus === 'PENDING_APPROVAL'
-  const canDecide = withdrawal.status === 'PENDING'
+  const canDecide = withdrawal.status === 'PENDING' && canValidate && !ownDecisionBlocked
   const canProcess = withdrawal.status === 'APPROVED' && !payoutActive
   const canCancel = (withdrawal.status === 'PENDING' || withdrawal.status === 'APPROVED') && !payoutActive
   const canPayout = canProcess && canManage && !!payoutOptions?.enabled
@@ -140,6 +164,18 @@ export function WithdrawalDetailPage() {
         {!isRejecting && (
           <div className={ui.actions}>
             <WithdrawalStatusPill status={withdrawal.status} />
+            {withdrawal.selfApproved && <SelfApprovedPill />}
+            {withdrawal.status === 'PROCESSED' && (
+              <button
+                type="button"
+                className={`${ui.btn} ${ui.btnSecondary} ${ui.btnSm}`}
+                disabled={isDownloading}
+                onClick={() => void downloadVoucher()}
+              >
+                <Icon name="download" size={14} />
+                {t('withdrawals.detail.voucher')}
+              </button>
+            )}
             {canDecide && (
               <>
                 <button
@@ -199,6 +235,13 @@ export function WithdrawalDetailPage() {
           </div>
         )}
       </header>
+
+      {withdrawal.status === 'PENDING' && canValidate && ownDecisionBlocked && (
+        <div className={`${ui.banner} ${ui.bannerNavy} ${styles.spaced}`} role="status">
+          <Icon name="alert" size={17} />
+          <div>{t('withdrawals.detail.ownWithdrawal')}</div>
+        </div>
+      )}
 
       {payoutActive && (
         <div className={`${ui.banner} ${ui.bannerAmber} ${styles.spaced}`} role="status">
