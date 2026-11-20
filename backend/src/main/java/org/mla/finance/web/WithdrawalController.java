@@ -8,6 +8,7 @@ import org.mla.finance.service.WithdrawalCsvExporter;
 import org.mla.finance.service.WithdrawalFilter;
 import org.mla.finance.service.WithdrawalPayoutService;
 import org.mla.finance.service.WithdrawalService;
+import org.mla.finance.service.WithdrawalVoucherService;
 import org.mla.finance.web.dto.MobileMoneyBalanceResponse;
 import org.mla.finance.web.dto.PayoutOptionsResponse;
 import org.mla.finance.web.dto.PayoutRequest;
@@ -46,6 +47,7 @@ public class WithdrawalController {
     private final WithdrawalService withdrawalService;
     private final WithdrawalPayoutService payoutService;
     private final WithdrawalCsvExporter csvExporter;
+    private final WithdrawalVoucherService voucherService;
 
     @GetMapping
     public Page<WithdrawalResponse> list(
@@ -57,10 +59,11 @@ public class WithdrawalController {
         @RequestParam(required = false) MovementNature nature,
         @RequestParam(required = false) Long activityId,
         @RequestParam(required = false) Long personId,
+        @RequestParam(required = false) Boolean selfApproved,
         @PageableDefault(size = 20, sort = "requestedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return withdrawalService.search(
-            new WithdrawalFilter(projectId, categoryId, status, dateFrom, dateTo, nature, activityId, personId), pageable);
+            new WithdrawalFilter(projectId, categoryId, status, dateFrom, dateTo, nature, activityId, personId, selfApproved), pageable);
     }
 
     @GetMapping("/export")
@@ -72,10 +75,11 @@ public class WithdrawalController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
         @RequestParam(required = false) MovementNature nature,
         @RequestParam(required = false) Long activityId,
-        @RequestParam(required = false) Long personId
+        @RequestParam(required = false) Long personId,
+        @RequestParam(required = false) Boolean selfApproved
     ) {
         String csv = csvExporter.export(
-            new WithdrawalFilter(projectId, categoryId, status, dateFrom, dateTo, nature, activityId, personId));
+            new WithdrawalFilter(projectId, categoryId, status, dateFrom, dateTo, nature, activityId, personId, selfApproved));
         return ResponseEntity.ok()
             .contentType(TEXT_CSV_UTF8)
             .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -98,6 +102,21 @@ public class WithdrawalController {
     @GetMapping("/{id}")
     public WithdrawalResponse get(@PathVariable Long id) {
         return withdrawalService.get(id);
+    }
+
+    /**
+     * Bon de décaissement PDF d'un retrait PROCESSED (409 sinon), produit à la demande. Même droit que
+     * la lecture du retrait ; chaque téléchargement est tracé (WITHDRAWAL_VOUCHER_DOWNLOADED).
+     */
+    @GetMapping(value = "/{id}/voucher.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> voucher(@PathVariable Long id) {
+        WithdrawalVoucherService.Voucher voucher = voucherService.generate(id);
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.attachment().filename(voucher.filename()).build().toString())
+            .header(HttpHeaders.CACHE_CONTROL, "no-store")
+            .body(voucher.pdf());
     }
 
     @PostMapping

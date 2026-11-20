@@ -48,6 +48,9 @@ export const withdrawalsApi = {
   payout: (id: number, recipientKey: string) =>
     apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/payout`, { recipientKey }),
 
+  /** Bon de décaissement PDF (retrait décaissé uniquement), produit par le serveur. */
+  voucher: (id: number) => apiClient.download(`/withdrawals/${id}/voucher.pdf`),
+
   recheckPayout: (id: number) => apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/payout/recheck`),
 
   payoutOptions: () => apiClient.get<PayoutOptions>('/withdrawals/payout-options'),

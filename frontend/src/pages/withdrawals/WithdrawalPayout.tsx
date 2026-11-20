@@ -108,6 +108,12 @@ export function WithdrawalPayoutCard({
               <td>{formatDateTime(withdrawal.payoutCompletedAt)}</td>
             </tr>
           )}
+          {withdrawal.payoutProviderRef && (
+            <tr>
+              <th scope="row">{t('withdrawals.payout.providerRef')}</th>
+              <td className={styles.amount}>{withdrawal.payoutProviderRef}</td>
+            </tr>
+          )}
           {status === 'FAILED' && withdrawal.payoutFailureCode && (
             <tr>
               <th scope="row">{t('withdrawals.payout.failureLabel')}</th>

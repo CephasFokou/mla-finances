@@ -144,9 +144,25 @@ public class Withdrawal {
     @JoinColumn(name = "payout_requested_by")
     private User payoutRequestedBy;
 
+    /**
+     * Référence de la transaction chez l'opérateur (providerTransactionId de PawaPay, relayé par
+     * wallet-ledger), enregistrée au passage en COMPLETED ; relue à la demande pour les payouts plus anciens.
+     */
+    @Column(name = "payout_provider_ref", length = 100)
+    private String payoutProviderRef;
+
     /** Prochaine relecture due par le job de polling (null : rien à relire). */
     @Column(name = "payout_next_check_at")
     private Instant payoutNextCheckAt;
+
+    /**
+     * Saisi et validé par la même personne : validation d'un SUPER_ADMIN sur son propre retrait, ou
+     * dépense enregistrée après coup (record). Calculé, jamais stocké.
+     */
+    public boolean isSelfApproved() {
+        return requestedBy != null && decidedBy != null && status != WithdrawalStatus.REJECTED
+            && status != WithdrawalStatus.PENDING && java.util.Objects.equals(requestedBy.getId(), decidedBy.getId());
+    }
 
     public boolean hasActivePayout() {
         return payoutStatus != null && payoutStatus.isActive();

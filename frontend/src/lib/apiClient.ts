@@ -80,7 +80,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** Fichier binaire (ex. PDF) : contenu et nom proposé par le serveur (Content-Disposition). */
+async function download(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  const token = useAuthStore.getState().token
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (response.status === 401 && token) {
+    useAuthStore.getState().expireSession()
+  }
+  if (!response.ok) {
+    let body: unknown = null
+    try {
+      body = await response.json()
+    } catch {
+      // pas de corps JSON
+    }
+    throw new ApiError(response.status, body, messageFromErrorBody(response.status, body))
+  }
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const match = /filename="?([^";]+)"?/.exec(disposition)
+  return { blob: await response.blob(), filename: match?.[1] ?? null }
+}
+
 export const apiClient = {
+  download,
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }),

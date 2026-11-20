@@ -20,9 +20,16 @@
   <properties>
     <java.version>21</java.version>
     <lombok.version>1.18.42</lombok.version>
+    <openhtmltopdf.version>1.1.24</openhtmltopdf.version>
   </properties>
 
   <dependencies>
+    <!-- Bon de décaissement : PDF produit à la demande à partir d'un gabarit XHTML (PDFBox 3). -->
+    <dependency>
+      <groupId>io.github.openhtmltopdf</groupId>
+      <artifactId>openhtmltopdf-pdfbox</artifactId>
+      <version>${openhtmltopdf.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>

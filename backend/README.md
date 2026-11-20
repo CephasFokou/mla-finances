@@ -105,6 +105,15 @@ liste est le miroir de la liste blanche du projet MLA dans wallet-ledger, qui re
   `GET /api/v1/balance` (route wallet-ledger, pas un chemin PawaPay).
 - Détail : `docs/module-retraits-spec.md`.
 
+### Séparation des rôles et bon de décaissement
+
+- Personne ne valide ni ne rejette un retrait qu'il a saisi, sauf `SUPER_ADMIN` (403 sinon) ; l'auto-validation
+  d'un super administrateur est tracée (`WITHDRAWAL_SELF_APPROVED`), signalée par un badge « Auto-validé » et
+  filtrable (`GET /api/v1/withdrawals?selfApproved=true`).
+- Bon de décaissement PDF d'un retrait décaissé : `GET /api/v1/withdrawals/{id}/voucher.pdf`, produit à la
+  demande (openhtmltopdf, polices embarquées, rien sur disque), avec la référence opérateur pour un payout
+  Mobile Money.
+
 ## Build
 
 ```bash

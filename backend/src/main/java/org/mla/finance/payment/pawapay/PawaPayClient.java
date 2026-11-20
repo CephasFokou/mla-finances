@@ -218,7 +218,7 @@ public class PawaPayClient {
                         return PayoutOutcome.unavailable("réponse sans statut");
                     }
                     return switch (payoutStatus) {
-                        case "COMPLETED" -> PayoutOutcome.completed();
+                        case "COMPLETED" -> PayoutOutcome.completed(text(data, "providerTransactionId"));
                         case "FAILED", "REJECTED" -> {
                             JsonNode failure = data.path("failureReason");
                             yield PayoutOutcome.failed(payoutStatus, text(failure, "failureCode"), text(failure, "failureMessage"));

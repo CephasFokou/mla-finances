@@ -5,7 +5,12 @@ package org.mla.finance.payment.pawapay;
  * GET /v2/payouts/{payoutId}), indépendante du format exact — c'est ce que
  * WithdrawalPayoutStateService.apply sait appliquer.
  */
-public record PayoutOutcome(Kind kind, String providerStatus, String failureCode, String failureMessage) {
+public record PayoutOutcome(Kind kind, String providerStatus, String failureCode, String failureMessage,
+                            String providerTransactionId) {
+
+    public PayoutOutcome(Kind kind, String providerStatus, String failureCode, String failureMessage) {
+        this(kind, providerStatus, failureCode, failureMessage, null);
+    }
 
     public enum Kind {
         /** ACCEPTED / DUPLICATE_IGNORED / ENQUEUED / PROCESSING / IN_RECONCILIATION : relire plus tard. */
@@ -31,7 +36,12 @@ public record PayoutOutcome(Kind kind, String providerStatus, String failureCode
     }
 
     public static PayoutOutcome completed() {
-        return new PayoutOutcome(Kind.COMPLETED, "COMPLETED", null, null);
+        return completed(null);
+    }
+
+    /** providerTransactionId : référence de la transaction chez l'opérateur, si wallet-ledger la relaie. */
+    public static PayoutOutcome completed(String providerTransactionId) {
+        return new PayoutOutcome(Kind.COMPLETED, "COMPLETED", null, null, providerTransactionId);
     }
 
     public static PayoutOutcome failed(String providerStatus, String failureCode, String failureMessage) {

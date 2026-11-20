@@ -25,6 +25,7 @@ public record WithdrawalResponse(
     String transferGroup,
     WithdrawalStatus status,
     Instant requestedAt,
+    Long requestedById,
     String requestedByName,
     Instant decidedAt,
     String decidedByName,
@@ -39,7 +40,11 @@ public record WithdrawalResponse(
     String payoutFailureCode,
     Instant payoutRequestedAt,
     Instant payoutCompletedAt,
-    String payoutRequestedByName
+    String payoutRequestedByName,
+    /** Référence de la transaction chez l'opérateur (payout COMPLETED). */
+    String payoutProviderRef,
+    /** Saisi et validé par la même personne (badge « Auto-validé »). */
+    boolean selfApproved
 ) {
     public static WithdrawalResponse from(Withdrawal w) {
         return new WithdrawalResponse(
@@ -57,6 +62,7 @@ public record WithdrawalResponse(
             w.getTransferGroup(),
             w.getStatus(),
             w.getRequestedAt(),
+            w.getRequestedBy() != null ? w.getRequestedBy().getId() : null,
             w.getRequestedBy() != null ? w.getRequestedBy().getFullName() : null,
             w.getDecidedAt(),
             w.getDecidedBy() != null ? w.getDecidedBy().getFullName() : null,
@@ -70,7 +76,9 @@ public record WithdrawalResponse(
             w.getPayoutFailureCode(),
             w.getPayoutRequestedAt(),
             w.getPayoutCompletedAt(),
-            w.getPayoutRequestedBy() != null ? w.getPayoutRequestedBy().getFullName() : null
+            w.getPayoutRequestedBy() != null ? w.getPayoutRequestedBy().getFullName() : null,
+            w.getPayoutProviderRef(),
+            w.isSelfApproved()
         );
     }
 }
