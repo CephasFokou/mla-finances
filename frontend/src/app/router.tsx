@@ -27,6 +27,7 @@ import { NewVisualPage } from '../pages/media/NewVisualPage'
 import { PaymentTransactionsPage } from '../pages/payment-transactions/PaymentTransactionsPage'
 import { MembersPage } from '../pages/members/MembersPage'
 import { TransferFormPage } from '../pages/transfers/TransferFormPage'
+import { RemindersPage } from '../pages/reminders/RemindersPage'
 import { RequireAuth, RequirePermission } from './guards'
 
 // Squelette de routage : un module = un dossier sous src/pages, monté ici au fil de
@@ -59,6 +60,14 @@ export const router = createBrowserRouter([
           { path: 'withdrawals/:id', element: <WithdrawalDetailPage /> },
           { path: 'transfers/new', element: <TransferFormPage /> },
           { path: 'members', element: <MembersPage /> },
+          {
+            path: 'reminders',
+            element: (
+              <RequirePermission permission="SEND_REMINDERS">
+                <RemindersPage />
+              </RequirePermission>
+            ),
+          },
           { path: 'reports', element: <ReportsPage /> },
           { path: 'payment-transactions', element: <PaymentTransactionsPage /> },
           {

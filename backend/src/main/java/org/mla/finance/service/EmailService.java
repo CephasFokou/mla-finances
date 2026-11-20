@@ -78,25 +78,54 @@ public class EmailService {
     }
 
     private void send(String to, String subject, String html) {
+        sendHtml(to, subject, html, null);
+    }
+
+    /** Résultat d'un envoi : identifiant Resend si l'email est parti, sinon la raison de l'échec. */
+    public record SendResult(boolean sent, String messageId, String error) {
+        static SendResult failed(String error) {
+            return new SendResult(false, null, error);
+        }
+    }
+
+    /**
+     * Envoi générique (relances) : ne lève jamais d'exception, l'échec est renvoyé pour être tracé. {@code text}
+     * (facultatif) est la version texte brut, utile aux messageries qui n'affichent pas le HTML.
+     */
+    public SendResult sendHtml(String to, String subject, String html, String text) {
         if (apiKey == null || apiKey.isBlank()) {
-            log.warn("app.email.resend-api-key non configurée — email non envoyé (destinataire={}, sujet={})", to, subject);
-            return;
+            log.warn("app.email.resend-api-key non configurée — email non envoyé (sujet={})", subject);
+            return SendResult.failed("Envoi d'email non configuré (RESEND_API_KEY absente).");
+        }
+        Map<String, Object> body = new java.util.HashMap<>(Map.of(
+            "from", from,
+            "to", List.of(to),
+            "subject", subject,
+            "html", html
+        ));
+        if (text != null) {
+            body.put("text", text);
         }
         try {
-            restClient.post()
+            Map<?, ?> response = restClient.post()
                 .uri("/emails")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer " + apiKey)
-                .body(Map.of(
-                    "from", from,
-                    "to", List.of(to),
-                    "subject", subject,
-                    "html", html
-                ))
+                .body(body)
                 .retrieve()
-                .toBodilessEntity();
+                .body(Map.class);
+            Object id = response == null ? null : response.get("id");
+            return new SendResult(true, id == null ? null : id.toString(), null);
         } catch (RestClientException e) {
-            log.error("Échec d'envoi d'email via Resend (destinataire={}, sujet={})", to, subject, e);
+            log.error("Échec d'envoi d'email via Resend (sujet={})", subject, e);
+            return SendResult.failed("Échec Resend : " + abbreviate(e.getMessage()));
         }
+    }
+
+    private static String abbreviate(String message) {
+        if (message == null) {
+            return "erreur inconnue";
+        }
+        return message.length() > 200 ? message.substring(0, 200) + "…" : message;
     }
 }

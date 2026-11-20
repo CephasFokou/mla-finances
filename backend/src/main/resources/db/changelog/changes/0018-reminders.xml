@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Module Relances des contributions (cadrage du 20/11/2026), lot 1 : dossiers, relances, envois par canal,
+         réglages. Les réponses du membre (WhatsApp / liens email), les jetons et l'espace membre arrivent aux lots
+         suivants ; les colonnes de réponse du dossier sont déjà là pour ne pas remigrer la table. -->
+
+    <changeSet id="0018-01-reminder-settings" author="mla-finance">
+        <createTable tableName="reminder_settings">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="enabled" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="open_from_day" type="INT" defaultValueNumeric="10">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cooldown_no_response_days" type="INT" defaultValueNumeric="3">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cooldown_ack_days" type="INT" defaultValueNumeric="5">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cooldown_not_found_hours" type="INT" defaultValueNumeric="48">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_per_month" type="INT" defaultValueNumeric="3">
+                <constraints nullable="false"/>
+            </column>
+            <column name="send_window_start" type="TIME" defaultValue="08:00:00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="send_window_end" type="TIME" defaultValue="20:00:00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="auto_reminder_on_promise" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <insert tableName="reminder_settings">
+            <column name="id" valueNumeric="1"/>
+            <column name="enabled" valueBoolean="true"/>
+            <column name="open_from_day" valueNumeric="10"/>
+            <column name="cooldown_no_response_days" valueNumeric="3"/>
+            <column name="cooldown_ack_days" valueNumeric="5"/>
+            <column name="cooldown_not_found_hours" valueNumeric="48"/>
+            <column name="max_per_month" valueNumeric="3"/>
+            <column name="send_window_start" value="08:00:00"/>
+            <column name="send_window_end" value="20:00:00"/>
+            <column name="auto_reminder_on_promise" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Un dossier = (membre, motif, mois) ou (membre, collecte). Clé d'unicité : deux admins qui relancent en même
+         temps ne créent jamais deux dossiers (le second reçoit un conflit). L'unicité porte sur case_key (non nul)
+         plutôt que sur project_id / period_month, dont l'un est toujours NULL (NULL casserait l'unicité). -->
+    <changeSet id="0018-02-reminder-cases" author="mla-finance">
+        <createTable tableName="reminder_cases">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="donor_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_reminder_cases_donor" references="donors(id)"/>
+            </column>
+            <!-- MONTHLY_CONTRIBUTION ou PROJECT. -->
+            <column name="reason" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints foreignKeyName="fk_reminder_cases_project" references="projects(id)"/>
+            </column>
+            <column name="period_month" type="DATE"/>
+            <!-- Clé d'unicité : « M:2026-11-01 » pour un mois, « P:12 » pour une collecte. -->
+            <column name="case_key" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reminder_count" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_allowed_at" type="TIMESTAMP"/>
+            <column name="promised_date" type="DATE"/>
+            <!-- ACK, DONE, PROMISE ou FREE_TEXT (lot 2). -->
+            <column name="last_response" type="VARCHAR(20)"/>
+            <column name="needs_attention" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="closed_at" type="TIMESTAMP"/>
+            <column name="closed_reason" type="VARCHAR(300)"/>
+            <column name="closed_by_id" type="BIGINT">
+                <constraints foreignKeyName="fk_reminder_cases_closed_by" references="users(id)"/>
+            </column>
+            <column name="contribution_id" type="BIGINT">
+                <constraints foreignKeyName="fk_reminder_cases_contribution" references="contributions(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <addUniqueConstraint tableName="reminder_cases" columnNames="donor_id, reason, case_key"
+                             constraintName="uq_reminder_cases_donor_reason_key"/>
+        <createIndex tableName="reminder_cases" indexName="idx_reminder_cases_period">
+            <column name="reason"/>
+            <column name="period_month"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0018-03-reminders" author="mla-finance">
+        <createTable tableName="reminders">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="case_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_reminders_case" references="reminder_cases(id)"/>
+            </column>
+            <column name="sequence_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MANUAL, BULK ou SCHEDULED. -->
+            <column name="trigger_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_by_user_id" type="BIGINT">
+                <constraints foreignKeyName="fk_reminders_sent_by" references="users(id)"/>
+            </column>
+            <!-- Renseigné quand l'envoi est mis en file (hors plage 8 h - 20 h). -->
+            <column name="scheduled_for" type="TIMESTAMP"/>
+            <column name="sent_at" type="TIMESTAMP"/>
+            <!-- Envoi programmé annulé (contribution enregistrée entre-temps, dossier clos). -->
+            <column name="cancelled_at" type="TIMESTAMP"/>
+            <column name="message_snapshot" type="VARCHAR(4000)"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="reminders" columnNames="case_id, sequence_no" constraintName="uq_reminders_case_seq"/>
+        <createIndex tableName="reminders" indexName="idx_reminders_scheduled">
+            <column name="scheduled_for"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0018-04-reminder-deliveries" author="mla-finance">
+        <createTable tableName="reminder_deliveries">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="reminder_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_reminder_deliveries_reminder" references="reminders(id)"/>
+            </column>
+            <!-- EMAIL ou WHATSAPP. -->
+            <column name="channel" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recipient" type="VARCHAR(180)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider_message_id" type="VARCHAR(120)"/>
+            <!-- QUEUED, SENT, DELIVERED, READ ou FAILED. -->
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error" type="VARCHAR(300)"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <createIndex tableName="reminder_deliveries" indexName="idx_reminder_deliveries_reminder">
+            <column name="reminder_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Nouvelle permission SEND_REMINDERS : SUPER_ADMIN et TRESORIER par défaut (modifiable dans la matrice). -->
+    <changeSet id="0018-05-permission-send-reminders" author="mla-finance">
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'SUPER_ADMIN')"/>
+            <column name="permission_code" value="SEND_REMINDERS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" valueComputed="(select id from roles where name = 'TRESORIER')"/>
+            <column name="permission_code" value="SEND_REMINDERS"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

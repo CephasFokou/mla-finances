@@ -2,6 +2,8 @@ package org.mla.finance.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.mla.finance.reminder.ContributionRecordedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mla.finance.domain.Contribution;
 import org.mla.finance.domain.Donor;
 import org.mla.finance.domain.MovementNature;
@@ -62,6 +64,7 @@ public class PaymentTransactionService {
     private final ContributionRepository contributionRepository;
     private final DonorRepository donorRepository;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
     private final PawaPayProperties pawaPayProperties;
 
     @Transactional(readOnly = true)
@@ -266,6 +269,7 @@ public class PaymentTransactionService {
             .paymentTransaction(transaction)
             .build();
         Contribution saved = contributionRepository.save(contribution);
+        eventPublisher.publishEvent(ContributionRecordedEvent.of(saved));
         transaction.setContribution(saved);
         return saved;
     }
@@ -290,6 +294,7 @@ public class PaymentTransactionService {
                 .notes(notes + " — " + YearMonth.from(month))
                 .paymentTransaction(transaction)
                 .build());
+            eventPublisher.publishEvent(ContributionRecordedEvent.of(saved));
             if (first == null) {
                 first = saved;
             }

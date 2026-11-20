@@ -37,4 +37,7 @@ public interface DonorRepository extends JpaRepository<Donor, Long> {
     Optional<Donor> findByEmailIgnoreCase(String email);
 
     Optional<Donor> findByPhone(String phone);
+
+    /** Membres du MLA (responsables et membres) d'un statut donné : population des relances. */
+    List<Donor> findByMemberRoleIsNotNullAndMemberStatus(MemberStatus status);
 }

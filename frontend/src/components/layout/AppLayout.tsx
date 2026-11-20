@@ -25,6 +25,7 @@ export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const currentUser = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+  const canRemind = useAuthStore((state) => state.user?.permissions.includes('SEND_REMINDERS') ?? false)
 
   const handleLogout = () => {
     logout()
@@ -37,6 +38,7 @@ export function AppLayout() {
     { to: '/withdrawals', label: t('nav.withdrawals'), icon: 'out' },
     { to: '/projects', label: t('nav.projects'), icon: 'folder' },
     { to: '/members', label: t('nav.members'), icon: 'users' },
+    ...(canRemind ? [{ to: '/reminders', label: t('nav.reminders'), icon: 'repeat' as IconName }] : []),
     { to: '/reports', label: t('nav.reports'), icon: 'file' },
     { to: '/payment-transactions', label: t('nav.paymentTransactions'), icon: 'heart' },
     { to: '/administration', label: t('nav.administration'), icon: 'gear' },
