@@ -107,6 +107,12 @@ app:
       - label: MTN MoMo MLA
         msisdn: "237651059561"
         provider: MTN_MOMO_CMR
+  reminders:
+    # Module Relances (voir reminder/ReminderService). Lien « Contribuer maintenant » des relances : le site
+    # public de don (PUBLIC_SITE_URL, sinon l'origine CORS du site public, sinon le domaine de prod).
+    public-site-url: ${PUBLIC_SITE_URL:${PUBLIC_FRONTEND_ORIGIN:https://don-mla.itc-services.xyz}}
+    # Fréquence du job qui envoie les relances mises en file hors plage horaire (8 h - 20 h, Africa/Douala).
+    queue-poll-ms: ${REMINDER_QUEUE_POLL_MS:60000}
   rate-limit:
     # Limitation de débit par adresse IP sur les surfaces non authentifiées (voir
     # security/RateLimitFilter). Fenêtre glissante d'une minute, 429 + Retry-After au-delà.

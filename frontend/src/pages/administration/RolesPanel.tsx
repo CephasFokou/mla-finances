@@ -15,6 +15,7 @@ const PERMISSIONS: Permission[] = [
   'MANAGE_USERS',
   'MANAGE_MEDIA',
   'VIEW_AUDIT_LOG',
+  'SEND_REMINDERS',
 ]
 
 function RoleRow({ role }: { role: RoleResponse }) {

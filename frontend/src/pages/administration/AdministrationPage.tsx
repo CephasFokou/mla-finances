@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next'
 import ui from '../../components/ui/ui.module.scss'
 import { MonthlyContributionPanel } from './MonthlyContributionPanel'
 import { PaymentChannelsPanel } from './PaymentChannelsPanel'
+import { ReminderSettingsPanel } from './ReminderSettingsPanel'
 import { RolesPanel } from './RolesPanel'
 import styles from './AdministrationPage.module.scss'
 import { UsersPanel } from './UsersPanel'
 
-type Tab = 'users' | 'roles' | 'channels' | 'monthly'
+type Tab = 'users' | 'roles' | 'channels' | 'monthly' | 'reminders'
 
 export function AdministrationPage() {
   const { t } = useTranslation()
@@ -59,6 +60,15 @@ export function AdministrationPage() {
         >
           {t('administration.tabs.monthlyContribution')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'reminders'}
+          className={tab === 'reminders' ? ui.segActive : undefined}
+          onClick={() => setTab('reminders')}
+        >
+          {t('administration.tabs.reminders')}
+        </button>
       </div>
 
       <div className={styles.tabPanel}>
@@ -66,6 +76,7 @@ export function AdministrationPage() {
         {tab === 'roles' && <RolesPanel />}
         {tab === 'channels' && <PaymentChannelsPanel />}
         {tab === 'monthly' && <MonthlyContributionPanel />}
+        {tab === 'reminders' && <ReminderSettingsPanel />}
       </div>
     </section>
   )

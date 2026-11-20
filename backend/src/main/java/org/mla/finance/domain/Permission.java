@@ -12,5 +12,7 @@ public enum Permission {
     VALIDATE_WITHDRAWALS,
     MANAGE_USERS,
     MANAGE_MEDIA,
-    VIEW_AUDIT_LOG
+    VIEW_AUDIT_LOG,
+    /** Relancer les membres pour leur contribution (module Relances). */
+    SEND_REMINDERS
 }

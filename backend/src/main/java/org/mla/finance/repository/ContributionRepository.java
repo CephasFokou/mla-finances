@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -74,4 +75,25 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
         having sum(c.amount) > 0
         """)
     List<LocalDate> paidMonths(Long donorId, Collection<LocalDate> months, Long excludeTransactionId);
+
+    /** Membres dont la contribution mensuelle du mois est enregistrée (ajustements déduits) : base des relances. */
+    @Query("""
+        select c.donor.id from Contribution c
+        where c.donor is not null
+          and c.nature = org.mla.finance.domain.MovementNature.MONTHLY_CONTRIBUTION
+          and c.periodMonth = :month
+        group by c.donor.id
+        having sum(c.amount) > 0
+        """)
+    List<Long> donorsWithMonthlyContribution(@Param("month") LocalDate month);
+
+    /** Écritures mensuelles d'un membre pour un mois (la dernière positive clôt le dossier de relance). */
+    @Query("""
+        select c from Contribution c
+        where c.donor.id = :donorId
+          and c.nature = org.mla.finance.domain.MovementNature.MONTHLY_CONTRIBUTION
+          and c.periodMonth = :month
+        order by c.id desc
+        """)
+    List<Contribution> monthlyEntries(@Param("donorId") Long donorId, @Param("month") LocalDate month);
 }

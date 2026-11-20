@@ -20,5 +20,6 @@
     <include file="db/changelog/changes/0015-withdrawal-payouts.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/changes/0016-payout-provider-ref.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/changes/0017-mobile-money-fees.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/changes/0018-reminders.xml" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

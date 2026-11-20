@@ -14,7 +14,8 @@
     "toggleMenu": "Ouvrir ou fermer le menu",
     "logout": "Se déconnecter",
     "paymentTransactions": "Dons en ligne",
-    "members": "Membres"
+    "members": "Membres",
+    "reminders": "Relances"
   },
   "login": {
     "title": "Connexion",
@@ -607,7 +608,8 @@
       "users": "Utilisateurs",
       "roles": "Rôles & permissions",
       "channels": "Canaux de paiement",
-      "monthlyContribution": "Contribution mensuelle"
+      "monthlyContribution": "Contribution mensuelle",
+      "reminders": "Relances"
     },
     "permissions": {
       "VIEW_DASHBOARD": "Tableau de bord",
@@ -617,7 +619,8 @@
       "VALIDATE_WITHDRAWALS": "Valider les retraits",
       "MANAGE_USERS": "Gérer les utilisateurs",
       "MANAGE_MEDIA": "Gérer les médias",
-      "VIEW_AUDIT_LOG": "Journal d'audit"
+      "VIEW_AUDIT_LOG": "Journal d'audit",
+      "SEND_REMINDERS": "Relancer les membres"
     },
     "roles": {
       "error": "Impossible de charger les rôles pour le moment.",
@@ -940,5 +943,146 @@
     "error": "Impossible de charger les réglages.",
     "genericError": "L'enregistrement a échoué.",
     "invalidAmount": "Indiquez des montants entiers supérieurs à zéro."
+  },
+  "reminders": {
+    "title": "Relances",
+    "subtitle": "Contribution mensuelle de {{month}} — relances ouvertes à partir du {{openFrom}}, échéance le {{due}}.",
+    "disabled": "Les relances sont désactivées (Administration → Relances).",
+    "readOnlyMonth": "Mois terminé ou à venir : consultation seulement, seul le mois en cours peut être relancé.",
+    "loading": "Chargement des membres…",
+    "error": "Impossible de charger les relances. Vérifiez que le backend est démarré.",
+    "empty": "Aucun membre dans cette vue.",
+    "genericError": "L'action a échoué.",
+    "month": "Mois",
+    "kpi": {
+      "upToDate": "À jour",
+      "unpaid": "Non réglés",
+      "remindable": "Relançables maintenant",
+      "sent": "Relances envoyées"
+    },
+    "filters": {
+      "label": "Filtrer les membres",
+      "unpaid": "Non payés",
+      "remindable": "Relançables maintenant",
+      "reminded": "Déjà relancés",
+      "all": "Tous"
+    },
+    "columns": {
+      "member": "Membre",
+      "expected": "Montant habituel",
+      "month": "Ce mois",
+      "lastReminder": "Dernière relance",
+      "case": "Dossier"
+    },
+    "selectAll": "Sélectionner tous les membres relançables",
+    "select": "Sélectionner {{name}}",
+    "role": {
+      "RESPONSABLE": "Responsable",
+      "MEMBRE": "Membre"
+    },
+    "contact": {
+      "email": "email renseigné",
+      "noEmail": "pas d'email"
+    },
+    "monthStatus": {
+      "PAID": "Réglé",
+      "UNPAID": "Non réglé",
+      "IN_PROGRESS": "Paiement en cours"
+    },
+    "caseStatus": {
+      "A_RELANCER": "À relancer",
+      "EN_ATTENTE_REPONSE": "En attente de réponse",
+      "ACCUSE": "Bien reçu",
+      "PROMIS": "Promis",
+      "VERIFICATION": "En vérification",
+      "DECLARE_NON_RETROUVE": "Déclaré payé — non retrouvé",
+      "REGLE": "Réglé",
+      "SANS_SUITE": "Sans suite"
+    },
+    "channel": {
+      "EMAIL": "Email",
+      "WHATSAPP": "WhatsApp"
+    },
+    "delivery": {
+      "QUEUED": "en file",
+      "SENT": "envoyé",
+      "DELIVERED": "livré",
+      "READ": "lu",
+      "FAILED": "échec"
+    },
+    "trigger": {
+      "MANUAL": "manuelle",
+      "BULK": "groupée",
+      "SCHEDULED": "programmée"
+    },
+    "count": "{{count}}/{{max}}",
+    "scheduledFor": "Programmée pour le {{date}}",
+    "remind": "Relancer",
+    "back": "Retour",
+    "close": "Fermer",
+    "result": {
+      "sent": "Relance envoyée à {{name}}.",
+      "queued": "Hors plage horaire : la relance de {{name}} partira le {{date}}.",
+      "failed": "La relance de {{name}} n'est pas partie : {{error}} Elle ne compte pas, vous pouvez réessayer."
+    },
+    "preview": {
+      "title": "Relancer {{name}}",
+      "to": "Envoi à : {{recipients}}",
+      "noChannel": "Aucun canal disponible pour ce membre.",
+      "frameTitle": "Aperçu de l'email de relance",
+      "error": "Impossible de charger l'aperçu.",
+      "send": "Envoyer la relance"
+    },
+    "bulk": {
+      "button_one": "Relancer la sélection ({{count}})",
+      "button_other": "Relancer la sélection ({{count}})",
+      "title": "Relance groupée",
+      "confirm_one": "Relancer {{count}} membre pour la contribution du mois ? Chacun suit ses propres règles : un membre devenu non éligible entre-temps est ignoré.",
+      "confirm_other": "Relancer {{count}} membres pour la contribution du mois ? Chacun suit ses propres règles : un membre devenu non éligible entre-temps est ignoré.",
+      "send_one": "Relancer {{count}} membre",
+      "send_other": "Relancer {{count}} membres",
+      "sending": "Envoi en cours…",
+      "report": "{{sent}} relancé(s), {{skipped}} ignoré(s).",
+      "queuedHint": "Une partie des relances est programmée pour l'ouverture de la plage horaire d'envoi."
+    },
+    "case": {
+      "title": "Dossier de {{name}}",
+      "error": "Impossible de charger le dossier.",
+      "reminder": "Relance n°{{n}}",
+      "sentAt": "Envoyée le {{date}}",
+      "cancelledAt": "Annulée le {{date}} (non comptée)",
+      "closed": "Clos le {{date}}",
+      "contribution": "Voir la contribution #{{id}}",
+      "closeLabel": "Clore sans suite (ex. membre dispensé ce mois)",
+      "closePlaceholder": "Motif de la clôture",
+      "closeAction": "Clore sans suite"
+    }
+  },
+  "reminderSettings": {
+    "intro": "Relances de la contribution mensuelle (membres actifs). L'échéance est toujours le dernier jour du mois ; les envois partent uniquement dans la plage horaire (heure de Douala), une demande hors plage est programmée pour l'ouverture suivante.",
+    "enabled": "Relances activées",
+    "enabledHint": "Désactivées, plus aucune relance ne part (les relances programmées sont annulées à leur heure d'envoi).",
+    "fields": {
+      "openFromDay": "Relances ouvertes à partir du (jour du mois)",
+      "cooldownNoResponseDays": "Délai sans réponse (jours)",
+      "maxPerMonth": "Relances maximum par membre et par mois",
+      "cooldownAckDays": "Délai après « Bien reçu » (jours)",
+      "cooldownNotFoundHours": "Délai si « C'est fait » non retrouvé (heures)",
+      "sendWindowStart": "Envois à partir de",
+      "sendWindowEnd": "Envois jusqu'à"
+    },
+    "hints": {
+      "openFromDay": "Entre {{min}} et {{max}}.",
+      "cooldownNoResponseDays": "Entre {{min}} et {{max}}.",
+      "maxPerMonth": "Entre {{min}} et {{max}}.",
+      "cooldownAckDays": "Utilisé avec les réponses WhatsApp (à venir).",
+      "cooldownNotFoundHours": "Utilisé avec les réponses WhatsApp (à venir)."
+    },
+    "nextLots": "Les réponses des membres (« Bien reçu », date promise, « C'est déjà fait ») et l'envoi WhatsApp arrivent avec l'intégration Kapso.",
+    "save": "Enregistrer",
+    "saved": "Réglages enregistrés.",
+    "invalid": "Vérifiez les valeurs : nombres entiers dans les bornes indiquées, et fin de plage après son début.",
+    "error": "Impossible de charger les réglages des relances.",
+    "genericError": "L'enregistrement a échoué."
   }
 }
