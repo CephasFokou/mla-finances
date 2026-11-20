@@ -61,6 +61,13 @@ public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long>, J
 
     Optional<Withdrawal> findByPayoutId(String payoutId);
 
+    Optional<Withdrawal> findFirstByReference(String reference);
+
+    /** Σ des décaissements Mobile Money reçus depuis un instant (contrôle d'écart). */
+    @Query("select coalesce(sum(w.amount), 0) from Withdrawal w "
+        + "where w.payoutStatus = org.mla.finance.domain.PayoutStatus.COMPLETED and w.payoutCompletedAt >= :since")
+    BigDecimal sumCompletedPayoutsSince(@Param("since") Instant since);
+
     /** Payouts non finaux dont la relecture est due (job de polling). */
     List<Withdrawal> findByPayoutStatusInAndPayoutNextCheckAtLessThanEqualOrderByPayoutNextCheckAtAsc(
         Collection<PayoutStatus> statuses, Instant now, Pageable pageable);

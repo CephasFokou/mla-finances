@@ -497,7 +497,14 @@
         "reserved": "Réservé",
         "hint": "Lecture seule, depuis la Trésorerie. Le réservé couvre les décaissements en cours.",
         "asOf": "Au {{date}}",
-        "unreachable": "Solde indisponible : la Trésorerie ne répond pas pour le moment."
+        "unreachable": "Solde indisponible : la Trésorerie ne répond pas pour le moment.",
+        "gapTitle": "Écart avec MLA Finance",
+        "expected": "Attendu par MLA Finance : {{amount}}",
+        "noGap": "Aucun écart : le solde de la Trésorerie correspond aux dons, décaissements et frais Mobile Money enregistrés.",
+        "gap": "Écart de {{amount}} avec ce que MLA Finance attend.",
+        "gapExplain": "Causes habituelles : frais du jour pas encore comptés (relevé PawaPay importé vers 05:30 UTC, frais enregistrés à 07:00 UTC), don ou décaissement en cours de confirmation, ou mouvement réaffecté dans la Trésorerie. S'il persiste après le prochain passage, comparez les mouvements du jour dans la Trésorerie.",
+        "gapUnavailable": "Contrôle d'écart indisponible : date de bascule du MLA sur la Trésorerie inconnue (variable MLA_LEDGER_START).",
+        "since": "Depuis le {{date}}"
       }
     }
   },

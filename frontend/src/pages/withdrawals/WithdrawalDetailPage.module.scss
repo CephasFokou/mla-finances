@@ -231,3 +231,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+// Contrôle d'écart sous l'encart « Solde Mobile Money du MLA ».
+.gapLine {
+  margin-top: var(--space-3);
+}
+
+.gapExplain {
+  margin: var(--space-1) 0 0;
+  font-size: 0.86rem;
+}

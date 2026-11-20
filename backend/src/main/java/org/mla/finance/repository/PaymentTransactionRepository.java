@@ -20,6 +20,14 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
 
     Optional<PaymentTransaction> findByDepositId(String depositId);
 
+    Optional<PaymentTransaction> findByReference(String reference);
+
+    /** Σ des dons Mobile Money confirmés passés par wallet-ledger depuis un instant (contrôle d'écart). */
+    @Query("select coalesce(sum(t.amount), 0) from PaymentTransaction t where t.provider = :provider "
+        + "and t.status = org.mla.finance.domain.PaymentTransactionStatus.CONFIRMED and t.depositId is not null "
+        + "and t.confirmedAt >= :since")
+    java.math.BigDecimal sumConfirmedSince(@Param("provider") String provider, @Param("since") java.time.Instant since);
+
     Optional<PaymentTransaction> findByTrackingToken(String trackingToken);
 
     /**

@@ -3,6 +3,7 @@ package org.mla.finance.service;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.exception.BusinessRuleViolationException;
+import org.mla.finance.payment.fees.MobileMoneyControlService;
 import org.mla.finance.payment.pawapay.MobileMoneyBalance;
 import org.mla.finance.payment.pawapay.PawaPayClient;
 import org.mla.finance.payment.pawapay.PawaPayProperties;
@@ -44,6 +45,7 @@ public class WithdrawalPayoutService {
     private final PawaPayClient client;
     private final PawaPayProperties pawaPayProperties;
     private final PayoutRecipientsProperties recipients;
+    private final MobileMoneyControlService controlService;
 
     public PayoutOptionsResponse options() {
         if (!pawaPayProperties.isEnabled()) {
@@ -58,7 +60,9 @@ public class WithdrawalPayoutService {
         if (!pawaPayProperties.isEnabled()) {
             return MobileMoneyBalanceResponse.disabled();
         }
-        return client.balance().map(MobileMoneyBalanceResponse::from).orElseGet(MobileMoneyBalanceResponse::unreachable);
+        return client.balance()
+            .map(b -> MobileMoneyBalanceResponse.from(b, controlService.control(b)))
+            .orElseGet(MobileMoneyBalanceResponse::unreachable);
     }
 
     public WithdrawalResponse initiate(Long withdrawalId, String recipientKey) {

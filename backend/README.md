@@ -114,6 +114,14 @@ liste est le miroir de la liste blanche du projet MLA dans wallet-ledger, qui re
   demande (openhtmltopdf, polices embarquées, rien sur disque), avec la référence opérateur pour un payout
   Mobile Money.
 
+### Frais Mobile Money (automatiques)
+
+Chaque jour à 07:00 UTC, les frais PawaPay du projet MLA (lignes `FEE` de `GET /api/v1/movements` chez
+wallet-ledger) sont enregistrés comme dépenses « Frais Mobile Money » sur l'enveloppe de l'opération qui les a
+causés (Caisse MLA à défaut), une par jour et par enveloppe, sans doublon. Variables : `MLA_FEES_SYNC_ENABLED`
+(vrai par défaut avec PawaPay), `MLA_FEES_SYNC_CRON`, `MLA_LEDGER_START` (début du contrôle d'écart si
+wallet-ledger ne renvoie pas de date d'ouverture). L'encart de solde de la page Retraits affiche l'écart.
+
 ## Build
 
 ```bash
