@@ -349,7 +349,8 @@
       "status": "Statut",
       "requestedAt": "Demandé le",
       "amount": "Montant",
-      "date": "Date"
+      "date": "Date",
+      "payout": "Mobile Money"
     },
     "filters": {
       "envelope": "Enveloppe",
@@ -439,7 +440,59 @@
       "peopleValue": "Saisie par {{requested}}, validée par {{decided}}"
     },
     "count_one": "{{count}} sortie enregistrée",
-    "count_other": "{{count}} sorties enregistrées"
+    "count_other": "{{count}} sorties enregistrées",
+    "payout": {
+      "action": "Décaisser par Mobile Money",
+      "retry": "Relancer par Mobile Money",
+      "title": "Décaissement Mobile Money",
+      "dialogTitle": "Décaisser par Mobile Money",
+      "recipientLabel": "Numéro de réception",
+      "recipientHint": "Seuls les numéros Mobile Money du MLA approuvés dans la Trésorerie sont proposés.",
+      "noRecipient": "Aucun numéro Mobile Money n'est configuré : contactez l'administrateur.",
+      "confirm": "Envoyer {{amount}} sur {{operator}} {{phone}} ?",
+      "confirmHint": "Au-delà du seuil de la Trésorerie, l'envoi attendra une validation. Le retrait passera « Décaissé » automatiquement à la réception.",
+      "send": "Envoyer",
+      "recheck": "Vérifier le statut",
+      "phone": "Numéro",
+      "operator": "Opérateur",
+      "statusLabel": "Statut",
+      "requestedAt": "Envoyé le",
+      "requestedBy": "Envoyé par",
+      "completedAt": "Reçu le",
+      "failureLabel": "Motif de l'échec",
+      "payoutId": "Identifiant",
+      "processingHint": "Envoi en cours : le statut se met à jour automatiquement.",
+      "pendingApprovalHint": "En attente de validation dans la Trésorerie",
+      "completedHint": "Argent reçu : le retrait a été marqué décaissé automatiquement.",
+      "failedHint": "Le retrait reste validé : vous pouvez relancer un décaissement Mobile Money, ou le marquer décaissé s'il a été payé autrement.",
+      "blocked": "Décaissement Mobile Money en cours : l'annulation et le décaissement manuel sont indisponibles jusqu'à son résultat.",
+      "status": {
+        "PROCESSING": "Envoi en cours",
+        "PENDING_APPROVAL": "À valider (Trésorerie)",
+        "COMPLETED": "Envoyé",
+        "FAILED": "Échec"
+      },
+      "provider": {
+        "ORANGE_CMR": "Orange Money",
+        "MTN_MOMO_CMR": "MTN MoMo"
+      },
+      "failure": {
+        "INSUFFICIENT_PROJECT_BALANCE": "Solde Mobile Money du MLA insuffisant",
+        "RECIPIENT_NOT_ALLOWED": "Numéro non approuvé dans la Trésorerie",
+        "LEDGER_CONSISTENCY_HOLD": "Sorties suspendues par la Trésorerie (contrôle de cohérence en cours)",
+        "PAYOUT_NOT_FOUND": "La demande n'est jamais arrivée à la Trésorerie",
+        "HTTP_401": "Clé MLA refusée par la Trésorerie (configuration à vérifier)",
+        "HTTP_403": "Clé MLA refusée par la Trésorerie (configuration à vérifier)"
+      },
+      "balance": {
+        "title": "Solde Mobile Money du MLA",
+        "available": "Disponible",
+        "reserved": "Réservé",
+        "hint": "Lecture seule, depuis la Trésorerie. Le réservé couvre les décaissements en cours.",
+        "asOf": "Au {{date}}",
+        "unreachable": "Solde indisponible : la Trésorerie ne répond pas pour le moment."
+      }
+    }
   },
   "reports": {
     "title": "Rapports",

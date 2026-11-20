@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Décaissement d'un retrait APPROVED par Mobile Money (POST /v2/payouts sur wallet-ledger).
+         Un retrait porte au plus UN payout actif : ces colonnes décrivent le dernier en date (une
+         nouvelle tentative après un échec les écrase ; l'historique reste dans le journal d'audit).
+         Toutes nullables : les retraits existants (espèces, virement) ne sont pas concernés.
+         withdrawals.status n'est pas touché : PROCESSED n'est posé qu'à la confirmation COMPLETED. -->
+    <changeSet id="0015-01-withdrawal-payout-columns" author="mla-finance">
+        <addColumn tableName="withdrawals">
+            <column name="payout_id" type="VARCHAR(36)"/>
+            <column name="payout_phone" type="VARCHAR(20)"/>
+            <column name="payout_provider" type="VARCHAR(30)"/>
+            <column name="payout_status" type="VARCHAR(20)"/>
+            <column name="payout_failure_code" type="VARCHAR(60)"/>
+            <column name="payout_requested_at" type="TIMESTAMP"/>
+            <column name="payout_completed_at" type="TIMESTAMP"/>
+            <column name="payout_requested_by" type="BIGINT"/>
+            <!-- Prochaine relecture due par le job de polling (recul progressif, comme les dons). -->
+            <column name="payout_next_check_at" type="TIMESTAMP"/>
+        </addColumn>
+        <addUniqueConstraint tableName="withdrawals" columnNames="payout_id" constraintName="uq_withdrawals_payout_id"/>
+        <addForeignKeyConstraint baseTableName="withdrawals" baseColumnNames="payout_requested_by"
+            constraintName="fk_withdrawals_payout_requested_by" referencedTableName="users" referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        <createIndex tableName="withdrawals" indexName="idx_withdrawals_payout_status_check">
+            <column name="payout_status"/>
+            <column name="payout_next_check_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

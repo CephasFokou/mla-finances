@@ -6,7 +6,11 @@ import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.WithdrawalStatus;
 import org.mla.finance.service.WithdrawalCsvExporter;
 import org.mla.finance.service.WithdrawalFilter;
+import org.mla.finance.service.WithdrawalPayoutService;
 import org.mla.finance.service.WithdrawalService;
+import org.mla.finance.web.dto.MobileMoneyBalanceResponse;
+import org.mla.finance.web.dto.PayoutOptionsResponse;
+import org.mla.finance.web.dto.PayoutRequest;
 import org.mla.finance.web.dto.WithdrawalCreateRequest;
 import org.mla.finance.web.dto.WithdrawalRejectRequest;
 import org.mla.finance.web.dto.WithdrawalResponse;
@@ -40,6 +44,7 @@ public class WithdrawalController {
     private static final MediaType TEXT_CSV_UTF8 = new MediaType("text", "csv", StandardCharsets.UTF_8);
 
     private final WithdrawalService withdrawalService;
+    private final WithdrawalPayoutService payoutService;
     private final WithdrawalCsvExporter csvExporter;
 
     @GetMapping
@@ -76,6 +81,18 @@ public class WithdrawalController {
             .header(HttpHeaders.CONTENT_DISPOSITION,
                 ContentDisposition.attachment().filename("retraits.csv").build().toString())
             .body(csv);
+    }
+
+    /** Décaissement Mobile Money activé ? Numéros MLA proposés (liste fermée, masqués). */
+    @GetMapping("/payout-options")
+    public PayoutOptionsResponse payoutOptions() {
+        return payoutService.options();
+    }
+
+    /** Encart « Solde Mobile Money du MLA » de la page Retraits (lecture seule, wallet-ledger). */
+    @GetMapping("/mobile-money-balance")
+    public MobileMoneyBalanceResponse mobileMoneyBalance() {
+        return payoutService.balance();
     }
 
     @GetMapping("/{id}")
@@ -125,5 +142,19 @@ public class WithdrawalController {
     @PreAuthorize("hasAuthority('MANAGE_WITHDRAWALS')")
     public WithdrawalResponse process(@PathVariable Long id) {
         return withdrawalService.process(id);
+    }
+
+    /** Décaisser un retrait APPROVED par Mobile Money vers un numéro MLA approuvé (payout wallet-ledger). */
+    @PostMapping("/{id}/payout")
+    @PreAuthorize("hasAuthority('MANAGE_WITHDRAWALS')")
+    public WithdrawalResponse payout(@PathVariable Long id, @Valid @RequestBody PayoutRequest request) {
+        return payoutService.initiate(id, request.recipientKey());
+    }
+
+    /** Relecture immédiate du statut du payout (« Vérifier le statut ») : ne fait que ce que le polling ferait. */
+    @PostMapping("/{id}/payout/recheck")
+    @PreAuthorize("hasAuthority('MANAGE_WITHDRAWALS')")
+    public WithdrawalResponse recheckPayout(@PathVariable Long id) {
+        return payoutService.recheck(id);
     }
 }

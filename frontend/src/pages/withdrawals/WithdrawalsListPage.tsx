@@ -6,12 +6,13 @@ import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { OUTFLOW_NATURES, type MovementNature } from '../../features/ledger/types'
 import { withdrawalsApi } from '../../features/withdrawals/api'
-import { useWithdrawalsQuery } from '../../features/withdrawals/hooks'
+import { useMobileMoneyBalanceQuery, useWithdrawalsQuery } from '../../features/withdrawals/hooks'
 import type { WithdrawalFilters, WithdrawalStatus } from '../../features/withdrawals/types'
 import { useCategoriesQuery, useProjectsQuery } from '../../features/reference-data/hooks'
 import { downloadTextFile } from '../../lib/download'
 import { formatDate, formatFcfa, personLabel } from '../../lib/format'
 import { useHasPermission } from '../../store/authStore'
+import { MobileMoneyBalanceCard, PayoutStatusPill } from './WithdrawalPayout'
 import { WithdrawalStatusPill } from './WithdrawalStatusPill'
 import styles from './WithdrawalsListPage.module.scss'
 
@@ -46,6 +47,7 @@ export function WithdrawalsListPage() {
   })
   const { data: projects } = useProjectsQuery()
   const { data: categories } = useCategoriesQuery()
+  const { data: mobileMoneyBalance } = useMobileMoneyBalanceQuery()
 
   const hasFilters = !!(envelope || status || nature)
 
@@ -94,6 +96,8 @@ export function WithdrawalsListPage() {
           </Link>
         </div>
       </header>
+
+      {mobileMoneyBalance && <MobileMoneyBalanceCard balance={mobileMoneyBalance} />}
 
       <div className={styles.toolbar}>
         <label className={styles.filter}>
@@ -221,7 +225,14 @@ export function WithdrawalsListPage() {
                       </div>
                     </td>
                     <td>
-                      <WithdrawalStatusPill status={withdrawal.status} />
+                      <div className={styles.statusCell}>
+                        <WithdrawalStatusPill status={withdrawal.status} />
+                        {withdrawal.payoutStatus && (
+                          <span title={t('withdrawals.payout.title')}>
+                            <PayoutStatusPill status={withdrawal.payoutStatus} />
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>{formatDate(withdrawal.operationDate ?? withdrawal.requestedAt)}</td>
                     <td className={`${ui.num} ${ui.cellMain}`}>{formatFcfa(withdrawal.amount)}</td>

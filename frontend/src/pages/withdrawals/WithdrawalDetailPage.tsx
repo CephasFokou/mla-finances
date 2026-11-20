@@ -7,7 +7,10 @@ import ui from '../../components/ui/ui.module.scss'
 import {
   useApproveWithdrawalMutation,
   useCancelWithdrawalMutation,
+  usePayoutOptionsQuery,
+  usePayoutWithdrawalMutation,
   useProcessWithdrawalMutation,
+  useRecheckPayoutMutation,
   useRejectWithdrawalMutation,
   useWithdrawalCategoryBalanceQuery,
   useWithdrawalProjectBalanceQuery,
@@ -15,6 +18,8 @@ import {
 } from '../../features/withdrawals/hooks'
 import { ApiError } from '../../lib/apiClient'
 import { formatDate, formatDateTime, formatFcfa, personLabel } from '../../lib/format'
+import { useHasPermission } from '../../store/authStore'
+import { PayoutDialog, WithdrawalPayoutCard } from './WithdrawalPayout'
 import { WithdrawalStatusPill } from './WithdrawalStatusPill'
 import styles from './WithdrawalDetailPage.module.scss'
 
@@ -30,6 +35,10 @@ export function WithdrawalDetailPage() {
   const rejectMutation = useRejectWithdrawalMutation(id)
   const cancelMutation = useCancelWithdrawalMutation(id)
   const processMutation = useProcessWithdrawalMutation(id)
+  const payoutMutation = usePayoutWithdrawalMutation(id)
+  const recheckMutation = useRecheckPayoutMutation(id)
+  const { data: payoutOptions } = usePayoutOptionsQuery()
+  const canManage = useHasPermission('MANAGE_WITHDRAWALS')
   const projectBalance = useWithdrawalProjectBalanceQuery(withdrawal?.project?.id)
   const categoryBalance = useWithdrawalCategoryBalanceQuery(withdrawal?.category?.id)
   const balance = withdrawal?.project ? projectBalance.data : categoryBalance.data
@@ -38,6 +47,7 @@ export function WithdrawalDetailPage() {
   const [isRejecting, setIsRejecting] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
+  const [isPayingOut, setIsPayingOut] = useState(false)
 
   if (isLoading) {
     return (
@@ -87,9 +97,33 @@ export function WithdrawalDetailPage() {
     }
   }
 
+  const confirmPayout = async (recipientKey: string) => {
+    setActionError(null)
+    try {
+      await payoutMutation.mutateAsync(recipientKey)
+      setIsPayingOut(false)
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : t('withdrawals.detail.actionError'))
+    }
+  }
+
+  const recheckPayout = async () => {
+    setActionError(null)
+    try {
+      await recheckMutation.mutateAsync()
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : t('withdrawals.detail.actionError'))
+    }
+  }
+
+  // Payout en cours (PROCESSING / PENDING_APPROVAL) : l'argent peut partir à tout moment, donc
+  // ni annulation ni décaissement manuel (le backend le refuse aussi).
+  const payoutActive =
+    withdrawal.payoutStatus === 'PROCESSING' || withdrawal.payoutStatus === 'PENDING_APPROVAL'
   const canDecide = withdrawal.status === 'PENDING'
-  const canProcess = withdrawal.status === 'APPROVED'
-  const canCancel = withdrawal.status === 'PENDING' || withdrawal.status === 'APPROVED'
+  const canProcess = withdrawal.status === 'APPROVED' && !payoutActive
+  const canCancel = (withdrawal.status === 'PENDING' || withdrawal.status === 'APPROVED') && !payoutActive
+  const canPayout = canProcess && canManage && !!payoutOptions?.enabled
 
   return (
     <section>
@@ -126,10 +160,27 @@ export function WithdrawalDetailPage() {
                 </button>
               </>
             )}
-            {canProcess && (
+            {canPayout && (
               <button
                 type="button"
                 className={`${ui.btn} ${ui.btnPrimary} ${ui.btnSm}`}
+                onClick={() => {
+                  setActionError(null)
+                  setIsPayingOut(true)
+                }}
+              >
+                <Icon name="out" size={14} />
+                {t(
+                  withdrawal.payoutStatus === 'FAILED'
+                    ? 'withdrawals.payout.retry'
+                    : 'withdrawals.payout.action',
+                )}
+              </button>
+            )}
+            {canProcess && (
+              <button
+                type="button"
+                className={`${ui.btn} ${canPayout ? ui.btnSecondary : ui.btnPrimary} ${ui.btnSm}`}
                 onClick={() => setPendingAction('process')}
               >
                 <Icon name="check" strokeWidth={2.4} />
@@ -148,6 +199,13 @@ export function WithdrawalDetailPage() {
           </div>
         )}
       </header>
+
+      {payoutActive && (
+        <div className={`${ui.banner} ${ui.bannerAmber} ${styles.spaced}`} role="status">
+          <Icon name="clock" size={17} />
+          <div>{t('withdrawals.payout.blocked')}</div>
+        </div>
+      )}
 
       <div className={styles.grid}>
         <div className={ui.card}>
@@ -251,10 +309,18 @@ export function WithdrawalDetailPage() {
               )}
             </tbody>
           </table>
-          {actionError && !pendingAction && !isRejecting && <span className={ui.error}>{actionError}</span>}
+          {actionError && !pendingAction && !isRejecting && !isPayingOut && (
+            <span className={ui.error}>{actionError}</span>
+          )}
         </div>
 
         <div className={styles.side}>
+          <WithdrawalPayoutCard
+            withdrawal={withdrawal}
+            canRecheck={canManage}
+            isRechecking={recheckMutation.isPending}
+            onRecheck={() => void recheckPayout()}
+          />
           {balance && (
             <div className={ui.card}>
               <div className={ui.cardHead}>
@@ -336,6 +402,17 @@ export function WithdrawalDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {isPayingOut && payoutOptions && (
+        <PayoutDialog
+          withdrawal={withdrawal}
+          recipients={payoutOptions.recipients}
+          isSending={payoutMutation.isPending}
+          error={actionError}
+          onCancel={() => setIsPayingOut(false)}
+          onConfirm={(recipientKey) => void confirmPayout(recipientKey)}
+        />
       )}
 
       {isRejecting && (

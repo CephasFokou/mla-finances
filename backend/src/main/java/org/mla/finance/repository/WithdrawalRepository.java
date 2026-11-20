@@ -1,5 +1,7 @@
 package org.mla.finance.repository;
 
+import jakarta.persistence.LockModeType;
+import org.mla.finance.domain.PayoutStatus;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
 import org.springframework.data.domain.Page;
@@ -9,12 +11,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long>, JpaSpecificationExecutor<Withdrawal> {
 
@@ -49,12 +54,23 @@ public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long>, J
     @Query("select coalesce(sum(w.amount), 0) from Withdrawal w where w.status = :status and w.operationDate between :from and :to")
     BigDecimal sumAmountByStatusAndOperationDateBetween(WithdrawalStatus status, java.time.LocalDate from, java.time.LocalDate to);
 
+    /** Verrou de ligne du retrait : sérialise payout, callback, polling, annulation et décaissement manuel. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select w from Withdrawal w where w.id = :id")
+    Optional<Withdrawal> findByIdForUpdate(@Param("id") Long id);
+
+    Optional<Withdrawal> findByPayoutId(String payoutId);
+
+    /** Payouts non finaux dont la relecture est due (job de polling). */
+    List<Withdrawal> findByPayoutStatusInAndPayoutNextCheckAtLessThanEqualOrderByPayoutNextCheckAtAsc(
+        Collection<PayoutStatus> statuses, Instant now, Pageable pageable);
+
     // Évite le N+1 lors de la conversion en réponse (relations LAZY).
     @Override
-    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy", "person", "paymentChannel", "activity"})
+    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy", "person", "paymentChannel", "activity", "payoutRequestedBy"})
     Page<Withdrawal> findAll(Specification<Withdrawal> spec, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy", "person", "paymentChannel", "activity"})
+    @EntityGraph(attributePaths = {"project", "category", "requestedBy", "decidedBy", "person", "paymentChannel", "activity", "payoutRequestedBy"})
     List<Withdrawal> findAll(Specification<Withdrawal> spec, Sort sort);
 }

@@ -1,6 +1,8 @@
 import { apiClient } from '../../lib/apiClient'
 import type {
+  MobileMoneyBalance,
   PageResponse,
+  PayoutOptions,
   WithdrawalBalanceResponse,
   WithdrawalCreateInput,
   WithdrawalFilters,
@@ -41,6 +43,16 @@ export const withdrawalsApi = {
   cancel: (id: number) => apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/cancel`),
 
   process: (id: number) => apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/process`),
+
+  /** Décaissement Mobile Money vers un numéro MLA de la liste fermée (payout wallet-ledger). */
+  payout: (id: number, recipientKey: string) =>
+    apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/payout`, { recipientKey }),
+
+  recheckPayout: (id: number) => apiClient.post<WithdrawalResponse>(`/withdrawals/${id}/payout/recheck`),
+
+  payoutOptions: () => apiClient.get<PayoutOptions>('/withdrawals/payout-options'),
+
+  mobileMoneyBalance: () => apiClient.get<MobileMoneyBalance>('/withdrawals/mobile-money-balance'),
 
   projectBalance: (projectId: number) =>
     apiClient.get<WithdrawalBalanceResponse>(`/projects/${projectId}/balance`),

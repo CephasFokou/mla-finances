@@ -3,6 +3,7 @@ package org.mla.finance.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.MovementNature;
+import org.mla.finance.domain.PaymentChannel;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
@@ -27,6 +28,9 @@ import java.util.List;
  * Workflow retrait : demande (PENDING) -> validation (APPROVED/REJECTED, un rôle distinct du
  * demandeur via VALIDATE_WITHDRAWALS) -> décaissement effectif (PROCESSED, MANAGE_WITHDRAWALS).
  * Annulation possible tant que le retrait n'est pas décaissé (PENDING ou APPROVED -> CANCELLED).
+ * Un retrait APPROVED peut aussi être décaissé par Mobile Money (WithdrawalPayoutService) : tant que
+ * ce payout est actif, annulation et décaissement manuel sont refusés, et c'est la confirmation
+ * COMPLETED qui le fait passer PROCESSED (completeByPayout).
  *
  * Anti-concurrence : approve()/process() verrouillent (PESSIMISTIC_WRITE) la ligne de l'enveloppe
  * concernée avant de relire le solde engagé, pour que deux validations simultanées sur la même
@@ -158,7 +162,8 @@ public class WithdrawalService {
     }
 
     public WithdrawalResponse cancel(Long id) {
-        Withdrawal withdrawal = find(id);
+        Withdrawal withdrawal = findForUpdate(id);
+        requireNoActivePayout(withdrawal, "d'annuler");
         if (withdrawal.getStatus() != WithdrawalStatus.PENDING && withdrawal.getStatus() != WithdrawalStatus.APPROVED) {
             throw new ConflictException(
                 "Impossible d'annuler le retrait " + id + " : statut actuel " + withdrawal.getStatus() + ".");
@@ -170,14 +175,41 @@ public class WithdrawalService {
 
     /** Décaissement effectif : seul un retrait APPROVED peut être marqué PROCESSED. */
     public WithdrawalResponse process(Long id) {
-        Withdrawal withdrawal = find(id);
+        Withdrawal withdrawal = findForUpdate(id);
         requireStatus(withdrawal, WithdrawalStatus.APPROVED, "décaisser");
+        requireNoActivePayout(withdrawal, "de marquer décaissé");
         lockEnvelope(withdrawal);
         withdrawal.setStatus(WithdrawalStatus.PROCESSED);
         withdrawal.setProcessedAt(Instant.now());
         withdrawal.setOperationDate(LocalDate.now());
         auditLogService.record("WITHDRAWAL", id, "PROCESS", "Retrait #" + id + " décaissé");
         return WithdrawalResponse.from(withdrawal);
+    }
+
+    /**
+     * Décaissement confirmé par Mobile Money (payout COMPLETED relu chez wallet-ledger) : même effet
+     * que {@link #process}, avec le canal de l'opérateur. Appelé par WithdrawalPayoutStateService, qui
+     * tient déjà le verrou de ligne du retrait (ordre des verrous : retrait puis enveloppe, comme
+     * process()). L'audit PAYOUT_COMPLETED est posé par l'appelant.
+     */
+    public void completeByPayout(Withdrawal withdrawal, PaymentChannel channel) {
+        requireStatus(withdrawal, WithdrawalStatus.APPROVED, "décaisser");
+        lockEnvelope(withdrawal);
+        withdrawal.setStatus(WithdrawalStatus.PROCESSED);
+        withdrawal.setProcessedAt(Instant.now());
+        withdrawal.setOperationDate(LocalDate.now());
+        if (channel != null) {
+            withdrawal.setPaymentChannel(channel);
+        }
+    }
+
+    /** Pendant un payout PROCESSING / PENDING_APPROVAL, l'argent peut partir à tout moment : rien ne doit bouger. */
+    private void requireNoActivePayout(Withdrawal withdrawal, String action) {
+        if (withdrawal.hasActivePayout()) {
+            throw new ConflictException("Impossible " + action + " le retrait " + withdrawal.getId()
+                + " : un décaissement Mobile Money est en cours (" + withdrawal.getPayoutStatus()
+                + "). Attendez son résultat ou vérifiez son statut.");
+        }
     }
 
     /** Verrouille la ligne Project/DonationCategory ciblée (anti-concurrence, voir javadoc de classe). */
@@ -199,6 +231,11 @@ public class WithdrawalService {
 
     private static String envelopeName(Withdrawal w) {
         return w.getProject() != null ? w.getProject().getName() : w.getCategory().getName();
+    }
+
+    private Withdrawal findForUpdate(Long id) {
+        return withdrawalRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new EntityNotFoundException("Retrait introuvable : " + id));
     }
 
     private Withdrawal find(Long id) {
