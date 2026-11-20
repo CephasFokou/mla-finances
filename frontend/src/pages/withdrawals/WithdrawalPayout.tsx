@@ -239,6 +239,31 @@ export function PayoutDialog({
   )
 }
 
+/** Contrôle d'écart entre le solde de la Trésorerie et ce que MLA Finance attend. */
+function MobileMoneyGap({ balance }: { balance: MobileMoneyBalance }) {
+  const { t } = useTranslation()
+  if (balance.gap === null || balance.expected === null) {
+    return <p className={`${ui.sub} ${styles.gapLine}`}>{t('withdrawals.payout.balance.gapUnavailable')}</p>
+  }
+  const ok = balance.gap === 0
+  return (
+    <div className={`${ui.banner} ${ok ? ui.bannerGreen : ui.bannerAmber} ${styles.gapLine}`} role="status">
+      <Icon name={ok ? 'check' : 'alert'} size={17} />
+      <div>
+        <strong>{t('withdrawals.payout.balance.gapTitle')}. </strong>
+        {ok
+          ? t('withdrawals.payout.balance.noGap')
+          : t('withdrawals.payout.balance.gap', { amount: formatFcfa(balance.gap) })}{' '}
+        {t('withdrawals.payout.balance.expected', { amount: formatFcfa(balance.expected) })}
+        {balance.checkSince && (
+          <> · {t('withdrawals.payout.balance.since', { date: formatDateTime(balance.checkSince) })}</>
+        )}
+        {!ok && <p className={styles.gapExplain}>{t('withdrawals.payout.balance.gapExplain')}</p>}
+      </div>
+    </div>
+  )
+}
+
 /** Encart « Solde Mobile Money du MLA » (lecture seule) de la page Retraits. */
 export function MobileMoneyBalanceCard({ balance }: { balance: MobileMoneyBalance }) {
   const { t } = useTranslation()
@@ -266,6 +291,7 @@ export function MobileMoneyBalanceCard({ balance }: { balance: MobileMoneyBalanc
             </div>
           </div>
           <p className={ui.sub}>{t('withdrawals.payout.balance.hint')}</p>
+          <MobileMoneyGap balance={balance} />
         </>
       ) : (
         <div className={`${ui.banner} ${ui.bannerAmber}`} role="status">

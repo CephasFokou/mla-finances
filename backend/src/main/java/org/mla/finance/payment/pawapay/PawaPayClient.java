@@ -250,14 +250,58 @@ public class PawaPayClient {
                         return Optional.<MobileMoneyBalance>empty();
                     }
                     String asOf = text(json, "asOf");
+                    String opening = text(json, "openingBalance");
+                    String openingDate = text(json, "openingDate");
                     return Optional.of(new MobileMoneyBalance(
                         text(json, "currency"),
                         decimal(text(json, "available")),
                         decimal(text(json, "reserved")),
-                        asOf == null ? null : Instant.parse(asOf)));
+                        asOf == null ? null : Instant.parse(asOf),
+                        opening == null ? null : decimal(opening),
+                        openingDate == null ? null : Instant.parse(openingDate)));
                 });
         } catch (RestClientException | IllegalArgumentException | java.time.format.DateTimeParseException e) {
             log.warn("Solde wallet-ledger indisponible ({})", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Une page du grand livre du projet MLA chez wallet-ledger (GET /api/v1/movements, route propre à
+     * wallet-ledger). from : date de début incluse (heure de Douala), null pour tout l'historique. Vide si
+     * le service est injoignable ou répond autre chose qu'une page.
+     */
+    public Optional<LedgerMovement.Page> movements(java.time.LocalDate from, int page, int size) {
+        try {
+            return restClient.get()
+                .uri(b -> {
+                    b.path("/api/v1/movements").queryParam("page", page).queryParam("size", size);
+                    if (from != null) {
+                        b.queryParam("from", from.toString());
+                    }
+                    return b.build();
+                })
+                .exchange((request, response) -> {
+                    int status = response.getStatusCode().value();
+                    JsonNode json = readJson(response.getBody());
+                    if (status != 200 || json == null || !json.path("content").isArray()) {
+                        log.warn("Grand livre wallet-ledger : HTTP {} sans page exploitable", status);
+                        return Optional.<LedgerMovement.Page>empty();
+                    }
+                    java.util.List<LedgerMovement> content = new java.util.ArrayList<>();
+                    for (JsonNode m : json.get("content")) {
+                        String amount = text(m, "amount");
+                        String occurredAt = text(m, "occurredAt");
+                        content.add(new LedgerMovement(m.path("id").isNumber() ? m.get("id").asLong() : null,
+                            text(m, "type"), text(m, "status"), amount == null ? null : decimal(amount),
+                            text(m, "depositId"), text(m, "payoutId"), text(m, "refundId"), text(m, "clientReferenceId"),
+                            text(m, "description"), occurredAt == null ? null : Instant.parse(occurredAt)));
+                    }
+                    return Optional.of(new LedgerMovement.Page(content, json.path("page").asInt(page),
+                        json.path("totalPages").asInt(0)));
+                });
+        } catch (RestClientException | IllegalArgumentException | java.time.format.DateTimeParseException e) {
+            log.warn("Grand livre wallet-ledger indisponible ({})", e.getMessage());
             return Optional.empty();
         }
     }

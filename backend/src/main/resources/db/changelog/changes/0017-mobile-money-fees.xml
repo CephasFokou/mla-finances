@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Frais Mobile Money (PawaPay) enregistrés automatiquement à partir du grand livre wallet-ledger
+         (GET /api/v1/movements, lignes de type FEE). Une ligne par mouvement wallet-ledger déjà compté :
+         la contrainte d'unicité sur ledger_movement_id rend la synchronisation idempotente (relancer le
+         job ne crée aucun doublon). withdrawal_id : la dépense « Frais Mobile Money » qui l'a comptée. -->
+    <changeSet id="0017-01-mobile-money-fees" author="mla-finance">
+        <createTable tableName="mobile_money_fees">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ledger_movement_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_mobile_money_fees_movement"/>
+            </column>
+            <!-- Montant positif (le grand livre le porte en négatif). -->
+            <column name="amount" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="occurred_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <!-- DEPOSIT, PAYOUT ou NONE (frais global réparti par wallet-ledger). -->
+            <column name="operation_kind" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation_id" type="VARCHAR(36)"/>
+            <column name="client_reference" type="VARCHAR(100)"/>
+            <!-- OPERATION (retrouvée), CLIENT_REFERENCE (par référence) ou MAIN_FUND (repli Caisse MLA). -->
+            <column name="attribution" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="withdrawal_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_mobile_money_fees_withdrawal" references="withdrawals(id)"/>
+            </column>
+            <column name="synced_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="mobile_money_fees" indexName="idx_mobile_money_fees_withdrawal">
+            <column name="withdrawal_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Utilisateur système qui « saisit » les dépenses de frais. Ne peut pas se connecter : suspendu et sans
+         mot de passe (AuthService exige ACTIVE et un mot de passe). Aucun rôle. -->
+    <changeSet id="0017-02-system-user-pawapay" author="mla-finance">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">select count(*) from users where email = 'tresorerie-pawapay@systeme.mla-finance'</sqlCheck>
+        </preConditions>
+        <insert tableName="users">
+            <column name="email" value="tresorerie-pawapay@systeme.mla-finance"/>
+            <column name="full_name" value="Trésorerie PawaPay"/>
+            <column name="status" value="SUSPENDED"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

@@ -74,6 +74,11 @@ export interface MobileMoneyBalance {
   available: number | null
   reserved: number | null
   asOf: string | null
+  /** Ce que MLA Finance attend depuis la bascule sur la Trésorerie (null : contrôle indisponible). */
+  expected: number | null
+  /** Solde Trésorerie (disponible + réservé) moins l'attendu ; 0 quand tout concorde. */
+  gap: number | null
+  checkSince: string | null
 }
 
 export interface PageResponse<T> {

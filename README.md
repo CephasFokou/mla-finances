@@ -6,7 +6,8 @@ L'argent des dons en ligne est sur le portefeuille Mobile Money partagé, sépar
 `wallet-ledger` : les dons y entrent (dépôts) et un retrait validé peut en sortir par Mobile Money depuis le
 back-office (voir « Décaissement des retraits par Mobile Money » dans `backend/README.md`). Chaque retrait
 décaissé a un bon de décaissement PDF téléchargeable, et un retrait est validé par une autre personne que
-celle qui l'a saisi (sauf super administrateur, auto-validation tracée).
+celle qui l'a saisi (sauf super administrateur, auto-validation tracée). Les frais Mobile Money sont enregistrés
+automatiquement chaque matin, et la page Retraits signale tout écart avec le solde Mobile Money réel.
 
 Monorepo :
 - `backend/` — API Spring Boot 3 / Java 21 / PostgreSQL / Liquibase (voir `backend/README.md`), sert aussi bien le back-office authentifié que les endpoints publics (`/api/v1/public/**`) consommés par le site de don.

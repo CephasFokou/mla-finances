@@ -84,6 +84,18 @@ app:
       pending-timeout-minutes: 30
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
+    # Frais Mobile Money (PawaPay) enregistrés automatiquement à partir du grand livre wallet-ledger
+    # (lignes FEE de GET /api/v1/movements), une fois par jour après l'import des relevés PawaPay de
+    # wallet-ledger (05:30 UTC) et son contrôle de cohérence (06:00 UTC). Voir MobileMoneyFeeSyncService.
+    fees:
+      sync-enabled: ${MLA_FEES_SYNC_ENABLED:${app.payment.pawapay.enabled:false}}
+      sync-cron: ${MLA_FEES_SYNC_CRON:0 0 7 * * *}
+      # Fenêtre relue à chaque passage (jours) : un relevé importé en retard est rattrapé ; les frais déjà
+      # comptés sont ignorés (idempotence par identifiant de mouvement). Premier passage : tout l'historique.
+      lookback-days: 31
+      # Début du contrôle d'écart quand wallet-ledger ne renvoie pas de date d'ouverture (RFC 3339, ex.
+      # 2026-11-18T09:00:00Z = bascule de MLA sur wallet-ledger). Vide : date d'ouverture de wallet-ledger.
+      ledger-start: ${MLA_LEDGER_START:}
     # Décaissement des retraits par Mobile Money (POST /v2/payouts sur wallet-ledger) : liste
     # FERMÉE des numéros MLA proposés dans le back-office, jamais de saisie libre. Miroir de la liste
     # blanche du projet MLA dans wallet-ledger, qui reste l'autorité (numéro absent là-bas =>
