@@ -11,6 +11,7 @@ export type Permission =
   | 'MANAGE_USERS'
   | 'MANAGE_MEDIA'
   | 'VIEW_AUDIT_LOG'
+  | 'SEND_REMINDERS'
 
 export interface RoleRef {
   id: number

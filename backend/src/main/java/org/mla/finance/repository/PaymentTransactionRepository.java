@@ -45,4 +45,14 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
 
     /** Anti-abus : demandes de paiement récentes vers un même numéro, tous statuts confondus. */
     long countByPayerPhoneAndCreatedAtAfter(String payerPhone, Instant after);
+
+    /**
+     * Membres ayant un paiement de contribution mensuelle encore en cours (en attente, en traitement ou à
+     * vérifier) qui couvre ce mois : ils ne sont pas relancés tant que le paiement n'est pas final.
+     */
+    @Query("select distinct t.donor.id from PaymentTransaction t join t.coveredMonths m "
+        + "where t.kind = org.mla.finance.domain.PaymentTransactionKind.MONTHLY_CONTRIBUTION and t.donor is not null "
+        + "and m = :month and t.status in (org.mla.finance.domain.PaymentTransactionStatus.PENDING, "
+        + "org.mla.finance.domain.PaymentTransactionStatus.PROCESSING)")
+    List<Long> donorsWithPaymentInProgress(@Param("month") java.time.LocalDate month);
 }

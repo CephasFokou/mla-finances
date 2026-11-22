@@ -2,6 +2,8 @@ package org.mla.finance.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.mla.finance.reminder.ContributionRecordedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mla.finance.domain.Activity;
 import org.mla.finance.domain.Contribution;
 import org.mla.finance.domain.MovementNature;
@@ -38,6 +40,7 @@ public class ContributionService {
     private final LedgerLookup lookup;
     private final CurrentUserProvider currentUserProvider;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public Page<ContributionResponse> search(ContributionFilter filter, Pageable pageable) {
@@ -93,6 +96,7 @@ public class ContributionService {
             .createdBy(currentUserProvider.currentOrNull())
             .build();
         Contribution saved = contributionRepository.save(contribution);
+        eventPublisher.publishEvent(ContributionRecordedEvent.of(saved));
         auditLogService.record("CONTRIBUTION", saved.getId(), "CREATE",
             nature.label() + " de " + saved.getAmount() + " FCFA enregistrée pour " + envelope.name());
         return ContributionResponse.from(saved);

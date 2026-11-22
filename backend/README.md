@@ -122,6 +122,18 @@ causés (Caisse MLA à défaut), une par jour et par enveloppe, sans doublon. Va
 (vrai par défaut avec PawaPay), `MLA_FEES_SYNC_CRON`, `MLA_LEDGER_START` (début du contrôle d'écart si
 wallet-ledger ne renvoie pas de date d'ouverture). L'encart de solde de la page Retraits affiche l'écart.
 
+## Relances des contributions (lot 1 : email)
+
+Écran « Relances » (permission `SEND_REMINDERS`, par défaut SUPER_ADMIN et TRESORIER) : membres actifs du mois,
+contribution mensuelle réglée ou non, relance par email (Resend) individuelle avec aperçu, ou groupée. Règles :
+mois en cours seulement, à partir du 10, 3 jours d'attente sans réponse, 3 relances maximum par mois, envois
+entre 8 h et 20 h (heure de Douala ; hors plage, la relance est programmée pour 8 h). Une contribution mensuelle
+enregistrée clôt le dossier en « Réglé ». Un envoi dont aucun canal n'aboutit (ex. `RESEND_API_KEY` vide) est
+tracé mais ne compte pas. Réglages dans Administration → Relances. Variables : `PUBLIC_SITE_URL` (lien
+« Contribuer maintenant », défaut `PUBLIC_FRONTEND_ORIGIN` puis `https://don-mla.itc-services.xyz`),
+`REMINDER_QUEUE_POLL_MS`. WhatsApp (Kapso), réponses des membres, collectes relançables, suivi par référence et
+espace membre : lots suivants.
+
 ## Build
 
 ```bash
