@@ -303,6 +303,32 @@
         "cancel": "Annuler",
         "submit": "Créer l'occurrence"
       }
+    },
+    "reminders": {
+      "title": "Relances",
+      "enabled": "Relancer les membres pour cette collecte",
+      "enabledHint": "Désactivé par défaut. Les membres concernés qui n'ont pas encore donné pourront être relancés depuis l'écran Relances (email et WhatsApp). Aucun montant n'est indiqué : la participation est libre.",
+      "audience": "Membres concernés",
+      "audiences": {
+        "ALL": "Tous les membres actifs",
+        "RESPONSABLES": "Responsables seulement",
+        "MEMBRES": "Membres seulement (hors responsables)",
+        "SELECTION": "Sélection manuelle"
+      },
+      "selected_one": "{{count}} membre sélectionné",
+      "selected_other": "{{count}} membres sélectionnés",
+      "openFrom": "Ouverture des relances",
+      "openFromHint": "Vide : date de début de la collecte, sinon aujourd'hui.",
+      "dueDate": "Échéance",
+      "dueDateHint": "Vide : date de fin de la collecte. Plus aucune relance après.",
+      "dueDateRequired": "Obligatoire : la collecte n'a pas de date de fin.",
+      "message": "Message repris dans la relance",
+      "messagePlaceholder": "Ex. cérémonie le 6 décembre",
+      "messageHint": "Court texte affiché entre parenthèses après le nom de la collecte ({{count}}/120).",
+      "period": "Période",
+      "off": "Relances désactivées pour cette collecte.",
+      "open": "Ouvrir les relances de cette collecte",
+      "draftHint": "Les relances seront possibles une fois la collecte activée."
     }
   },
   "categories": {
@@ -976,7 +1002,8 @@
       "expected": "Montant habituel",
       "month": "Ce mois",
       "lastReminder": "Dernière relance",
-      "case": "Dossier"
+      "case": "Dossier",
+      "project": "Participation"
     },
     "selectAll": "Sélectionner tous les membres relançables",
     "select": "Sélectionner {{name}}",
@@ -1074,6 +1101,15 @@
       "DONE": "« C'est déjà fait »",
       "REFERENCE": "Référence de paiement",
       "FREE_TEXT": "Message libre"
+    },
+    "subtitleProject": "Collecte « {{name}} » ({{note}}) — participation libre, relances ouvertes à partir du {{openFrom}}, échéance le {{due}}.",
+    "readOnlyProject": "Collecte terminée, échéance dépassée ou relances désactivées : consultation seulement.",
+    "motive": "Motif",
+    "motiveMonthly": "Contribution mensuelle",
+    "projectStatus": {
+      "PAID": "A participé",
+      "UNPAID": "Pas encore",
+      "IN_PROGRESS": "Don en cours"
     }
   },
   "reminderSettings": {

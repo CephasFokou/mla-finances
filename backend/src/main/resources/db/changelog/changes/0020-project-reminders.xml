@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Module Relances, lot 2 bis : collectes relançables sur décision de l'admin (cadrage §6 bis). Par défaut une
+         collecte n'est pas relançable. Pas de montant indicatif : la participation à une collecte est libre (22/11). -->
+    <changeSet id="0020-01-project-reminder-fields" author="mla-finance">
+        <addColumn tableName="projects">
+            <column name="reminders_enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ALL (membres actifs), RESPONSABLES, MEMBRES, SELECTION (liste project_reminder_members). -->
+            <column name="reminder_audience" type="VARCHAR(20)" defaultValue="ALL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reminder_open_from" type="DATE"/>
+            <column name="reminder_due_date" type="DATE"/>
+            <column name="reminder_message" type="VARCHAR(120)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="0020-02-project-reminder-members" author="mla-finance">
+        <createTable tableName="project_reminder_members">
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_project_reminder_members_project" references="projects(id)"/>
+            </column>
+            <column name="donor_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_project_reminder_members_donor" references="donors(id)"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="project_reminder_members" columnNames="project_id, donor_id"
+                       constraintName="pk_project_reminder_members"/>
+    </changeSet>
+
+    <!-- Dossiers d'une collecte : chargés par projet pour l'écran Relances et la clôture de la collecte. -->
+    <changeSet id="0020-03-reminder-cases-project-index" author="mla-finance">
+        <createIndex tableName="reminder_cases" indexName="idx_reminder_cases_project">
+            <column name="project_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

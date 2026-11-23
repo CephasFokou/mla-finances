@@ -23,6 +23,7 @@ import org.mla.finance.repository.DonationCategoryRepository;
 import org.mla.finance.repository.PaymentChannelRepository;
 import org.mla.finance.repository.PaymentTransactionRepository;
 import org.mla.finance.repository.ProjectRepository;
+import org.mla.finance.reminder.ReminderPublicService;
 import org.mla.finance.web.dto.PublicDonationRequest;
 import org.mla.finance.web.dto.PublicDonationResponse;
 import org.mla.finance.web.dto.PublicDonationStatusResponse;
@@ -71,6 +72,7 @@ public class PublicDonationService {
     private static final Duration PHONE_THROTTLE_WINDOW = Duration.ofMinutes(10);
 
     private final ProjectRepository projectRepository;
+    private final ReminderPublicService reminderPublicService;
     private final PaymentChannelRepository paymentChannelRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final ContributionRepository contributionRepository;
@@ -224,9 +226,13 @@ public class PublicDonationService {
         if (!request.anonymous() && (request.donorName() == null || request.donorName().isBlank())) {
             throw new BusinessRuleViolationException("DON-02", "Le nom du donateur est requis, sauf pour un don anonyme.");
         }
+        // Lien signé d'une relance de collecte : le don est rattaché au membre en interne (le site public reste anonyme),
+        // ce qui clôt sa relance à la confirmation du paiement.
+        Donor member = reminderPublicService.memberForProjectDonation(request.reminderToken(), project.getId()).orElse(null);
         return PaymentTransaction.builder()
             .kind(PaymentTransactionKind.DONATION)
             .project(project)
+            .donor(member)
             .amount(request.amount())
             .anonymous(request.anonymous())
             .donorName(request.anonymous() ? null : request.donorName())

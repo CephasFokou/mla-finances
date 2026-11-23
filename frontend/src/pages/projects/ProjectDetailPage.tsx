@@ -19,6 +19,7 @@ import { ApiError } from '../../lib/apiClient'
 import { formatDate, formatDateTime, formatFcfa } from '../../lib/format'
 import { ProjectStatusPill } from './ProjectStatusPill'
 import styles from './ProjectDetailPage.module.scss'
+import { ProjectRemindersCard } from './ProjectRemindersCard'
 
 type LifecycleAction = 'activate' | 'complete' | 'archive'
 
@@ -413,6 +414,8 @@ export function ProjectDetailPage() {
               </div>
             </div>
           )}
+
+          <ProjectRemindersCard project={project} canEdit={!isArchived} />
 
           <OccurrencesCard project={project} />
         </div>

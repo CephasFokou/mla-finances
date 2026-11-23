@@ -1,5 +1,7 @@
 package org.mla.finance.web.dto;
 
+import org.mla.finance.domain.ProjectReminderAudience;
+import java.util.List;
 import org.mla.finance.domain.Project;
 import org.mla.finance.domain.ProjectStatus;
 
@@ -20,8 +22,14 @@ public record ProjectResponse(
     LocalDate startDate,
     LocalDate endDate,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    Reminders reminders
 ) {
+    /** Bloc « Relances » de la collecte (cadrage Relances §6 bis). */
+    public record Reminders(boolean enabled, ProjectReminderAudience audience, LocalDate openFrom, LocalDate dueDate,
+                            String message, List<Long> memberIds) {
+    }
+
     public static ProjectResponse from(Project p) {
         return new ProjectResponse(
             p.getId(),
@@ -34,7 +42,9 @@ public record ProjectResponse(
             p.getStartDate(),
             p.getEndDate(),
             p.getCreatedAt(),
-            p.getUpdatedAt()
+            p.getUpdatedAt(),
+            new Reminders(p.isRemindersEnabled(), p.getReminderAudience(), p.getReminderOpenFrom(), p.getReminderDueDate(),
+                p.getReminderMessage(), p.getReminderMemberIds().stream().sorted().toList())
         );
     }
 }

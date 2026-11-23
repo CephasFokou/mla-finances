@@ -1,12 +1,15 @@
 package org.mla.finance.domain;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -19,6 +22,8 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Un projet/enveloppe (ex. "Toiture du Temple Central", ou une occurrence de Comfrat).
@@ -65,6 +70,35 @@ public class Project {
 
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    /** Relances de la collecte (cadrage Relances §6 bis) : désactivées par défaut. */
+    @Column(name = "reminders_enabled", nullable = false)
+    @Builder.Default
+    private boolean remindersEnabled = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reminder_audience", nullable = false, length = 20)
+    @Builder.Default
+    private ProjectReminderAudience reminderAudience = ProjectReminderAudience.ALL;
+
+    /** Ouverture des relances ; toujours renseignée quand les relances sont activées. */
+    @Column(name = "reminder_open_from")
+    private LocalDate reminderOpenFrom;
+
+    /** Échéance des relances ; toujours renseignée quand les relances sont activées. */
+    @Column(name = "reminder_due_date")
+    private LocalDate reminderDueDate;
+
+    /** Message court de l'admin repris dans la relance (ex. « cérémonie le 6 décembre »). */
+    @Column(name = "reminder_message", length = 120)
+    private String reminderMessage;
+
+    /** Membres ciblés quand {@link #reminderAudience} vaut SELECTION. */
+    @ElementCollection
+    @CollectionTable(name = "project_reminder_members", joinColumns = @JoinColumn(name = "project_id"))
+    @Column(name = "donor_id", nullable = false)
+    @Builder.Default
+    private Set<Long> reminderMemberIds = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

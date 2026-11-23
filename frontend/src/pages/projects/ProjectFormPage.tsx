@@ -10,6 +10,7 @@ import ui from '../../components/ui/ui.module.scss'
 import { useCreateProjectMutation } from '../../features/projects/hooks'
 import { ApiError } from '../../lib/apiClient'
 import styles from './ProjectFormPage.module.scss'
+import { EMPTY_REMINDERS, ProjectRemindersFields, remindersInput } from './ProjectRemindersFields'
 
 const schema = z.object({
   name: z.string().min(1, 'Le nom du projet est requis'),
@@ -31,10 +32,12 @@ export function ProjectFormPage() {
   const navigate = useNavigate()
   const createMutation = useCreateProjectMutation()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [reminders, setReminders] = useState(EMPTY_REMINDERS)
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -52,6 +55,7 @@ export function ProjectFormPage() {
         recurringSeriesId: values.recurringSeriesId || undefined,
         startDate: values.startDate || undefined,
         endDate: values.endDate || undefined,
+        reminders: reminders.enabled ? remindersInput(reminders) : undefined,
       })
       navigate(`/projects/${created.id}`)
     } catch (error) {
@@ -117,6 +121,12 @@ export function ProjectFormPage() {
             <span className={ui.hint}>{t('projects.form.recurringSeriesIdHint')}</span>
           </label>
         </div>
+
+        <ProjectRemindersFields
+          value={reminders}
+          onChange={setReminders}
+          projectEndDate={watch('endDate') ?? ''}
+        />
 
         {submitError && (
           <div className={`${ui.banner} ${ui.bannerRed}`} role="alert">

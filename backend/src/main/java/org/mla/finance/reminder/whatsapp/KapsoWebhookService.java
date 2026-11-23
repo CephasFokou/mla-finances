@@ -8,6 +8,7 @@ import org.mla.finance.domain.ReminderDelivery;
 import org.mla.finance.domain.ReminderDeliveryStatus;
 import org.mla.finance.domain.ReminderResponseType;
 import org.mla.finance.reminder.ReminderClock;
+import org.mla.finance.reminder.ReminderMotive;
 import org.mla.finance.reminder.ReminderPayloads;
 import org.mla.finance.reminder.ReminderResponseService;
 import org.mla.finance.repository.ReminderCaseRepository;
@@ -112,7 +113,9 @@ public class KapsoWebhookService {
             return;
         }
         ReminderCase rc = target.get();
-        YearMonth month = YearMonth.from(rc.getPeriodMonth());
+        // Collecte : les dates écrites en texte libre se lisent dans le mois en cours.
+        YearMonth month = rc.getPeriodMonth() != null ? YearMonth.from(rc.getPeriodMonth())
+            : YearMonth.from(clock.now().atZone(ReminderClock.ZONE));
 
         ReminderResponseType type;
         LocalDate date = null;
@@ -157,14 +160,19 @@ public class KapsoWebhookService {
         }
     }
 
-    /** Texte libre : dossier du mois en cours d'un membre à qui MLA Finance a écrit sur WhatsApp ces 7 derniers jours. */
+    /**
+     * Texte libre : dernier dossier (mois en cours ou collecte encore ouverte) d'un membre à qui MLA Finance a écrit sur
+     * WhatsApp ces 7 derniers jours.
+     */
     private Optional<ReminderCase> recentCase(String number) {
         Instant now = clock.now();
         return deliveryRepository.findFirstByChannelAndRecipientOrderByCreatedAtDesc(ReminderChannel.WHATSAPP, number)
             .filter(d -> d.getCreatedAt().isAfter(now.minus(FREE_TEXT_WINDOW)))
             .map(d -> d.getReminder().getReminderCase())
             .filter(rc -> rc.getDonor().getMemberStatus() == MemberStatus.ACTIVE)
-            .filter(rc -> YearMonth.from(rc.getPeriodMonth()).equals(YearMonth.from(now.atZone(ReminderClock.ZONE))));
+            .filter(rc -> rc.getPeriodMonth() == null
+                ? !ReminderMotive.of(rc).isOver(now.atZone(ReminderClock.ZONE).toLocalDate())
+                : YearMonth.from(rc.getPeriodMonth()).equals(YearMonth.from(now.atZone(ReminderClock.ZONE))));
     }
 
     // ------------------------------------------------------------------------------------------------ statuts

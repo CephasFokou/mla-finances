@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
@@ -10,6 +11,7 @@ import {
   useReminderCaseQuery,
   useReminderOverviewQuery,
   useReminderPreviewQuery,
+  useReminderReasonsQuery,
   useSendReminderMutation,
 } from '../../features/reminders/hooks'
 import type {
@@ -49,12 +51,20 @@ function currentDoualaMonth(): string {
     .slice(0, 7)
 }
 
-// Écran « Relances » (lot 1) : membres actifs du mois, statut de la contribution mensuelle, relance par email
-// individuelle (avec aperçu exact) ou groupée. Le serveur décide seul de l'éligibilité (délais, maximum, plage
-// horaire) : un bouton grisé affiche son motif au survol.
+// Écran « Relances » : un motif (contribution mensuelle d'un mois, ou collecte relançable — lot 2 bis), ses membres
+// concernés, relance individuelle (avec aperçu exact) ou groupée. Le serveur décide seul de l'éligibilité (délais,
+// maximum, plage horaire, échéance, ciblage) : un bouton grisé affiche son motif au survol.
+// « month » porte le motif : « 2026-11 » pour un mois, « P12 » pour la collecte n° 12 (voir features/reminders/api).
 export function RemindersPage() {
   const { t } = useTranslation()
-  const [month, setMonth] = useState(currentDoualaMonth)
+  const [searchParams] = useSearchParams()
+  // Lien « Ouvrir les relances » de la fiche d'une collecte : /reminders?projectId=12.
+  const [month, setMonth] = useState(() => {
+    const projectId = Number(searchParams.get('projectId'))
+    return projectId > 0 ? `P${projectId}` : currentDoualaMonth()
+  })
+  const reasons = useReminderReasonsQuery()
+  const isProject = month.startsWith('P')
   const [filter, setFilter] = useState<Filter>('unpaid')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [previewFor, setPreviewFor] = useState<ReminderRow | null>(null)
@@ -85,6 +95,12 @@ export function RemindersPage() {
   const selectable = rows.filter((r) => r.canRemind)
   const selectedRows = (data?.rows ?? []).filter((r) => selected.has(r.donorId))
 
+  const changeMotive = (value: string) => {
+    setMonth(value === 'MONTHLY' ? currentDoualaMonth() : value)
+    setSelected(new Set())
+    setNotice(null)
+  }
+
   const changeMonth = (value: string) => {
     setMonth(value || currentDoualaMonth())
     setSelected(new Set())
@@ -109,7 +125,17 @@ export function RemindersPage() {
       <header className={ui.pageHead}>
         <div>
           <h1>{t('reminders.title')}</h1>
-          {data && (
+          {data && data.reason === 'PROJECT' && (
+            <p>
+              {t('reminders.subtitleProject', {
+                name: data.monthLabel,
+                note: data.projectNote ?? '',
+                openFrom: data.openFrom ? formatDate(data.openFrom) : '—',
+                due: data.dueDate ? formatDate(data.dueDate) : '—',
+              })}
+            </p>
+          )}
+          {data && data.reason !== 'PROJECT' && (
             <p>
               {t('reminders.subtitle', {
                 month: data.monthLabel,
@@ -149,7 +175,7 @@ export function RemindersPage() {
           style={{ marginBottom: 'var(--space-4)' }}
         >
           <Icon name="clock" size={16} />
-          <div>{t('reminders.readOnlyMonth')}</div>
+          <div>{t(data.reason === 'PROJECT' ? 'reminders.readOnlyProject' : 'reminders.readOnlyMonth')}</div>
         </div>
       )}
       {notice && (
@@ -177,15 +203,34 @@ export function RemindersPage() {
 
       <div className={styles.toolbar}>
         <label className={styles.filter}>
-          <Icon name="clock" size={12} />
-          <span>{t('reminders.month')}</span>
-          <input
-            type="month"
-            value={month}
-            max={currentDoualaMonth()}
-            onChange={(e) => changeMonth(e.target.value)}
-          />
+          <Icon name="repeat" size={12} />
+          <span>{t('reminders.motive')}</span>
+          <select value={isProject ? month : 'MONTHLY'} onChange={(e) => changeMotive(e.target.value)}>
+            <option value="MONTHLY">{t('reminders.motiveMonthly')}</option>
+            {(reasons.data ?? [])
+              .filter((r) => r.reason === 'PROJECT' && r.projectId !== null)
+              .map((r) => (
+                <option key={r.projectId} value={`P${r.projectId}`}>
+                  {r.label}
+                </option>
+              ))}
+            {isProject && !(reasons.data ?? []).some((r) => `P${r.projectId}` === month) && data && (
+              <option value={month}>{data.monthLabel}</option>
+            )}
+          </select>
         </label>
+        {!isProject && (
+          <label className={styles.filter}>
+            <Icon name="clock" size={12} />
+            <span>{t('reminders.month')}</span>
+            <input
+              type="month"
+              value={month}
+              max={currentDoualaMonth()}
+              onChange={(e) => changeMonth(e.target.value)}
+            />
+          </label>
+        )}
         <div className={ui.seg} role="tablist" aria-label={t('reminders.filters.label')}>
           {(['unpaid', 'remindable', 'toRead', 'notFound', 'reminded', 'all'] as Filter[]).map((f) => (
             <button
@@ -241,8 +286,8 @@ export function RemindersPage() {
                     />
                   </th>
                   <th>{t('reminders.columns.member')}</th>
-                  <th className={ui.num}>{t('reminders.columns.expected')}</th>
-                  <th>{t('reminders.columns.month')}</th>
+                  {!isProject && <th className={ui.num}>{t('reminders.columns.expected')}</th>}
+                  <th>{t(isProject ? 'reminders.columns.project' : 'reminders.columns.month')}</th>
                   <th>{t('reminders.columns.lastReminder')}</th>
                   <th>{t('reminders.columns.case')}</th>
                   <th />
@@ -268,10 +313,14 @@ export function RemindersPage() {
                         {row.hasEmail ? t('reminders.contact.email') : t('reminders.contact.noEmail')}
                       </div>
                     </td>
-                    <td className={`${ui.num} ${ui.cellSub}`}>{formatFcfa(row.expectedAmount)}</td>
+                    {!isProject && (
+                      <td className={`${ui.num} ${ui.cellSub}`}>{formatFcfa(row.expectedAmount ?? 0)}</td>
+                    )}
                     <td>
                       <span className={`${ui.pill} ${MONTH_PILL[row.monthStatus]}`}>
-                        {t(`reminders.monthStatus.${row.monthStatus}`)}
+                        {t(
+                          `${isProject ? 'reminders.projectStatus' : 'reminders.monthStatus'}.${row.monthStatus}`,
+                        )}
                       </span>
                     </td>
                     <td>

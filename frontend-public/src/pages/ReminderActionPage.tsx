@@ -74,12 +74,27 @@ export function ReminderActionPage({ token, initial }: { token: string; initial:
             <>
               <h1>{t('public.reminderPage.hello', { name: data.name })}</h1>
               {data.settled ? (
-                <p>{t('public.reminderPage.settled', { month: data.monthLabel })}</p>
+                <p>
+                  {t(`public.reminderPage.${data.reason === 'PROJECT' ? 'settledProject' : 'settled'}`, {
+                    month: data.monthLabel,
+                    name: data.projectName,
+                  })}
+                </p>
               ) : !data.open ? (
-                <p>{t('public.reminderPage.closed', { month: data.monthLabel })}</p>
+                <p>
+                  {t(`public.reminderPage.${data.reason === 'PROJECT' ? 'closedProject' : 'closed'}`, {
+                    month: data.monthLabel,
+                    name: data.projectName,
+                  })}
+                </p>
               ) : panel === 'choose' ? (
                 <>
-                  <p>{t('public.reminderPage.question', { month: data.monthLabel })}</p>
+                  <p>
+                    {t(`public.reminderPage.${data.reason === 'PROJECT' ? 'questionProject' : 'question'}`, {
+                      month: data.monthLabel,
+                      name: data.projectName,
+                    })}
+                  </p>
                   <div className={styles.actions}>
                     <button
                       type="button"
@@ -102,10 +117,18 @@ export function ReminderActionPage({ token, initial }: { token: string; initial:
                 </>
               ) : (
                 <>
-                  <p>{t('public.reminderPage.when', { month: data.monthLabel })}</p>
+                  <p>
+                    {t(`public.reminderPage.${data.reason === 'PROJECT' ? 'whenProject' : 'when'}`, {
+                      month: data.monthLabel,
+                      name: data.projectName,
+                    })}
+                  </p>
                   <fieldset className={styles.dates}>
                     <legend className={styles.srOnly}>
-                      {t('public.reminderPage.when', { month: data.monthLabel })}
+                      {t(`public.reminderPage.${data.reason === 'PROJECT' ? 'whenProject' : 'when'}`, {
+                        month: data.monthLabel,
+                        name: data.projectName,
+                      })}
                     </legend>
                     {options.map((o) => (
                       <label key={o.date} className={styles.option}>

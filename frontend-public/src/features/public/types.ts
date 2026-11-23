@@ -33,6 +33,8 @@ export interface PublicDonationInput {
   donorContact?: string
   /** Numéro Mobile Money à débiter, requis pour un canal en ligne. */
   payerPhone?: string
+  /** Jeton du lien « Participer maintenant » d'une relance de collecte : rattache le don au membre. */
+  reminderToken?: string
 }
 
 /** Contribution mensuelle d'un membre à la caisse MLA : plusieurs mois en un seul paiement. */
@@ -100,11 +102,15 @@ export interface PublicCollection {
 }
 
 /** Lien « Contribuer maintenant » d'une relance : membre et mois à présélectionner. */
+/** Lien /c/{jeton} : contribution mensuelle (membre + mois) ou collecte (reason PROJECT, projectId). */
 export interface ContributionLink {
+  reason: 'MONTHLY_CONTRIBUTION' | 'PROJECT'
   donorId: number
   displayName: string
-  suggestedAmount: number
+  suggestedAmount: number | null
   months: string[]
+  projectId: number | null
+  projectName: string | null
 }
 
 export interface ReminderDateOption {
@@ -115,8 +121,12 @@ export interface ReminderDateOption {
 /** Page de réponse d'un email de relance. */
 export interface ReminderActionView {
   name: string
-  month: string
-  monthLabel: string
+  reason: 'MONTHLY_CONTRIBUTION' | 'PROJECT'
+  /** Contribution mensuelle seulement. */
+  month: string | null
+  monthLabel: string | null
+  /** Collecte seulement. */
+  projectName: string | null
   dueDate: string
   status: string
   settled: boolean

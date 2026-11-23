@@ -3,6 +3,7 @@ package org.mla.finance.web.dto;
 import org.mla.finance.domain.MemberRole;
 import org.mla.finance.domain.ReminderCaseStatus;
 import org.mla.finance.domain.ReminderChannel;
+import org.mla.finance.domain.ReminderReason;
 import org.mla.finance.domain.ReminderDeliveryStatus;
 
 import java.math.BigDecimal;
@@ -10,7 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Écran Relances : un mois, ses indicateurs et une ligne par membre actif. */
+/** Écran Relances : un motif (mois ou collecte), ses indicateurs et une ligne par membre concerné. */
 public record ReminderOverviewResponse(
     String month,
     String monthLabel,
@@ -19,6 +20,10 @@ public record ReminderOverviewResponse(
     LocalDate openFrom,
     LocalDate dueDate,
     int maxReminders,
+    /** Motif : contribution mensuelle ({@code month}) ou collecte ({@code projectId}, {@code projectNote}). */
+    ReminderReason reason,
+    Long projectId,
+    String projectNote,
     Summary summary,
     List<Row> rows
 ) {

@@ -38,14 +38,23 @@ public class ReminderController {
 
     @GetMapping("/api/v1/reminders")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
-    public ReminderOverviewResponse overview(@RequestParam(required = false) String month) {
-        return reminderService.overview(month);
+    public ReminderOverviewResponse overview(@RequestParam(required = false) String month,
+                                             @RequestParam(required = false) Long projectId) {
+        return reminderService.overview(month, projectId);
+    }
+
+    /** Motifs disponibles : contribution mensuelle du mois en cours, collectes relançables en cours (§6 bis). */
+    @GetMapping("/api/v1/reminders/reasons")
+    @PreAuthorize("hasAuthority('SEND_REMINDERS')")
+    public java.util.List<org.mla.finance.reminder.ReminderService.ReminderReasonOption> reasons() {
+        return reminderService.reasons();
     }
 
     @GetMapping("/api/v1/reminders/preview")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
-    public ReminderPreviewResponse preview(@RequestParam Long donorId, @RequestParam(required = false) String month) {
-        return reminderService.preview(donorId, month);
+    public ReminderPreviewResponse preview(@RequestParam Long donorId, @RequestParam(required = false) String month,
+                                           @RequestParam(required = false) Long projectId) {
+        return reminderService.preview(donorId, month, projectId);
     }
 
     @GetMapping("/api/v1/reminders/cases/{id}")
@@ -57,13 +66,13 @@ public class ReminderController {
     @PostMapping("/api/v1/reminders")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
     public ReminderSendResponse send(@Valid @RequestBody ReminderSendRequest request) {
-        return reminderService.send(request.donorId(), request.month(), ReminderTrigger.MANUAL);
+        return reminderService.send(request.donorId(), request.month(), request.projectId(), ReminderTrigger.MANUAL);
     }
 
     @PostMapping("/api/v1/reminders/bulk")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
     public ReminderBulkResponse bulk(@Valid @RequestBody ReminderBulkRequest request) {
-        return reminderService.bulk(request.donorIds(), request.month());
+        return reminderService.bulk(request.donorIds(), request.month(), request.projectId());
     }
 
     @PostMapping("/api/v1/reminders/cases/{id}/close")
@@ -75,7 +84,7 @@ public class ReminderController {
     @PostMapping("/api/v1/reminders/close")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
     public ReminderCaseDetailResponse closeForMember(@Valid @RequestBody ReminderCloseForMemberRequest request) {
-        return reminderService.closeForMember(request.donorId(), request.month(), request.reason());
+        return reminderService.closeForMember(request.donorId(), request.month(), request.projectId(), request.reason());
     }
 
     @PostMapping("/api/v1/reminders/cases/{id}/acknowledge")

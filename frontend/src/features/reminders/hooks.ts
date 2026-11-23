@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { remindersApi } from './api'
 import type { ReminderSettingsInput } from './types'
 
+/** Motifs de l'écran Relances : contribution mensuelle du mois en cours, collectes relançables en cours. */
+export function useReminderReasonsQuery() {
+  return useQuery({ queryKey: ['reminders', 'reasons'], queryFn: remindersApi.reasons, staleTime: 60_000 })
+}
+
 export function useReminderOverviewQuery(month: string) {
   return useQuery({
     queryKey: ['reminders', month],

@@ -43,7 +43,13 @@ export function PublicDonationPage() {
   useEffect(() => {
     if (linkToken && (link.isSuccess || link.isError)) window.history.replaceState(null, '', '/')
   }, [linkToken, link.isSuccess, link.isError])
-  const presetOpen = !!link.data && !!monthlyOffer && !presetDismissed
+  const projectLink = link.data?.reason === 'PROJECT' ? link.data : null
+  const presetOpen = !!link.data && !projectLink && !!monthlyOffer && !presetDismissed
+  // Relance d'une collecte : le don à cette collecte s'ouvre directement (montant libre), au nom du membre.
+  const projectLinkOpen =
+    !!projectLink &&
+    !presetDismissed &&
+    (collections ?? []).some((c) => c.id === projectLink.projectId && c.state === 'OPEN')
   // Carte permanente, masquée si le parcours est désactivé (ou s'il n'y a aucun membre à proposer).
   const showMonthly = !!monthlyOffer?.enabled && monthlyOffer.members.length > 0
 
@@ -294,14 +300,27 @@ export function PublicDonationPage() {
           }}
         />
       )}
-      {linkToken && link.isError && !presetDismissed && (
-        <div className={styles.linkNotice} role="status">
-          <span>{t('public.reminderLink.expired')}</span>
-          <button type="button" onClick={() => setPresetDismissed(true)}>
-            {t('public.reminderLink.dismiss')}
-          </button>
-        </div>
+      {projectLinkOpen && projectLink && linkToken && (
+        <DonationDialog
+          onClose={() => setPresetDismissed(true)}
+          collections={open}
+          ribbonColor={ribbonColor}
+          initialCollectionId={projectLink.projectId}
+          reminder={{ token: linkToken, name: projectLink.displayName }}
+        />
       )}
+      {linkToken &&
+        (link.isError || (projectLink && collections && !projectLinkOpen)) &&
+        !presetDismissed && (
+          <div className={styles.linkNotice} role="status">
+            <span>
+              {t(projectLink ? 'public.reminderLink.expiredProject' : 'public.reminderLink.expired')}
+            </span>
+            <button type="button" onClick={() => setPresetDismissed(true)}>
+              {t('public.reminderLink.dismiss')}
+            </button>
+          </div>
+        )}
       {presetOpen && link.data && monthlyOffer && (
         <MonthlyContributionDialog
           offer={monthlyOffer}

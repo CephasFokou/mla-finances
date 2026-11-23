@@ -23,6 +23,8 @@ interface DonationDialogProps {
   showMonthly?: boolean
   /** Ferme ce parcours et ouvre celui de la contribution mensuelle. */
   onChooseMonthly?: () => void
+  /** Lien « Participer maintenant » d'une relance : nom prérempli et jeton qui rattache le don au membre. */
+  reminder?: { token: string; name: string }
 }
 
 /**
@@ -40,6 +42,7 @@ export function DonationDialog({
   initialCollectionId,
   showMonthly = false,
   onChooseMonthly,
+  reminder,
 }: DonationDialogProps) {
   const { t } = useTranslation()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -51,7 +54,7 @@ export function DonationDialog({
   const [amount, setAmount] = useState<number | null>(null)
   const [custom, setCustom] = useState('')
   const [anonymous, setAnonymous] = useState(false)
-  const [name, setName] = useState('')
+  const [name, setName] = useState(reminder?.name ?? '')
   const payment = usePaymentChoice(channels)
   const [error, setError] = useState<string | null>(null)
 
@@ -122,6 +125,7 @@ export function DonationDialog({
         donorName: anonymous ? undefined : name.trim(),
         donorContact: anonymous ? undefined : payment.phoneToSend,
         payerPhone: online ? payment.digits : undefined,
+        reminderToken: reminder?.token,
       })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('public.dialog.error'))

@@ -39,4 +39,13 @@ public interface ReminderCaseRepository extends JpaRepository<ReminderCase, Long
     /** Dossiers mensuels encore ouverts d'un mois terminé : passés « Sans suite » par le job quotidien. */
     List<ReminderCase> findByReasonAndPeriodMonthBeforeAndStatusNotIn(
         ReminderReason reason, LocalDate periodMonth, Collection<ReminderCaseStatus> statuses);
+
+    @EntityGraph(attributePaths = {"donor"})
+    List<ReminderCase> findByReasonAndProjectId(ReminderReason reason, Long projectId);
+
+    /** Dossiers encore ouverts d'une collecte : clos quand la collecte se termine ou que ses relances sont coupées. */
+    List<ReminderCase> findByProjectIdAndStatusNotIn(Long projectId, Collection<ReminderCaseStatus> statuses);
+
+    /** Tous les dossiers ouverts d'un motif (job quotidien : collectes dont l'échéance est passée). */
+    List<ReminderCase> findByReasonAndStatusNotIn(ReminderReason reason, Collection<ReminderCaseStatus> statuses);
 }

@@ -14,6 +14,9 @@ import java.util.Optional;
 public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByStatus(ProjectStatus status);
 
+    /** Collectes relançables en cours (motifs de l'écran Relances). */
+    List<Project> findByRemindersEnabledTrueAndStatusOrderByNameAsc(ProjectStatus status);
+
     List<Project> findByRecurringSeriesIdOrderByStartDateAsc(String recurringSeriesId);
 
     /** Verrou pessimiste utilisé lors de la validation/traitement d'un retrait (anti-concurrence :

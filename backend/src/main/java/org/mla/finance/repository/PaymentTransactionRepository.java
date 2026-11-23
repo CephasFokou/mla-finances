@@ -55,4 +55,11 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
         + "and m = :month and t.status in (org.mla.finance.domain.PaymentTransactionStatus.PENDING, "
         + "org.mla.finance.domain.PaymentTransactionStatus.PROCESSING)")
     List<Long> donorsWithPaymentInProgress(@Param("month") java.time.LocalDate month);
+
+    /** Membres ayant un don en cours (en attente ou en traitement) vers une collecte : pas de relance d'ici là. */
+    @Query("select distinct t.donor.id from PaymentTransaction t "
+        + "where t.kind = org.mla.finance.domain.PaymentTransactionKind.DONATION and t.donor is not null "
+        + "and t.project.id = :projectId and t.status in (org.mla.finance.domain.PaymentTransactionStatus.PENDING, "
+        + "org.mla.finance.domain.PaymentTransactionStatus.PROCESSING)")
+    List<Long> donorsWithDonationInProgress(@Param("projectId") Long projectId);
 }

@@ -3,6 +3,28 @@
 
 export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
 
+/** Membres concernés par les relances d'une collecte (cadrage Relances §6 bis). */
+export type ProjectReminderAudience = 'ALL' | 'RESPONSABLES' | 'MEMBRES' | 'SELECTION'
+
+/** Bloc « Relances » d'une collecte : pas de montant, la participation est libre. */
+export interface ProjectReminders {
+  enabled: boolean
+  audience: ProjectReminderAudience
+  openFrom: string | null // "YYYY-MM-DD"
+  dueDate: string | null // "YYYY-MM-DD"
+  message: string | null
+  memberIds: number[]
+}
+
+export interface ProjectRemindersInput {
+  enabled: boolean
+  audience: ProjectReminderAudience
+  openFrom?: string
+  dueDate?: string
+  message?: string
+  memberIds?: number[]
+}
+
 export interface Project {
   id: number
   name: string
@@ -15,6 +37,7 @@ export interface Project {
   endDate: string | null // "YYYY-MM-DD"
   createdAt: string
   updatedAt: string
+  reminders: ProjectReminders
 }
 
 // Le solde d'ouverture n'est plus modifiable une fois le projet créé (comme le montant d'une
@@ -27,6 +50,7 @@ export interface ProjectCreateInput {
   recurringSeriesId?: string
   startDate?: string
   endDate?: string
+  reminders?: ProjectRemindersInput
 }
 
 export interface ProjectUpdateInput {
@@ -35,6 +59,8 @@ export interface ProjectUpdateInput {
   targetAmount?: number
   startDate?: string
   endDate?: string
+  /** Absent : bloc « Relances » inchangé. */
+  reminders?: ProjectRemindersInput
 }
 
 export interface ProjectOccurrenceInput {
