@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
+import { useReminderAttentionQuery } from '../../features/reminders/hooks'
 import { useAuthStore } from '../../store/authStore'
 import { IccLogo } from '../brand/IccLogo'
 import { Icon, type IconName } from '../ui/Icon'
@@ -26,6 +27,8 @@ export function AppLayout() {
   const currentUser = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const canRemind = useAuthStore((state) => state.user?.permissions.includes('SEND_REMINDERS') ?? false)
+  const { data: attention } = useReminderAttentionQuery(canRemind)
+  const attentionCount = attention?.count ?? 0
 
   const handleLogout = () => {
     logout()
@@ -75,6 +78,14 @@ export function AppLayout() {
             >
               <Icon name={item.icon} size={17} />
               {item.label}
+              {item.to === '/reminders' && attentionCount > 0 && (
+                <span
+                  className={styles.navBadge}
+                  aria-label={t('nav.remindersToRead', { count: attentionCount })}
+                >
+                  {attentionCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

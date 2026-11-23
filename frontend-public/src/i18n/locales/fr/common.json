@@ -200,6 +200,32 @@
       "confirmed": "Paiement confirmé",
       "thanks": "Merci pour votre générosité.",
       "foot": "Pour toute question sur ce paiement, contactez le secrétariat du MLA en indiquant la référence."
+    },
+    "reminderLink": {
+      "expired": "Ce lien de relance n'est plus valable. Vous pouvez contribuer en choisissant votre nom dans « Contribution mensuelle ».",
+      "dismiss": "Compris"
+    },
+    "reminderPage": {
+      "brand": "MLA — ICC Yaoundé",
+      "loading": "Chargement…",
+      "invalidTitle": "Lien expiré",
+      "invalidText": "Ce lien n'est plus valable. Vous pouvez toujours contribuer depuis le site de don.",
+      "toSite": "Aller sur le site de don",
+      "hello": "Bonjour {{name}}",
+      "question": "Votre contribution mensuelle de {{month}} n'est pas encore enregistrée. Que souhaitez-vous nous répondre ?",
+      "ack": "Bien reçu",
+      "done": "C'est déjà fait",
+      "doneHint": "Si vous avez déjà versé votre contribution, appuyez sur « C'est déjà fait » : nous vérifions et vous répondons.",
+      "when": "Quand pensez-vous verser votre contribution de {{month}} ?",
+      "unsure": "Je ne sais pas encore",
+      "confirm": "Envoyer ma réponse",
+      "back": "Retour",
+      "doneTitle": "Merci !",
+      "thanks": "Votre réponse est enregistrée.",
+      "settled": "Votre contribution de {{month}} est bien enregistrée. Merci pour votre fidélité !",
+      "closed": "Le suivi de votre contribution de {{month}} est clos. Merci !",
+      "error": "La réponse n'a pas pu être enregistrée. Réessayez dans un instant.",
+      "foot": "Vous recevez ce message car vous êtes membre actif du MLA."
     }
   }
 }

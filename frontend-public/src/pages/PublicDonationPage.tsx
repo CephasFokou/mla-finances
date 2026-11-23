@@ -1,9 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { IccLogo } from '../components/IccLogo'
 import { RibbonProgress } from '../components/RibbonProgress'
-import { usePublicCollectionsQuery, usePublicMonthlyOfferQuery } from '../features/public/hooks'
+import {
+  useContributionLinkQuery,
+  usePublicCollectionsQuery,
+  usePublicMonthlyOfferQuery,
+} from '../features/public/hooks'
 import type { PublicCollection } from '../features/public/types'
 import { formatAmount, formatDayMonth, formatFcfa, formatPeriod } from '../lib/format'
 import { LANGUAGES, setLanguage } from '../i18n/i18n'
@@ -19,12 +23,27 @@ const STEPS = ['s1', 's2', 's3'] as const
  * Site public de don, charte ICC : « l'envol » du logo à l'ouverture, une collecte = un ruban de
  * couleur, et la transparence sur ce qui a été remis. Montants agrégés uniquement (aucun donateur).
  */
+/** Jeton d'un lien /c/{jeton} (relance « Contribuer maintenant »), null sur toute autre adresse. */
+function contributionTokenFromPath(): string | null {
+  const match = /^\/c\/([A-Za-z0-9_-]{16,64})\/?$/.exec(window.location.pathname)
+  return match ? match[1]! : null
+}
+
 export function PublicDonationPage() {
   const { t, i18n } = useTranslation()
   const { data: collections, isLoading, isError } = usePublicCollectionsQuery()
   const { data: monthlyOffer } = usePublicMonthlyOfferQuery()
   const [dialog, setDialog] = useState<{ collectionId: number | null } | null>(null)
   const [monthlyOpen, setMonthlyOpen] = useState(false)
+  // Lien « Contribuer maintenant » d'une relance : /c/{jeton} ouvre la contribution mensuelle, membre et mois
+  // présélectionnés. Le jeton est retiré de la barre d'adresse dès qu'il est lu.
+  const [linkToken] = useState(() => contributionTokenFromPath())
+  const link = useContributionLinkQuery(linkToken)
+  const [presetDismissed, setPresetDismissed] = useState(false)
+  useEffect(() => {
+    if (linkToken && (link.isSuccess || link.isError)) window.history.replaceState(null, '', '/')
+  }, [linkToken, link.isSuccess, link.isError])
+  const presetOpen = !!link.data && !!monthlyOffer && !presetDismissed
   // Carte permanente, masquée si le parcours est désactivé (ou s'il n'y a aucun membre à proposer).
   const showMonthly = !!monthlyOffer?.enabled && monthlyOffer.members.length > 0
 
@@ -273,6 +292,21 @@ export function PublicDonationPage() {
             setDialog(null)
             setMonthlyOpen(true)
           }}
+        />
+      )}
+      {linkToken && link.isError && !presetDismissed && (
+        <div className={styles.linkNotice} role="status">
+          <span>{t('public.reminderLink.expired')}</span>
+          <button type="button" onClick={() => setPresetDismissed(true)}>
+            {t('public.reminderLink.dismiss')}
+          </button>
+        </div>
+      )}
+      {presetOpen && link.data && monthlyOffer && (
+        <MonthlyContributionDialog
+          offer={monthlyOffer}
+          preset={{ memberId: link.data.donorId, months: link.data.months }}
+          onClose={() => setPresetDismissed(true)}
         />
       )}
       {monthlyOpen && monthlyOffer && (

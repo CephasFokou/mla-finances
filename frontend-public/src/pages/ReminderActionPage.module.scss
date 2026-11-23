@@ -1,0 +1,158 @@
+@use '../tokens' as *;
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+  background: $hero-gradient;
+  font-family: $font-body;
+  color: $ink;
+}
+
+.card {
+  width: min(520px, 100%);
+  background: $paper;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgb(20 4 34 / 35%);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px;
+  background: $violet;
+  color: #fff;
+  font: 700 16px $font-display;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+}
+
+.body {
+  display: grid;
+  gap: 16px;
+  padding: 28px 24px 8px;
+  font-size: 16px;
+  line-height: 1.55;
+
+  h1 {
+    margin: 0;
+    font: 700 22px $font-display;
+    color: $violet-night;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.actions {
+  display: grid;
+  gap: 10px;
+}
+
+.primary,
+.secondary {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  font: 700 16px $font-body;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 3px solid $gold;
+    outline-offset: 2px;
+  }
+}
+
+.primary {
+  border: 0;
+  background: $violet;
+  color: #fff;
+}
+
+.secondary {
+  border: 2px solid $violet;
+  background: $paper;
+  color: $violet;
+}
+
+.link {
+  border: 0;
+  background: none;
+  color: $violet;
+  font: 600 15px $font-body;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.dates {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: $violet;
+    background: $violet-tint;
+  }
+
+  input {
+    accent-color: $violet;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.muted {
+  color: $ink-faint;
+  font-size: 14px;
+}
+
+.error {
+  color: $red;
+  font-weight: 600;
+}
+
+.foot {
+  margin: 0;
+  padding: 16px 24px 20px;
+  color: $ink-faint;
+  font-size: 13px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

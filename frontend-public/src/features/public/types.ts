@@ -98,3 +98,36 @@ export interface PublicCollection {
   firstMovementDate: string | null
   lastMovementDate: string | null
 }
+
+/** Lien « Contribuer maintenant » d'une relance : membre et mois à présélectionner. */
+export interface ContributionLink {
+  donorId: number
+  displayName: string
+  suggestedAmount: number
+  months: string[]
+}
+
+export interface ReminderDateOption {
+  date: string
+  label: string
+}
+
+/** Page de réponse d'un email de relance. */
+export interface ReminderActionView {
+  name: string
+  month: string
+  monthLabel: string
+  dueDate: string
+  status: string
+  settled: boolean
+  open: boolean
+  dateOptions: ReminderDateOption[]
+}
+
+export interface ReminderActionResult {
+  message: string | null
+  status: string
+  dateOptions: ReminderDateOption[]
+}
+
+export type ReminderAction = 'ACK' | 'UNSURE' | 'PROMISE' | 'DONE'

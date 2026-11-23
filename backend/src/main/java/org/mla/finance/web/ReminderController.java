@@ -78,6 +78,19 @@ public class ReminderController {
         return reminderService.closeForMember(request.donorId(), request.month(), request.reason());
     }
 
+    @PostMapping("/api/v1/reminders/cases/{id}/acknowledge")
+    @PreAuthorize("hasAuthority('SEND_REMINDERS')")
+    public ReminderCaseDetailResponse acknowledge(@PathVariable Long id) {
+        return reminderService.acknowledge(id);
+    }
+
+    /** Badge de la navigation : dossiers avec une réponse à lire ou un paiement déclaré non retrouvé. */
+    @GetMapping("/api/v1/reminders/attention")
+    @PreAuthorize("hasAuthority('SEND_REMINDERS')")
+    public java.util.Map<String, Long> attention() {
+        return java.util.Map.of("count", reminderService.attentionCount());
+    }
+
     @GetMapping("/api/v1/reminder-settings")
     public ReminderSettingsResponse settings() {
         return settingsService.get();

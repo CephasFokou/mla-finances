@@ -39,7 +39,11 @@ export interface ReminderRow {
   blockedCode: string | null
   blockedReason: string | null
   needsAttention: boolean
+  lastResponse: ReminderResponseType | null
+  promisedDate: string | null
 }
+
+export type ReminderResponseType = 'ACK' | 'PROMISE' | 'UNSURE' | 'DONE' | 'REFERENCE' | 'FREE_TEXT'
 
 export interface ReminderOverview {
   month: string
@@ -65,6 +69,7 @@ export interface ReminderPreview {
   subject: string
   html: string
   text: string
+  whatsappText: string | null
   channels: { channel: ReminderChannel; recipient: string }[]
   canRemind: boolean
   blockedReason: string | null
@@ -104,10 +109,21 @@ export interface ReminderCaseDetail {
   closedReason: string | null
   closedBy: string | null
   contributionId: number | null
+  needsAttention: boolean
+  promisedDate: string | null
+  responses: {
+    channel: ReminderChannel
+    type: ReminderResponseType
+    promisedDate: string | null
+    text: string | null
+    outcome: string | null
+    receivedAt: string
+  }[]
   reminders: {
     id: number
     sequenceNo: number
     trigger: ReminderTrigger
+    kind: 'RELANCE' | 'PROMISE'
     sentBy: string | null
     createdAt: string
     scheduledFor: string | null

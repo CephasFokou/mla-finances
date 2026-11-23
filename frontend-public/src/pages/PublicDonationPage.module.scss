@@ -575,3 +575,36 @@ $ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   align-self: flex-start;
   margin-top: 6px;
 }
+
+// Lien de relance expiré : bandeau discret en bas d'écran, le reste du site reste utilisable.
+.linkNotice {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100% - 32px));
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: $violet-night;
+  color: #fff;
+  font-size: 15px;
+  box-shadow: 0 12px 32px rgb(35 18 47 / 30%);
+
+  span {
+    flex: 1;
+  }
+
+  button {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: $gold;
+    color: $violet-night;
+    font: 700 14px $font-body;
+    cursor: pointer;
+  }
+}

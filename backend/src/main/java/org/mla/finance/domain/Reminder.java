@@ -62,6 +62,11 @@ public class Reminder {
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private ReminderKind kind = ReminderKind.RELANCE;
+
     @Column(name = "message_snapshot", length = 4000)
     private String messageSnapshot;
 

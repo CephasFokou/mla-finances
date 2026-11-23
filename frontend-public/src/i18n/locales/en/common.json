@@ -200,6 +200,32 @@
       "confirmed": "Payment confirmed",
       "thanks": "Thank you for your generosity.",
       "foot": "For any question about this payment, contact the MLA secretariat and quote the reference."
+    },
+    "reminderLink": {
+      "expired": "This reminder link is no longer valid. You can still contribute by choosing your name under “Monthly contribution”.",
+      "dismiss": "OK"
+    },
+    "reminderPage": {
+      "brand": "MLA — ICC Yaoundé",
+      "loading": "Loading…",
+      "invalidTitle": "Link expired",
+      "invalidText": "This link is no longer valid. You can still contribute from the donation site.",
+      "toSite": "Go to the donation site",
+      "hello": "Hello {{name}}",
+      "question": "Your {{month}} monthly contribution has not been recorded yet. What would you like to reply?",
+      "ack": "Noted",
+      "done": "Already done",
+      "doneHint": "If you have already paid your contribution, tap “Already done”: we will check and get back to you.",
+      "when": "When do you plan to pay your {{month}} contribution?",
+      "unsure": "I don't know yet",
+      "confirm": "Send my answer",
+      "back": "Back",
+      "doneTitle": "Thank you!",
+      "thanks": "Your answer has been recorded.",
+      "settled": "Your {{month}} contribution is recorded. Thank you for your faithfulness!",
+      "closed": "The follow-up of your {{month}} contribution is closed. Thank you!",
+      "error": "Your answer could not be saved. Please try again in a moment.",
+      "foot": "You are receiving this message because you are an active MLA member."
     }
   }
 }
