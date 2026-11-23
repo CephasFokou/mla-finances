@@ -88,6 +88,7 @@ public class KapsoWebhookService {
         String number = WhatsAppChannel.normalize(firstNonBlank(
             text(payload.path("conversation").path("phone_number")), text(message.path("from"))));
         if (wamid == null || number == null) {
+            log.info("Relances : message WhatsApp entrant ignoré (numéro non reconnu)");
             return;
         }
         String buttonId = firstNonBlank(text(message.path("button").path("payload")),
@@ -110,6 +111,10 @@ public class KapsoWebhookService {
             .or(() -> buttonId == null ? recentCase(number) : Optional.empty())
             .filter(rc -> WhatsAppChannel.sameNumber(rc.getDonor().getPhone(), number));
         if (target.isEmpty()) {
+            if (parsed.isPresent()) {
+                log.info("Relances : réponse au dossier #{} ignorée (numéro différent de celui du membre)",
+                    parsed.get().caseId());
+            }
             return;
         }
         ReminderCase rc = target.get();

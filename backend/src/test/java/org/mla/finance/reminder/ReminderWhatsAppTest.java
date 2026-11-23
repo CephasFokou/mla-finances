@@ -18,6 +18,7 @@ import org.mla.finance.domain.ReminderDeliveryStatus;
 import org.mla.finance.domain.ReminderReason;
 import org.mla.finance.domain.ReminderResponseType;
 import org.mla.finance.reminder.whatsapp.KapsoClient;
+import org.mla.finance.reminder.whatsapp.WhatsAppChannel;
 import org.mla.finance.reminder.whatsapp.WhatsAppTemplate;
 import org.mla.finance.repository.DonationCategoryRepository;
 import org.mla.finance.repository.DonorRepository;
@@ -294,6 +295,33 @@ class ReminderWhatsAppTest {
             "mlaf:date:" + caseId + ":2026-11-25", "mlaf:date:" + caseId + ":2026-11-27",
             "mlaf:date:" + caseId + ":2026-11-30", "mlaf:unsure:" + caseId);
         assertThat(rows.getValue()).allSatisfy(r -> assertThat(r.title().length()).isLessThanOrEqualTo(24));
+    }
+
+    @Test
+    void replyFromALegacyEightDigitCameroonianNumberIsRecognised() throws Exception {
+        // WhatsApp identifie encore certains comptes par l'ancien numéro : 237 + 8 chiffres, sans le 6 initial.
+        Donor donor = member("Wa Ancien");
+        send(donor);
+        Long caseId = caseOf(donor).getId();
+        String legacy = "237" + donor.getPhone().substring(4);
+        Map<String, Object> payload = Map.of(
+            "message", Map.of("id", "wamid.in-legacy-" + tag, "from", legacy, "type", "button",
+                "button", Map.of("payload", "mlaf:ack:" + caseId, "text", "Bien reçu"),
+                "kapso", Map.of("direction", "inbound", "status", "received")),
+            "conversation", Map.of("phone_number", legacy), "phone_number_id", "123456");
+
+        assertThat(webhook("whatsapp.message.received", payload)).isEqualTo(200);
+
+        assertThat(caseOf(donor).getStatus()).isEqualTo(ReminderCaseStatus.ACCUSE);
+        verify(kapso).sendList(eq(donor.getPhone()), contains("Quand pensez-vous"), eq("Choisir une date"), any());
+    }
+
+    @Test
+    void legacyEightDigitNumbersMatchTheCurrentFormat() {
+        assertThat(WhatsAppChannel.normalize("23799123456")).isEqualTo("237699123456");
+        assertThat(WhatsAppChannel.normalize("+237 6 99 12 34 56")).isEqualTo("237699123456");
+        assertThat(WhatsAppChannel.sameNumber("699123456", "23799123456")).isTrue();
+        assertThat(WhatsAppChannel.sameNumber("699123456", "23799123457")).isFalse();
     }
 
     @Test
