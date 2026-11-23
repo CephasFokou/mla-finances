@@ -361,7 +361,7 @@ class ReminderWhatsAppTest {
         verify(emailService, atLeastOnce()).sendHtml(eq("admin@mla-finance.dev"), contains("dit avoir payé"), anyString(), any());
 
         // Le paiement en cours échoue : le dossier redevient relançable tout de suite.
-        eventPublisher.publishEvent(new PaymentAbandonedEvent(pending.getId(), List.of(LocalDate.of(2026, 11, 1))));
+        eventPublisher.publishEvent(new PaymentAbandonedEvent(pending.getId(), List.of(LocalDate.of(2026, 11, 1)), null));
         ReminderCase reopened = caseOf(pending);
         assertThat(reopened.getStatus()).isEqualTo(ReminderCaseStatus.EN_ATTENTE_REPONSE);
         assertThat(reopened.getNextAllowedAt()).isEqualTo(NOV_20_10H);

@@ -203,7 +203,8 @@
     },
     "reminderLink": {
       "expired": "Ce lien de relance n'est plus valable. Vous pouvez contribuer en choisissant votre nom dans « Contribution mensuelle ».",
-      "dismiss": "Compris"
+      "dismiss": "Compris",
+      "expiredProject": "Ce lien de relance n'est plus valable (collecte terminée ou lien expiré). Merci de votre attention !"
     },
     "reminderPage": {
       "brand": "MLA — ICC Yaoundé",
@@ -225,7 +226,11 @@
       "settled": "Votre contribution de {{month}} est bien enregistrée. Merci pour votre fidélité !",
       "closed": "Le suivi de votre contribution de {{month}} est clos. Merci !",
       "error": "La réponse n'a pas pu être enregistrée. Réessayez dans un instant.",
-      "foot": "Vous recevez ce message car vous êtes membre actif du MLA."
+      "foot": "Vous recevez ce message car vous êtes membre actif du MLA.",
+      "settledProject": "Votre participation à la collecte « {{name}} » est bien enregistrée. Merci pour votre soutien !",
+      "closedProject": "Le suivi de la collecte « {{name}} » est clos. Merci !",
+      "questionProject": "Nous n'avons pas encore enregistré votre participation à la collecte « {{name}} » (participation libre). Que souhaitez-vous nous répondre ?",
+      "whenProject": "Quand pensez-vous participer à la collecte « {{name}} » ?"
     }
   }
 }

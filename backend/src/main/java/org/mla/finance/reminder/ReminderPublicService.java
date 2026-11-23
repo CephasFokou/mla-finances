@@ -7,6 +7,7 @@ import org.mla.finance.domain.MonthlyContributionSettings;
 import org.mla.finance.domain.ReminderCase;
 import org.mla.finance.domain.ReminderCaseStatus;
 import org.mla.finance.domain.ReminderChannel;
+import org.mla.finance.domain.ReminderReason;
 import org.mla.finance.domain.ReminderResponseType;
 import org.mla.finance.exception.InvalidRequestException;
 import org.mla.finance.repository.ReminderCaseRepository;
@@ -46,26 +47,32 @@ public class ReminderPublicService {
     }
 
     /** Page de réponse : prénom usuel, mois, état du dossier, dates proposées si « Bien reçu ». */
-    public record ActionView(String name, String month, String monthLabel, LocalDate dueDate, String status,
-                             boolean settled, boolean open, List<DateOption> dateOptions) {
+    public record ActionView(String name, String reason, String month, String monthLabel, String projectName,
+                             LocalDate dueDate, String status, boolean settled, boolean open, List<DateOption> dateOptions) {
     }
 
     public record ActionResult(String message, String status, List<DateOption> dateOptions) {
     }
 
-    /** Lien « Contribuer maintenant » : le membre et le mois à présélectionner sur le site de don. */
-    public record ContributionLink(Long donorId, String displayName, BigDecimal suggestedAmount, List<String> months) {
+    /**
+     * Lien « Contribuer maintenant » : le membre et le mois à présélectionner sur le site de don ; pour une collecte
+     * (reason PROJECT), la collecte à ouvrir — le jeton accompagne alors le don pour le rattacher au membre.
+     */
+    public record ContributionLink(String reason, Long donorId, String displayName, BigDecimal suggestedAmount,
+                                   List<String> months, Long projectId, String projectName) {
     }
 
     @Transactional(readOnly = true)
     public ActionView view(String token) {
         ReminderCase rc = caseFor(token, AccessTokenPurpose.REMINDER_ACTION);
-        YearMonth month = YearMonth.from(rc.getPeriodMonth());
+        ReminderMotive motive = ReminderMotive.of(rc);
         boolean settled = rc.getStatus() == ReminderCaseStatus.REGLE
-            || reminderService.facts(rc.getDonor(), month, rc).paid();
+            || reminderService.facts(rc.getDonor(), motive, rc).paid();
         boolean open = !settled && rc.getStatus() != ReminderCaseStatus.SANS_SUITE;
-        return new ActionView(rc.getDonor().getLabel(), month.toString(), ReminderMessageRenderer.monthLabel(month),
-            month.atEndOfMonth(), rc.getStatus().name(), settled, open, options(month));
+        return new ActionView(rc.getDonor().getLabel(), rc.getReason().name(),
+            motive.isProject() ? null : motive.month().toString(), motive.isProject() ? null : motive.label(),
+            motive.isProject() ? motive.project().getName() : null, motive.dueDate(), rc.getStatus().name(), settled, open,
+            options(motive));
     }
 
     /** action : ACK, UNSURE, PROMISE (avec date) ou DONE. */
@@ -87,18 +94,23 @@ public class ReminderPublicService {
         }
         ReminderResponseService.Outcome outcome = responseService.respond(rc.getId(), ReminderChannel.EMAIL, type, date, null,
             "Page de réponse : " + type.name().toLowerCase() + (date == null ? "" : " " + date), null).orElseThrow();
-        YearMonth month = YearMonth.from(rc.getPeriodMonth());
-        return new ActionResult(outcome.reply(), outcome.status().name(), outcome.asksForDate() ? options(month) : List.of());
+        return new ActionResult(outcome.reply(), outcome.status().name(),
+            outcome.asksForDate() ? options(ReminderMotive.of(rc)) : List.of());
     }
 
     @Transactional(readOnly = true)
     public ContributionLink contributionLink(String token) {
         AccessToken t = tokenService.resolve(token, AccessTokenPurpose.CONTRIBUTE)
             .orElseThrow(() -> new EntityNotFoundException(INVALID));
+        ReminderCase rc = t.getReminderCase();
+        if (rc != null && rc.getReason() == ReminderReason.PROJECT) {
+            return new ContributionLink(ReminderReason.PROJECT.name(), t.getDonor().getId(), t.getDonor().getDisplayName(),
+                null, List.of(), rc.getProject().getId(), rc.getProject().getName());
+        }
         MonthlyContributionSettings amounts = reminderService.monthlySettings();
-        return new ContributionLink(t.getDonor().getId(), t.getDonor().getDisplayName(),
-            amounts.suggestedAmount(t.getDonor().getMemberRole()),
-            List.of(YearMonth.from(t.getPeriodMonth()).toString()));
+        return new ContributionLink(ReminderReason.MONTHLY_CONTRIBUTION.name(), t.getDonor().getId(),
+            t.getDonor().getDisplayName(), amounts.suggestedAmount(t.getDonor().getMemberRole()),
+            List.of(YearMonth.from(t.getPeriodMonth()).toString()), null, null);
     }
 
     private ReminderCase caseFor(String token, AccessTokenPurpose purpose) {
@@ -106,8 +118,23 @@ public class ReminderPublicService {
         return caseRepository.findById(t.getReminderCase().getId()).orElseThrow(() -> new EntityNotFoundException(INVALID));
     }
 
-    private List<DateOption> options(YearMonth month) {
-        return responseService.dateChoices(month).stream()
+    /**
+     * Don à une collecte ouvert depuis « Participer maintenant » : le membre du jeton, si le jeton est valide et vise
+     * bien cette collecte. Sinon rien (le don reste un don public ordinaire).
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<org.mla.finance.domain.Donor> memberForProjectDonation(String token, Long projectId) {
+        if (token == null || projectId == null) {
+            return java.util.Optional.empty();
+        }
+        return tokenService.resolve(token, AccessTokenPurpose.CONTRIBUTE)
+            .filter(t -> t.getReminderCase() != null && t.getReminderCase().getReason() == ReminderReason.PROJECT
+                && projectId.equals(t.getReminderCase().getProject().getId()))
+            .map(AccessToken::getDonor);
+    }
+
+    private List<DateOption> options(ReminderMotive motive) {
+        return responseService.dateChoices(motive).stream()
             .map(c -> new DateOption(c.date(), c.description() + " — " + c.title())).toList();
     }
 }

@@ -6,7 +6,13 @@ import org.mla.finance.domain.Project;
 import org.mla.finance.domain.ProjectStatus;
 import org.mla.finance.exception.BusinessRuleViolationException;
 import org.mla.finance.exception.ConflictException;
+import org.mla.finance.domain.ProjectReminderAudience;
+import org.mla.finance.exception.InvalidRequestException;
+import org.mla.finance.reminder.ReminderClock;
+import org.mla.finance.reminder.ReminderService;
+import org.mla.finance.repository.DonorRepository;
 import org.mla.finance.repository.ProjectRepository;
+import org.mla.finance.web.dto.ProjectRemindersRequest;
 import org.mla.finance.web.dto.ProjectCreateRequest;
 import org.mla.finance.web.dto.ProjectOccurrenceRequest;
 import org.mla.finance.web.dto.ProjectResponse;
@@ -15,7 +21,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Gestion des projets/enveloppes : création, modification descriptive, cycle de vie et occurrences
@@ -35,6 +44,9 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
+    private final DonorRepository donorRepository;
+    private final ReminderService reminderService;
+    private final ReminderClock reminderClock;
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> list(ProjectStatus status) {
@@ -60,6 +72,9 @@ public class ProjectService {
             .startDate(request.startDate())
             .endDate(request.endDate())
             .build();
+        if (request.reminders() != null) {
+            applyReminders(project, request.reminders());
+        }
         return ProjectResponse.from(projectRepository.save(project));
     }
 
@@ -74,7 +89,60 @@ public class ProjectService {
         project.setTargetAmount(request.targetAmount());
         project.setStartDate(request.startDate());
         project.setEndDate(request.endDate());
+        if (request.reminders() != null) {
+            boolean wasEnabled = project.isRemindersEnabled();
+            applyReminders(project, request.reminders());
+            if (wasEnabled != project.isRemindersEnabled()) {
+                auditLogService.record("PROJECT", id, "REMINDERS", "Relances de la collecte '" + project.getName() + "' "
+                    + (project.isRemindersEnabled() ? "activées" : "désactivées"));
+            }
+            projectRepository.flush();
+            reminderService.syncProjectCases(id);
+        }
         return ProjectResponse.from(project);
+    }
+
+    /**
+     * Bloc « Relances » (cadrage Relances §6 bis). Activées : ouverture par défaut = début de la collecte, sinon
+     * aujourd'hui ; échéance par défaut = fin de la collecte, obligatoire sinon ; sélection manuelle non vide.
+     */
+    private void applyReminders(Project project, ProjectRemindersRequest r) {
+        String message = r.message() == null || r.message().isBlank() ? null : r.message().trim();
+        Set<Long> memberIds = r.memberIds() == null ? Set.of() : new HashSet<>(r.memberIds());
+        if (r.enabled()) {
+            LocalDate openFrom = r.openFrom() != null ? r.openFrom()
+                : project.getStartDate() != null ? project.getStartDate()
+                : reminderClock.now().atZone(ReminderClock.ZONE).toLocalDate();
+            LocalDate due = r.dueDate() != null ? r.dueDate() : project.getEndDate();
+            if (due == null) {
+                throw new InvalidRequestException("reminders.dueDate",
+                    "Indiquez l'échéance des relances : la collecte n'a pas de date de fin.");
+            }
+            if (due.isBefore(openFrom)) {
+                throw new InvalidRequestException("reminders.dueDate", "L'échéance des relances précède leur ouverture.");
+            }
+            if (r.audience() == ProjectReminderAudience.SELECTION) {
+                if (memberIds.isEmpty()) {
+                    throw new InvalidRequestException("reminders.memberIds", "Cochez au moins un membre à relancer.");
+                }
+                long members = donorRepository.findAllById(memberIds).stream().filter(d -> d.isMember()).count();
+                if (members != memberIds.size()) {
+                    throw new InvalidRequestException("reminders.memberIds", "La sélection contient des personnes qui ne sont pas membres.");
+                }
+            }
+            project.setReminderOpenFrom(openFrom);
+            project.setReminderDueDate(due);
+        } else {
+            project.setReminderOpenFrom(r.openFrom());
+            project.setReminderDueDate(r.dueDate());
+        }
+        project.setRemindersEnabled(r.enabled());
+        project.setReminderAudience(r.audience());
+        project.setReminderMessage(message);
+        project.getReminderMemberIds().clear();
+        if (r.audience() == ProjectReminderAudience.SELECTION) {
+            project.getReminderMemberIds().addAll(memberIds);
+        }
     }
 
     public ProjectResponse activate(Long id) {
@@ -90,6 +158,7 @@ public class ProjectService {
         requireStatus(project, ProjectStatus.ACTIVE, "clôturer");
         project.setStatus(ProjectStatus.COMPLETED);
         auditLogService.record("PROJECT", id, "COMPLETE", "Projet '" + project.getName() + "' clôturé");
+        reminderService.closeProjectCases(id, "Collecte clôturée");
         return ProjectResponse.from(project);
     }
 
@@ -100,6 +169,7 @@ public class ProjectService {
         }
         project.setStatus(ProjectStatus.ARCHIVED);
         auditLogService.record("PROJECT", id, "ARCHIVE", "Projet '" + project.getName() + "' archivé");
+        reminderService.closeProjectCases(id, "Collecte archivée");
         return ProjectResponse.from(project);
     }
 

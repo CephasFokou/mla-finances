@@ -203,7 +203,8 @@
     },
     "reminderLink": {
       "expired": "This reminder link is no longer valid. You can still contribute by choosing your name under “Monthly contribution”.",
-      "dismiss": "OK"
+      "dismiss": "OK",
+      "expiredProject": "This reminder link is no longer valid (collection closed or link expired). Thank you!"
     },
     "reminderPage": {
       "brand": "MLA — ICC Yaoundé",
@@ -225,7 +226,11 @@
       "settled": "Your {{month}} contribution is recorded. Thank you for your faithfulness!",
       "closed": "The follow-up of your {{month}} contribution is closed. Thank you!",
       "error": "Your answer could not be saved. Please try again in a moment.",
-      "foot": "You are receiving this message because you are an active MLA member."
+      "foot": "You are receiving this message because you are an active MLA member.",
+      "settledProject": "Your gift to the “{{name}}” collection is recorded. Thank you for your support!",
+      "closedProject": "The follow-up of the “{{name}}” collection is closed. Thank you!",
+      "questionProject": "We have not recorded your gift to the “{{name}}” collection yet (any amount is welcome). What would you like to reply?",
+      "whenProject": "When do you plan to give to the “{{name}}” collection?"
     }
   }
 }

@@ -119,23 +119,23 @@ public class ReminderResponseService {
         }
         Instant now = clock.now();
         ReminderSettings settings = reminderService.settings();
-        YearMonth month = YearMonth.from(rc.getPeriodMonth());
-        String monthName = month.getMonth().getDisplayName(TextStyle.FULL, FR);
-        boolean monthOver = month.isBefore(ReminderService.currentMonth(now));
+        ReminderMotive motive = ReminderMotive.of(rc);
+        String what = motive.memberPhrase();
+        boolean monthOver = motive.isOver(ReminderService.today(now)) || !motive.isRemindable();
 
         Step step;
         if (type == ReminderResponseType.DONE || type == ReminderResponseType.REFERENCE) {
-            step = type == ReminderResponseType.REFERENCE ? reference(rc, reference, now, settings, monthName)
-                : verify(rc, now, settings, monthName, "Déclare avoir payé");
+            step = type == ReminderResponseType.REFERENCE ? reference(rc, reference, now, settings, motive)
+                : verify(rc, now, settings, motive, "Déclare avoir payé");
         } else if (rc.getStatus() == ReminderCaseStatus.REGLE) {
-            step = new Step("Merci, votre contribution de " + monthName + " est déjà enregistrée. 🙏", null, "Dossier déjà réglé");
+            step = new Step("Merci, " + what + " est déjà enregistrée. 🙏", null, "Dossier déjà réglé");
         } else if (rc.getStatus() == ReminderCaseStatus.SANS_SUITE || monthOver) {
             step = new Step("Merci pour votre réponse.", null, "Dossier clos : réponse enregistrée");
         } else {
             step = switch (type) {
-                case ACK -> ack(rc, now, settings, monthName);
-                case UNSURE -> unsure(rc, now, settings);
-                case PROMISE -> promise(rc, date, now, settings, month);
+                case ACK -> ack(rc, now, settings, motive);
+                case UNSURE -> unsure(rc, now, settings, motive);
+                case PROMISE -> promise(rc, date, now, settings, motive);
                 default -> freeText(rc);
             };
         }
@@ -156,10 +156,13 @@ public class ReminderResponseService {
         return Optional.of(new Outcome(rc.getStatus(), step.reply(), step.choices()));
     }
 
-    /** Dates proposées après « Bien reçu » : jamais avant demain, jamais après l'échéance du mois. */
-    public List<DateChoice> dateChoices(YearMonth month) {
+    /** Dates proposées après « Bien reçu » : jamais avant demain, jamais après l'échéance (mois ou collecte). */
+    public List<DateChoice> dateChoices(ReminderMotive motive) {
         LocalDate today = clock.now().atZone(ReminderClock.ZONE).toLocalDate();
-        LocalDate due = month.atEndOfMonth();
+        LocalDate due = motive.dueDate();
+        if (due == null || !due.isAfter(today)) {
+            return List.of();
+        }
         List<DateChoice> choices = new ArrayList<>();
         LocalDate friday = today.with(TemporalAdjusters.next(DayOfWeek.FRIDAY));
         add(choices, friday, "Vendredi " + friday.format(DAY), "Ce vendredi", due);
@@ -168,11 +171,15 @@ public class ReminderResponseService {
             add(choices, week, capitalize(week.getDayOfWeek().getDisplayName(TextStyle.FULL, FR)) + " " + week.format(DAY),
                 "Dans une semaine", due);
         }
-        if (due.getDayOfMonth() >= 25) {
-            LocalDate the25 = month.atDay(25);
-            add(choices, the25, "Le " + the25.format(DAY), "Le 25 du mois", due);
+        if (motive.isProject()) {
+            add(choices, due, "Le " + due.format(DAY), "Avant l'échéance de la collecte", due);
+        } else {
+            LocalDate the25 = motive.month().atDay(25);
+            if (the25.isAfter(today)) {
+                add(choices, the25, "Le " + the25.format(DAY), "Le 25 du mois", due);
+            }
+            add(choices, due, "Fin du mois (" + due.format(DAY) + ")", "Avant la fin du mois", due);
         }
-        add(choices, due, "Fin du mois (" + due.format(DAY) + ")", "Avant la fin du mois", due);
         choices.sort((a, b) -> a.date().compareTo(b.date()));
         return choices;
     }
@@ -218,30 +225,40 @@ public class ReminderResponseService {
     private record Step(String reply, List<DateChoice> choices, String outcome) {
     }
 
-    private Step ack(ReminderCase rc, Instant now, ReminderSettings settings, String monthName) {
+    private Step ack(ReminderCase rc, Instant now, ReminderSettings settings, ReminderMotive motive) {
         rc.setStatus(ReminderCaseStatus.ACCUSE);
         rc.setNextAllowedAt(now.plus(Duration.ofDays(settings.getCooldownAckDays())));
-        List<DateChoice> choices = dateChoices(YearMonth.from(rc.getPeriodMonth()));
-        return new Step("Merci ! Quand pensez-vous verser votre contribution de " + monthName + " ?", choices, "Bien reçu");
+        List<DateChoice> choices = dateChoices(motive);
+        if (choices.isEmpty()) {
+            return new Step("Merci ! Vous pouvez " + (motive.isProject() ? "participer" : "contribuer")
+                + " à tout moment avec le bouton « " + contributeLabel(motive) + " ».", null, "Bien reçu");
+        }
+        return new Step("Merci ! Quand pensez-vous " + (motive.isProject() ? "participer à la collecte « "
+            + motive.project().getName() + " »" : "verser " + motive.memberPhrase()) + " ?", choices, "Bien reçu");
     }
 
-    private Step unsure(ReminderCase rc, Instant now, ReminderSettings settings) {
+    private static String contributeLabel(ReminderMotive motive) {
+        return motive.isProject() ? "Participer maintenant" : "Contribuer maintenant";
+    }
+
+    private Step unsure(ReminderCase rc, Instant now, ReminderSettings settings, ReminderMotive motive) {
         cancelPromiseReminders(rc, now);
         rc.setStatus(ReminderCaseStatus.ACCUSE);
         rc.setPromisedDate(null);
         rc.setNextAllowedAt(now.plus(Duration.ofDays(settings.getCooldownAckDays())));
-        return new Step("C'est noté, merci ! Vous pouvez contribuer à tout moment avec le bouton « Contribuer maintenant ».",
+        return new Step("C'est noté, merci ! Vous pouvez " + (motive.isProject() ? "participer" : "contribuer")
+            + " à tout moment avec le bouton « " + contributeLabel(motive) + " ».",
             null, "Ne sait pas encore quand payer");
     }
 
-    private Step promise(ReminderCase rc, LocalDate date, Instant now, ReminderSettings settings, YearMonth month) {
+    private Step promise(ReminderCase rc, LocalDate date, Instant now, ReminderSettings settings, ReminderMotive motive) {
         LocalDate today = now.atZone(ReminderClock.ZONE).toLocalDate();
-        LocalDate due = month.atEndOfMonth();
+        LocalDate due = motive.dueDate();
         if (date == null || date.isBefore(today) || date.isAfter(due)) {
             rc.setNeedsAttention(true);
-            return new Step("Merci ! Cette date ne correspond pas au mois en cours (échéance le " + due.format(DAY)
+            return new Step("Merci ! Cette date tombe après l'échéance (le " + due.format(DAY)
                 + "). Un membre de la Coordination reviendra vers vous si besoin.", null,
-                "Date proposée hors du mois (" + (date == null ? "?" : date.format(DAY)) + ") : à lire");
+                "Date proposée hors délai (" + (date == null ? "?" : date.format(DAY)) + ") : à lire");
         }
         cancelPromiseReminders(rc, now);
         rc.setStatus(ReminderCaseStatus.PROMIS);
@@ -265,13 +282,13 @@ public class ReminderResponseService {
             : "C'est noté, merci !", null, "Date promise : " + date.format(DAY));
     }
 
-    private Step verify(ReminderCase rc, Instant now, ReminderSettings settings, String monthName, String prefix) {
-        ReminderService.Facts facts = reminderService.facts(rc.getDonor(), YearMonth.from(rc.getPeriodMonth()), rc);
+    private Step verify(ReminderCase rc, Instant now, ReminderSettings settings, ReminderMotive motive, String prefix) {
+        ReminderService.Facts facts = reminderService.facts(rc.getDonor(), motive, rc);
         if (facts.paid()) {
             if (rc.getStatus() != ReminderCaseStatus.REGLE) {
                 reminderService.closeAsPaid(rc, now);
             }
-            return new Step("Merci, votre contribution de " + monthName + " est bien enregistrée. 🙏", null,
+            return new Step("Merci, " + motive.memberPhrase() + " est bien enregistrée. 🙏", null,
                 prefix + " : contribution retrouvée");
         }
         cancelPromiseReminders(rc, now);
@@ -286,12 +303,12 @@ public class ReminderResponseService {
         rc.setNeedsAttention(true);
         rc.setNextAllowedAt(now.plus(Duration.ofHours(settings.getCooldownNotFoundHours())));
         alertService.declaredButNotFound(rc);
-        return new Step("Nous ne retrouvons pas encore votre contribution. Pouvez-vous nous envoyer la référence de paiement "
+        return new Step("Nous ne retrouvons pas encore votre " + (motive.isProject() ? "don" : "contribution") + ". Pouvez-vous nous envoyer la référence de paiement "
             + "(MLA-…) ou nous dire comment vous avez payé (espèces, virement, à qui) ?", null,
             prefix + " : non retrouvé, à vérifier");
     }
 
-    private Step reference(ReminderCase rc, String reference, Instant now, ReminderSettings settings, String monthName) {
+    private Step reference(ReminderCase rc, String reference, Instant now, ReminderSettings settings, ReminderMotive motive) {
         Optional<PaymentTransaction> found = reference == null ? Optional.empty()
             : paymentTransactionRepository.findByReference(reference);
         if (found.isEmpty()) {
@@ -307,15 +324,16 @@ public class ReminderResponseService {
         }
         if (tx.getStatus() == PaymentTransactionStatus.FAILED || tx.getStatus() == PaymentTransactionStatus.CANCELLED) {
             rc.setNeedsAttention(true);
-            return new Step("Le paiement " + reference + " n'a pas abouti. Vous pouvez contribuer à nouveau avec le bouton "
-                + "« Contribuer maintenant ».", null, "Référence " + reference + " : paiement non abouti");
+            return new Step("Le paiement " + reference + " n'a pas abouti. Vous pouvez réessayer avec le bouton "
+                + "« " + contributeLabel(motive) + " ».", null, "Référence " + reference + " : paiement non abouti");
         }
-        Step step = verify(rc, now, settings, monthName, "Référence " + reference);
+        Step step = verify(rc, now, settings, motive, "Référence " + reference);
         if (rc.getStatus() == ReminderCaseStatus.DECLARE_NON_RETROUVE) {
             // Paiement retrouvé mais pas pour ce mois (don à une collecte, autre mois…) : un trésorier tranche.
             return new Step("Merci ! Nous avons bien la référence " + reference + " ; un membre de la Coordination vérifie "
-                + "qu'elle couvre bien votre contribution de " + monthName + ".", null,
-                "Référence " + reference + " retrouvée mais ne couvre pas ce mois : à vérifier");
+                + "qu'elle couvre bien " + motive.memberPhrase() + ".", null,
+                "Référence " + reference + " retrouvée mais ne couvre pas " + (motive.isProject() ? "cette collecte" : "ce mois")
+                    + " : à vérifier");
         }
         return step;
     }

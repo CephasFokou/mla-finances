@@ -32,7 +32,9 @@ public record PublicDonationRequest(
     @Size(max = 20) String payerPhone,
     Long donorId,
     @Size(max = 24) List<@NotNull @Pattern(regexp = "\\d{4}-\\d{2}", message = "format attendu : AAAA-MM") String> months,
-    @DecimalMin(value = "0", inclusive = false) @Digits(integer = 12, fraction = 2) BigDecimal amountPerMonth
+    @DecimalMin(value = "0", inclusive = false) @Digits(integer = 12, fraction = 2) BigDecimal amountPerMonth,
+    /** Jeton du lien « Participer maintenant » d'une relance de collecte : rattache le don au membre relancé. */
+    @Size(max = 64) String reminderToken
 ) {
     public PaymentTransactionKind kind() {
         return type == null ? PaymentTransactionKind.DONATION : type;

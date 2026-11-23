@@ -4,9 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.reminder.ContributionRecordedEvent;
 import org.mla.finance.reminder.PaymentAbandonedEvent;
+import org.mla.finance.reminder.whatsapp.WhatsAppChannel;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mla.finance.domain.Contribution;
 import org.mla.finance.domain.Donor;
+import org.mla.finance.domain.MemberStatus;
 import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.MovementType;
 import org.mla.finance.domain.PaymentTransaction;
@@ -310,9 +312,14 @@ public class PaymentTransactionService {
      * Rattache la contribution à un Donor, en réutilisant un donateur existant lorsque le contact
      * fourni (email ou téléphone) correspond exactement à un donateur déjà connu — jamais sur la
      * seule base du nom, trop ambigu (voir DonorRepository). En mode en ligne, le numéro payeur
-     * sert de contact de repli. Sans nom ni contact (don anonyme), aucun Donor n'est créé.
+     * sert de contact de repli. Sans nom ni contact (don anonyme), aucun Donor n'est créé. Un don
+     * déjà rattaché à un membre (lien « Participer maintenant » d'une relance de collecte) lui reste.
      */
     private Donor resolveDonor(PaymentTransaction transaction) {
+        if (transaction.getDonor() != null) {
+            // Don à une collecte ouvert depuis le lien signé d'une relance : le membre est déjà connu.
+            return transaction.getDonor();
+        }
         String name = transaction.getDonorName();
         String contact = transaction.getDonorContact();
         if ((contact == null || contact.isBlank()) && !transaction.isAnonymous()) {
@@ -331,6 +338,16 @@ public class PaymentTransactionService {
                 : donorRepository.findByPhone(trimmed);
             if (existing.isPresent()) {
                 return existing.get();
+            }
+            if (!trimmed.contains("@")) {
+                // Numéro payeur d'un membre actif saisi sous une autre forme (699… / 237699…) : rattaché au membre,
+                // ce qui clôt sa relance de collecte (cadrage Relances §6 bis).
+                Optional<Donor> member = donorRepository.findByMemberRoleIsNotNullAndMemberStatus(MemberStatus.ACTIVE).stream()
+                    .filter(d -> WhatsAppChannel.sameNumber(d.getPhone(), trimmed))
+                    .findFirst();
+                if (member.isPresent()) {
+                    return member.get();
+                }
             }
         }
 
@@ -375,8 +392,13 @@ public class PaymentTransactionService {
 
     /** Relances : un dossier « En vérification » redevient relançable quand le paiement n'aboutit pas. */
     private void publishAbandoned(PaymentTransaction tx) {
-        if (tx.isMonthlyContribution() && tx.getDonor() != null) {
-            eventPublisher.publishEvent(new PaymentAbandonedEvent(tx.getDonor().getId(), List.copyOf(tx.getCoveredMonths())));
+        if (tx.getDonor() == null) {
+            return;
+        }
+        if (tx.isMonthlyContribution()) {
+            eventPublisher.publishEvent(new PaymentAbandonedEvent(tx.getDonor().getId(), List.copyOf(tx.getCoveredMonths()), null));
+        } else if (tx.getProject() != null) {
+            eventPublisher.publishEvent(new PaymentAbandonedEvent(tx.getDonor().getId(), List.of(), tx.getProject().getId()));
         }
     }
 }

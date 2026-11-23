@@ -1,4 +1,4 @@
-// Contrat JSON du module Relances (ReminderController, lot 1 : contribution mensuelle par email).
+// Contrat JSON du module Relances (ReminderController) : contribution mensuelle et collectes relançables (lot 2 bis).
 
 export type ReminderCaseStatus =
   | 'A_RELANCER'
@@ -24,7 +24,8 @@ export interface ReminderRow {
   donorId: number
   label: string
   role: 'RESPONSABLE' | 'MEMBRE'
-  expectedAmount: number
+  /** Montant habituel de la contribution mensuelle ; null pour une collecte (participation libre). */
+  expectedAmount: number | null
   monthStatus: ReminderMonthStatus
   hasEmail: boolean
   hasPhone: boolean
@@ -45,14 +46,29 @@ export interface ReminderRow {
 
 export type ReminderResponseType = 'ACK' | 'PROMISE' | 'UNSURE' | 'DONE' | 'REFERENCE' | 'FREE_TEXT'
 
+export type ReminderReason = 'MONTHLY_CONTRIBUTION' | 'PROJECT'
+
+export interface ReminderReasonOption {
+  reason: ReminderReason
+  month: string | null
+  projectId: number | null
+  label: string
+  dueDate: string | null
+}
+
 export interface ReminderOverview {
-  month: string
+  /** Mois (« 2026-11 ») ; null pour une collecte. */
+  month: string | null
+  /** Libellé du motif : « novembre 2026 » ou le nom de la collecte. */
   monthLabel: string
   currentMonth: boolean
   enabled: boolean
   openFrom: string
   dueDate: string
   maxReminders: number
+  reason: ReminderReason
+  projectId: number | null
+  projectNote: string | null
   summary: {
     members: number
     upToDate: number

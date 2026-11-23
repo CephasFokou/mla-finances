@@ -96,4 +96,17 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
         order by c.id desc
         """)
     List<Contribution> monthlyEntries(@Param("donorId") Long donorId, @Param("month") LocalDate month);
+
+    /** Membres ayant donné à une collecte (ajustements déduits) : un don, quel que soit son montant, clôt la relance. */
+    @Query("""
+        select c.donor.id from Contribution c
+        where c.donor is not null and c.project.id = :projectId
+        group by c.donor.id
+        having sum(c.amount) > 0
+        """)
+    List<Long> donorsWithProjectContribution(@Param("projectId") Long projectId);
+
+    /** Dons d'un membre à une collecte, le plus récent d'abord. */
+    @Query("select c from Contribution c where c.donor.id = :donorId and c.project.id = :projectId order by c.id desc")
+    List<Contribution> projectEntries(@Param("donorId") Long donorId, @Param("projectId") Long projectId);
 }

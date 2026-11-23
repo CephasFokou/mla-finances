@@ -1,11 +1,20 @@
 package org.mla.finance.web.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
-/** Relance d'un membre pour la contribution mensuelle d'un mois (« 2026-11 », mois en cours uniquement). */
+/**
+ * Relance d'un membre : contribution mensuelle d'un mois ({@code month} « 2026-11 », mois en cours uniquement) ou
+ * collecte relançable ({@code projectId}). L'un des deux.
+ */
 public record ReminderSendRequest(
     @NotNull Long donorId,
-    @NotNull @Pattern(regexp = "\\d{4}-\\d{2}", message = "Mois attendu au format AAAA-MM") String month
+    @Pattern(regexp = "\\d{4}-\\d{2}", message = "Mois attendu au format AAAA-MM") String month,
+    Long projectId
 ) {
+    @AssertTrue(message = "Indiquez le mois ou la collecte.")
+    public boolean isMotiveGiven() {
+        return projectId != null || month != null;
+    }
 }

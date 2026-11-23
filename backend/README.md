@@ -141,7 +141,15 @@ dans Administration → Relances.
   MLA (Apps Script), qui ignore les réponses `mlaf:` de MLA Finance.
 - Variables : `PUBLIC_SITE_URL`, `REMINDER_QUEUE_POLL_MS`, `KAPSO_ENABLED` (faux par défaut : email seul),
   `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_WEBHOOK_SECRET`, `KAPSO_BASE_URL`.
-- Lots suivants : collectes relançables, suivi par référence, espace membre.
+- **Collectes relançables** (lot 2 bis) : une collecte n'est pas relançable par défaut. Le bloc « Relances » de la fiche
+  projet fixe les membres concernés (tous, responsables, membres, sélection), l'ouverture (défaut : début de la
+  collecte), l'échéance (défaut : fin de la collecte, obligatoire sinon) et un message court (≤ 120 caractères, repris
+  dans le modèle `mla_finance_relance_collecte`). Aucun montant : un don de n'importe quel montant clôt le dossier. Sur
+  l'écran Relances, le sélecteur « Motif » choisit la contribution mensuelle ou une collecte en cours. Le lien
+  « Participer maintenant » (`/c/{jeton}`) ouvre le don à la collecte au nom du membre et le rattache à lui ; un don
+  payé depuis le numéro d'un membre actif lui est aussi rattaché. Après l'échéance, ou si la collecte est clôturée,
+  archivée ou ses relances désactivées, les dossiers ouverts passent « Sans suite ».
+- Lots suivants : suivi par référence, espace membre.
 
 ## Build
 

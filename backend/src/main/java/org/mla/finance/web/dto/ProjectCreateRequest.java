@@ -1,5 +1,6 @@
 package org.mla.finance.web.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +23,8 @@ public record ProjectCreateRequest(
     @DecimalMin(value = "0", inclusive = false) @Digits(integer = 12, fraction = 2) BigDecimal targetAmount,
     @Size(max = 60) String recurringSeriesId,
     LocalDate startDate,
-    LocalDate endDate
+    LocalDate endDate,
+    /** Bloc « Relances » (facultatif : relances désactivées par défaut). */
+    @Valid ProjectRemindersRequest reminders
 ) {
 }

@@ -13,14 +13,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.time.YearMonth;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
 
 /**
  * Jetons des liens envoyés aux membres (page de réponse d'un email, bouton « Contribuer maintenant »). 128 bits
- * aléatoires en base64url dans le lien ; seul le hachage SHA-256 est stocké. Valables jusqu'à la fin du mois visé
+ * aléatoires en base64url dans le lien ; seul le hachage SHA-256 est stocké. Valables jusqu'à l'échéance (fin du mois visé ou échéance de la collecte)
  * (heure de Douala). Aucun identifiant interne dans l'URL.
  */
 @Service
@@ -37,14 +37,15 @@ public class AccessTokenService {
         byte[] bytes = new byte[16];
         RANDOM.nextBytes(bytes);
         String raw = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        YearMonth month = YearMonth.from(rc.getPeriodMonth());
+        // Valable jusqu'à l'échéance incluse : fin du mois, ou échéance de la collecte.
+        LocalDate due = ReminderMotive.of(rc).dueDate();
         repository.save(AccessToken.builder()
             .tokenHash(hash(raw))
             .purpose(purpose)
             .donor(rc.getDonor())
             .reminderCase(rc)
             .periodMonth(rc.getPeriodMonth())
-            .expiresAt(month.plusMonths(1).atDay(1).atStartOfDay(ReminderClock.ZONE).toInstant())
+            .expiresAt(due.plusDays(1).atStartOfDay(ReminderClock.ZONE).toInstant())
             .build());
         return raw;
     }
