@@ -48,16 +48,9 @@ public class KapsoWebhookController {
         if (!properties.isEnabled() || secret == null || secret.isBlank()) {
             return ResponseEntity.notFound().build();
         }
-        String variant = body == null ? null : matchingVariant(secret, body, signature);
-        if (variant == null) {
-            String text = body == null ? "" : new String(body, StandardCharsets.UTF_8);
-            log.warn("Webhook Kapso refusé : signature absente ou invalide (événement {}, {} octets, apostrophe {}, \\u0027 {}, "
-                    + "signature {})", event, body == null ? 0 : body.length, text.contains("'"), text.contains("\\u0027"),
-                signature == null ? "absente" : "présente");
+        if (body == null || !validSignature(secret, body, signature)) {
+            log.warn("Webhook Kapso refusé : signature absente ou invalide");
             return ResponseEntity.status(401).build();
-        }
-        if (!variant.equals("brut")) {
-            log.info("Webhook Kapso : signature vérifiée sur le corps normalisé ({})", variant);
         }
         JsonNode root = objectMapper.readTree(body);
         // Livraison groupée possible (buffering) : un tableau, ou { "data": [...] }.
@@ -70,25 +63,6 @@ public class KapsoWebhookController {
             service.handle(event, root);
         }
         return ResponseEntity.ok().build();
-    }
-
-    /**
-     * Forme du corps sur laquelle la signature est valide ; null si aucune. Kapso signe parfois le JSON avec
-     * l'apostrophe échappée (\\u0027) mais l'envoie en clair (ou l'inverse) : « C'est déjà fait » était refusé. Les
-     * variantes ne changent que l'écriture de l'apostrophe ; la signature reste obligatoire.
-     */
-    static String matchingVariant(String secret, byte[] body, String signature) {
-        if (validSignature(secret, body, signature)) {
-            return "brut";
-        }
-        String text = new String(body, StandardCharsets.UTF_8);
-        if (text.contains("'") && validSignature(secret, text.replace("'", "\\u0027").getBytes(StandardCharsets.UTF_8), signature)) {
-            return "apostrophe échappée";
-        }
-        if (text.contains("\\u0027") && validSignature(secret, text.replace("\\u0027", "'").getBytes(StandardCharsets.UTF_8), signature)) {
-            return "apostrophe en clair";
-        }
-        return null;
     }
 
     static boolean validSignature(String secret, byte[] body, String signature) {

@@ -11,6 +11,8 @@ import org.mla.finance.domain.MemberStatus;
 import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.ReminderCase;
 import org.mla.finance.domain.ReminderCaseStatus;
+import org.mla.finance.domain.ReminderResponseType;
+import org.mla.finance.domain.ReminderChannel;
 import org.mla.finance.domain.ReminderReason;
 import org.mla.finance.repository.DonorRepository;
 import org.mla.finance.repository.PaymentChannelRepository;
@@ -79,6 +81,7 @@ class ReminderProjectTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired ReminderService reminderService;
     @Autowired ReminderPublicService publicService;
+    @Autowired ReminderResponseService responseService;
     @Autowired ContributionService contributionService;
     @Autowired DonorRepository donorRepository;
     @Autowired ReminderCaseRepository caseRepository;
@@ -244,6 +247,23 @@ class ReminderProjectTest {
         assertThat(caseOf(donor, projectId).getStatus()).isEqualTo(ReminderCaseStatus.REGLE);
         assertThat(caseOf(donor, projectId).getContribution()).isNotNull();
         assertThat(row(overview(projectId), donor).get("blockedCode").asText()).isEqualTo("PAID");
+    }
+
+    @Test
+    void alreadyPaidButNothingFoundAsksForTheReferenceAndAlertsTheTreasurers() throws Exception {
+        // « C'est déjà fait » sur une collecte sans don : l'alerte aux trésoriers plantait (dossier sans mois).
+        Donor donor = member("Dana", MemberRole.MEMBRE);
+        long projectId = project("Toiture", reminders(true, "ALL", null));
+        remind(donor, projectId).andExpect(status().isOk());
+        Long caseId = caseOf(donor, projectId).getId();
+
+        ReminderResponseService.Outcome outcome = responseService.respond(caseId, ReminderChannel.WHATSAPP,
+            ReminderResponseType.DONE, null, null, "C'est déjà fait", "wamid.done-" + tag).orElseThrow();
+
+        assertThat(outcome.reply()).startsWith("Nous ne retrouvons pas encore votre don.");
+        ReminderCase rc = caseOf(donor, projectId);
+        assertThat(rc.getStatus()).isEqualTo(ReminderCaseStatus.DECLARE_NON_RETROUVE);
+        assertThat(rc.isNeedsAttention()).isTrue();
     }
 
     @Test

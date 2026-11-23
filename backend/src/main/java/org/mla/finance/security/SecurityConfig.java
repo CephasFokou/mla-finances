@@ -85,6 +85,8 @@ public class SecurityConfig {
                     "/actuator/health/**",
                     "/actuator/info",
                     "/api/v1/status",
+                    // Page d'erreur Spring : sans elle, une exception sur une route publique (webhook) remontait en 401.
+                    "/error",
                     "/h2-console/**"
                 ).permitAll()
                 .anyRequest().authenticated()

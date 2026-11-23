@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
-import java.time.YearMonth;
 import java.util.List;
 
 /**
@@ -34,11 +33,14 @@ public class ReminderAlertService {
 
     public void declaredButNotFound(ReminderCase rc) {
         String name = rc.getDonor().getLabel();
-        String month = ReminderMessageRenderer.monthLabel(YearMonth.from(rc.getPeriodMonth()));
+        ReminderMotive motive = ReminderMotive.of(rc);
         String link = backOfficeUrl + "/reminders";
-        String subject = "Relances : " + name + " dit avoir payé " + month + " — à vérifier";
-        String html = "<p>Bonjour,</p><p><strong>" + HtmlUtils.htmlEscape(name) + "</strong> répond avoir déjà versé sa "
-            + "contribution de " + month + ", mais aucune contribution ni aucun paiement en cours n'est enregistré.</p>"
+        String subject = "Relances : " + name + " dit avoir payé " + (motive.isProject()
+            ? "sa participation à la collecte « " + motive.label() + " »" : motive.label()) + " — à vérifier";
+        String html = "<p>Bonjour,</p><p><strong>" + HtmlUtils.htmlEscape(name) + "</strong> répond avoir déjà versé "
+            + HtmlUtils.htmlEscape(motive.isProject() ? "sa participation à la collecte « " + motive.label() + " »"
+                : "sa contribution de " + motive.label())
+            + ", mais aucun versement ni aucun paiement en cours n'est enregistré.</p>"
             + "<p>S'il s'agit d'un paiement en espèces ou par virement, saisissez la contribution : le dossier sera clos "
             + "automatiquement. Sinon, sa réponse est à lire dans l'écran Relances (filtre « Non retrouvés ») :</p>"
             + "<p><a href=\"" + HtmlUtils.htmlEscape(link) + "\">" + HtmlUtils.htmlEscape(link) + "</a></p>";
