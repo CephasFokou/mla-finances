@@ -49,7 +49,9 @@ public record ReminderOverviewResponse(
         boolean canRemind,
         String blockedCode,
         String blockedReason,
-        boolean needsAttention
+        boolean needsAttention,
+        String lastResponse,
+        LocalDate promisedDate
     ) {
     }
 

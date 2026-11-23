@@ -31,9 +31,12 @@ function fold(value: string) {
 export function MonthlyContributionDialog({
   offer,
   onClose,
+  preset,
 }: {
   offer: PublicMonthlyOffer
   onClose: () => void
+  /** Lien « Contribuer maintenant » d'une relance : membre et mois déjà choisis, on commence aux mois. */
+  preset?: { memberId: number; months: string[] }
 }) {
   const { t } = useTranslation()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -46,11 +49,15 @@ export function MonthlyContributionDialog({
     return offer.months.includes(now) ? now : offer.months[Math.max(0, offer.months.length - 4)]
   }, [offer.months])
 
-  const [step, setStep] = useState(1)
+  const presetMember = preset ? offer.members.find((m) => m.id === preset.memberId) : undefined
+  const presetMonths = preset?.months.filter((m) => offer.months.includes(m)) ?? []
+  const [step, setStep] = useState(presetMember && presetMonths.length > 0 ? 2 : 1)
   const [query, setQuery] = useState('')
-  const [memberId, setMemberId] = useState<number | null>(null)
-  const [months, setMonths] = useState<string[]>(defaultMonth ? [defaultMonth] : [])
-  const [amount, setAmount] = useState('')
+  const [memberId, setMemberId] = useState<number | null>(presetMember?.id ?? null)
+  const [months, setMonths] = useState<string[]>(
+    presetMember && presetMonths.length > 0 ? presetMonths : defaultMonth ? [defaultMonth] : [],
+  )
+  const [amount, setAmount] = useState(presetMember ? String(presetMember.suggestedAmount) : '')
   const payment = usePaymentChoice(channels)
   const [error, setError] = useState<string | null>(null)
 

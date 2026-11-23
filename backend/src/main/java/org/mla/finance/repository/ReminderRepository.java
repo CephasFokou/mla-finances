@@ -23,6 +23,10 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
         + "and r.scheduledFor is not null and r.scheduledFor <= :now order by r.scheduledFor")
     List<Long> findDueQueuedIds(@Param("now") Instant now, Pageable pageable);
 
+    /** Dossiers ayant une réponse à lire (badge de la navigation). */
+    @Query("select count(c) from ReminderCase c where c.needsAttention = true")
+    long countNeedingAttention();
+
     @Query("select r from Reminder r where r.reminderCase.id = :caseId and r.sentAt is null and r.cancelledAt is null")
     List<Reminder> findQueuedByCase(@Param("caseId") Long caseId);
 }

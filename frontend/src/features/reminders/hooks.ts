@@ -62,6 +62,24 @@ export function useCloseReminderMutation() {
   })
 }
 
+export function useAcknowledgeReminderMutation() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (caseId: number) => remindersApi.acknowledge(caseId),
+    onSettled: invalidate,
+  })
+}
+
+/** Badge de la navigation : dossiers avec une réponse à lire ou un paiement déclaré non retrouvé. */
+export function useReminderAttentionQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: ['reminders', 'attention'],
+    queryFn: remindersApi.attention,
+    enabled,
+    refetchInterval: 60_000,
+  })
+}
+
 export function useReminderSettingsQuery() {
   return useQuery({ queryKey: ['reminder-settings'], queryFn: remindersApi.settings })
 }

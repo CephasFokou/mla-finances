@@ -122,17 +122,26 @@ causés (Caisse MLA à défaut), une par jour et par enveloppe, sans doublon. Va
 (vrai par défaut avec PawaPay), `MLA_FEES_SYNC_CRON`, `MLA_LEDGER_START` (début du contrôle d'écart si
 wallet-ledger ne renvoie pas de date d'ouverture). L'encart de solde de la page Retraits affiche l'écart.
 
-## Relances des contributions (lot 1 : email)
+## Relances des contributions (email + WhatsApp)
 
 Écran « Relances » (permission `SEND_REMINDERS`, par défaut SUPER_ADMIN et TRESORIER) : membres actifs du mois,
-contribution mensuelle réglée ou non, relance par email (Resend) individuelle avec aperçu, ou groupée. Règles :
-mois en cours seulement, à partir du 10, 3 jours d'attente sans réponse, 3 relances maximum par mois, envois
-entre 8 h et 20 h (heure de Douala ; hors plage, la relance est programmée pour 8 h). Une contribution mensuelle
-enregistrée clôt le dossier en « Réglé ». Un envoi dont aucun canal n'aboutit (ex. `RESEND_API_KEY` vide) est
-tracé mais ne compte pas. Réglages dans Administration → Relances. Variables : `PUBLIC_SITE_URL` (lien
-« Contribuer maintenant », défaut `PUBLIC_FRONTEND_ORIGIN` puis `https://don-mla.itc-services.xyz`),
-`REMINDER_QUEUE_POLL_MS`. WhatsApp (Kapso), réponses des membres, collectes relançables, suivi par référence et
-espace membre : lots suivants.
+contribution mensuelle réglée ou non, relance individuelle (aperçu email et WhatsApp) ou groupée. Règles : mois en cours
+seulement, à partir du 10, 3 relances maximum par mois (rappel programmé compris), envois entre 8 h et 20 h (Douala ;
+hors plage, programmée pour 8 h). Délais : 3 j sans réponse, 5 j après « Bien reçu », 48 h après « C'est déjà fait »
+non retrouvé, lendemain de la date promise. Une contribution mensuelle enregistrée clôt le dossier en « Réglé ». Réglages
+dans Administration → Relances.
+
+- **Email** (Resend) : boutons « Contribuer maintenant » (`/c/{jeton}` sur le site de don, membre et mois
+  présélectionnés), « Bien reçu » et « C'est déjà fait » (`/relance/{jeton}`, page de réponse). Jetons hachés en base,
+  valables jusqu'à la fin du mois.
+- **WhatsApp** (Kapso, modèles `mla_finance_*` approuvés par Meta) si le membre a un numéro. Réponses reçues par
+  `POST /api/v1/webhooks/kapso` (signature HMAC vérifiée, idempotence par wamid) : boutons, liste de dates, texte libre
+  (mots-clés, date, référence MLA-…). « C'est déjà fait » est toujours vérifié en base ; non retrouvé, les trésoriers
+  sont alertés par email et le dossier apparaît dans « Non retrouvés ». Le numéro est partagé avec le suivi des tâches
+  MLA (Apps Script), qui ignore les réponses `mlaf:` de MLA Finance.
+- Variables : `PUBLIC_SITE_URL`, `REMINDER_QUEUE_POLL_MS`, `KAPSO_ENABLED` (faux par défaut : email seul),
+  `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_WEBHOOK_SECRET`, `KAPSO_BASE_URL`.
+- Lots suivants : collectes relançables, suivi par référence, espace membre.
 
 ## Build
 

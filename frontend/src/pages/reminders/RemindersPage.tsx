@@ -6,6 +6,7 @@ import ui from '../../components/ui/ui.module.scss'
 import {
   useBulkReminderMutation,
   useCloseReminderMutation,
+  useAcknowledgeReminderMutation,
   useReminderCaseQuery,
   useReminderOverviewQuery,
   useReminderPreviewQuery,
@@ -22,7 +23,7 @@ import { ApiError } from '../../lib/apiClient'
 import { formatDate, formatDateTime, formatFcfa } from '../../lib/format'
 import styles from './RemindersPage.module.scss'
 
-type Filter = 'all' | 'unpaid' | 'remindable' | 'reminded'
+type Filter = 'all' | 'unpaid' | 'remindable' | 'reminded' | 'toRead' | 'notFound'
 
 const MONTH_PILL: Record<ReminderMonthStatus, string | undefined> = {
   PAID: ui.pillGreen,
@@ -33,6 +34,10 @@ const MONTH_PILL: Record<ReminderMonthStatus, string | undefined> = {
 const CASE_PILL: Partial<Record<ReminderCaseStatus, string | undefined>> = {
   A_RELANCER: ui.pillGrey,
   EN_ATTENTE_REPONSE: ui.pillNavy,
+  ACCUSE: ui.pillNavy,
+  PROMIS: ui.pillNavy,
+  VERIFICATION: ui.pillAmber,
+  DECLARE_NON_RETROUVE: ui.pillRed,
   REGLE: ui.pillGreen,
   SANS_SUITE: ui.pillGrey,
 }
@@ -66,6 +71,10 @@ export function RemindersPage() {
         return all.filter((r) => r.monthStatus !== 'PAID')
       case 'remindable':
         return all.filter((r) => r.canRemind)
+      case 'toRead':
+        return all.filter((r) => r.needsAttention)
+      case 'notFound':
+        return all.filter((r) => r.caseStatus === 'DECLARE_NON_RETROUVE')
       case 'reminded':
         return all.filter((r) => r.reminderCount > 0)
       default:
@@ -178,7 +187,7 @@ export function RemindersPage() {
           />
         </label>
         <div className={ui.seg} role="tablist" aria-label={t('reminders.filters.label')}>
-          {(['unpaid', 'remindable', 'reminded', 'all'] as Filter[]).map((f) => (
+          {(['unpaid', 'remindable', 'toRead', 'notFound', 'reminded', 'all'] as Filter[]).map((f) => (
             <button
               key={f}
               type="button"
@@ -298,6 +307,16 @@ export function RemindersPage() {
                         </button>
                       ) : (
                         <span className={ui.cellSub}>—</span>
+                      )}
+                      {row.caseStatus === 'PROMIS' && row.promisedDate && (
+                        <div className={ui.cellSub}>
+                          {t('reminders.promisedOn', { date: formatDate(row.promisedDate) })}
+                        </div>
+                      )}
+                      {row.needsAttention && (
+                        <div>
+                          <span className={`${ui.pill} ${ui.pillAmber}`}>{t('reminders.toRead')}</span>
+                        </div>
                       )}
                     </td>
                     <td>
@@ -434,6 +453,12 @@ function PreviewDialog({
                     })
                   : t('reminders.preview.noChannel')}
               </p>
+              {data.whatsappText && (
+                <>
+                  <p className={ui.cellMain}>{t('reminders.preview.whatsapp')}</p>
+                  <pre className={styles.whatsappPreview}>{data.whatsappText}</pre>
+                </>
+              )}
               <p className={ui.cellMain}>{data.subject}</p>
               <iframe
                 title={t('reminders.preview.frameTitle')}
@@ -563,6 +588,7 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
   const errorMessage = useErrorMessage()
   const { data, isLoading, isError } = useReminderCaseQuery(row.caseId)
   const closeMutation = useCloseReminderMutation()
+  const ackMutation = useAcknowledgeReminderMutation()
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -603,7 +629,20 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
                   {t(`reminders.caseStatus.${data.status}`)}
                 </span>{' '}
                 {data.monthLabel}
+                {data.status === 'PROMIS' && data.promisedDate
+                  ? ` · ${t('reminders.promisedOn', { date: formatDate(data.promisedDate) })}`
+                  : ''}
               </p>
+              {data.needsAttention && (
+                <div className={`${ui.banner} ${ui.bannerAmber}`} role="status">
+                  <Icon name="alert" size={16} />
+                  <div>
+                    {data.status === 'DECLARE_NON_RETROUVE'
+                      ? t('reminders.case.notFoundHint')
+                      : t('reminders.case.toReadHint')}
+                  </div>
+                </div>
+              )}
               <ol className={styles.timeline}>
                 {data.reminders.map((r) => (
                   <li key={r.id}>
@@ -629,6 +668,18 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
                         {d.error ? ` (${d.error})` : ''}
                       </div>
                     ))}
+                  </li>
+                ))}
+                {data.responses.map((r, i) => (
+                  <li key={`r${i}`}>
+                    <div className={ui.cellMain}>
+                      {t(`reminders.response.${r.type}`)}
+                      {' · '}
+                      {t(`reminders.channel.${r.channel}`)}
+                    </div>
+                    <div className={ui.cellSub}>{formatDateTime(r.receivedAt)}</div>
+                    {r.text && r.channel === 'WHATSAPP' && <div className={styles.quote}>« {r.text} »</div>}
+                    {r.outcome && <div className={ui.cellSub}>{r.outcome}</div>}
                   </li>
                 ))}
                 {data.closedAt && (
@@ -666,6 +717,16 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
           <button type="button" className={`${ui.btn} ${ui.btnSecondary}`} onClick={onClose}>
             {t('reminders.close')}
           </button>
+          {data?.needsAttention && (
+            <button
+              type="button"
+              className={`${ui.btn} ${ui.btnPrimary}`}
+              disabled={ackMutation.isPending}
+              onClick={() => void ackMutation.mutateAsync(data.id).catch((e) => setError(errorMessage(e)))}
+            >
+              {t('reminders.case.markRead')}
+            </button>
+          )}
           {open && (
             <button
               type="button"

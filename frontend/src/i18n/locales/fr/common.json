@@ -15,7 +15,9 @@
     "logout": "Se déconnecter",
     "paymentTransactions": "Dons en ligne",
     "members": "Membres",
-    "reminders": "Relances"
+    "reminders": "Relances",
+    "remindersToRead_one": "{{count}} réponse à lire",
+    "remindersToRead_other": "{{count}} réponses à lire"
   },
   "login": {
     "title": "Connexion",
@@ -965,7 +967,9 @@
       "unpaid": "Non payés",
       "remindable": "Relançables maintenant",
       "reminded": "Déjà relancés",
-      "all": "Tous"
+      "all": "Tous",
+      "toRead": "Réponse à lire",
+      "notFound": "Non retrouvés"
     },
     "columns": {
       "member": "Membre",
@@ -1013,7 +1017,7 @@
     "trigger": {
       "MANUAL": "manuelle",
       "BULK": "groupée",
-      "SCHEDULED": "programmée"
+      "SCHEDULED": "rappel à la date promise"
     },
     "count": "{{count}}/{{max}}",
     "scheduledFor": "Programmée pour le {{date}}",
@@ -1031,7 +1035,8 @@
       "noChannel": "Aucun canal disponible pour ce membre.",
       "frameTitle": "Aperçu de l'email de relance",
       "error": "Impossible de charger l'aperçu.",
-      "send": "Envoyer la relance"
+      "send": "Envoyer la relance",
+      "whatsapp": "WhatsApp"
     },
     "bulk": {
       "button_one": "Relancer la sélection ({{count}})",
@@ -1055,7 +1060,20 @@
       "contribution": "Voir la contribution #{{id}}",
       "closeLabel": "Clore sans suite (ex. membre dispensé ce mois)",
       "closePlaceholder": "Motif de la clôture",
-      "closeAction": "Clore sans suite"
+      "closeAction": "Clore sans suite",
+      "markRead": "Marquer comme lu",
+      "toReadHint": "Le membre a envoyé un message que le système n'a pas su interpréter : lisez-le, puis marquez-le comme lu.",
+      "notFoundHint": "Le membre dit avoir payé mais rien n'est enregistré. S'il a payé en espèces ou par virement, saisissez la contribution : le dossier sera clos automatiquement."
+    },
+    "promisedOn": "Promis le {{date}}",
+    "toRead": "Réponse à lire",
+    "response": {
+      "ACK": "Bien reçu",
+      "PROMISE": "Date promise",
+      "UNSURE": "Ne sait pas encore",
+      "DONE": "« C'est déjà fait »",
+      "REFERENCE": "Référence de paiement",
+      "FREE_TEXT": "Message libre"
     }
   },
   "reminderSettings": {
@@ -1075,10 +1093,10 @@
       "openFromDay": "Entre {{min}} et {{max}}.",
       "cooldownNoResponseDays": "Entre {{min}} et {{max}}.",
       "maxPerMonth": "Entre {{min}} et {{max}}.",
-      "cooldownAckDays": "Utilisé avec les réponses WhatsApp (à venir).",
-      "cooldownNotFoundHours": "Utilisé avec les réponses WhatsApp (à venir)."
+      "cooldownAckDays": "Après la réponse « Bien reçu » (WhatsApp ou email). Entre {{min}} et {{max}}.",
+      "cooldownNotFoundHours": "Après « C'est déjà fait » sans paiement retrouvé. Entre {{min}} et {{max}}."
     },
-    "nextLots": "Les réponses des membres (« Bien reçu », date promise, « C'est déjà fait ») et l'envoi WhatsApp arrivent avec l'intégration Kapso.",
+    "nextLots": "Les relances partent par WhatsApp (si le membre a un numéro) et par email. Le rappel automatique part à 9 h le jour promis par le membre.",
     "save": "Enregistrer",
     "saved": "Réglages enregistrés.",
     "invalid": "Vérifiez les valeurs : nombres entiers dans les bornes indiquées, et fin de plage après son début.",

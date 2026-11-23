@@ -3,6 +3,7 @@ package org.mla.finance.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.reminder.ContributionRecordedEvent;
+import org.mla.finance.reminder.PaymentAbandonedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.mla.finance.domain.Contribution;
 import org.mla.finance.domain.Donor;
@@ -134,6 +135,7 @@ public class PaymentTransactionService {
         transaction.setNextCheckAt(null);
         transaction.setNeedsReview(false);
         PaymentTransaction saved = paymentTransactionRepository.save(transaction);
+        publishAbandoned(saved);
 
         auditLogService.record("PAYMENT_TRANSACTION", saved.getId(), "CANCEL",
             "Don en ligne " + saved.getReference() + " annulé : " + request.reason());
@@ -197,6 +199,7 @@ public class PaymentTransactionService {
             }
             case FAILED, NOT_FOUND -> {
                 tx.setStatus(PaymentTransactionStatus.FAILED);
+                publishAbandoned(tx);
                 tx.setProviderStatus(outcome.providerStatus());
                 tx.setFailureCode(outcome.failureCode());
                 tx.setFailureMessage(outcome.failureMessage());
@@ -368,5 +371,12 @@ public class PaymentTransactionService {
     private PaymentTransaction find(Long id) {
         return paymentTransactionRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Don en ligne introuvable : " + id));
+    }
+
+    /** Relances : un dossier « En vérification » redevient relançable quand le paiement n'aboutit pas. */
+    private void publishAbandoned(PaymentTransaction tx) {
+        if (tx.isMonthlyContribution() && tx.getDonor() != null) {
+            eventPublisher.publishEvent(new PaymentAbandonedEvent(tx.getDonor().getId(), List.copyOf(tx.getCoveredMonths())));
+        }
     }
 }

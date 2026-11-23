@@ -113,6 +113,20 @@ app:
     public-site-url: ${PUBLIC_SITE_URL:${PUBLIC_FRONTEND_ORIGIN:https://don-mla.itc-services.xyz}}
     # Fréquence du job qui envoie les relances mises en file hors plage horaire (8 h - 20 h, Africa/Douala).
     queue-poll-ms: ${REMINDER_QUEUE_POLL_MS:60000}
+  kapso:
+    # WhatsApp des relances via Kapso (voir reminder/whatsapp). Désactivé tant que KAPSO_ENABLED n'est pas vrai :
+    # les relances partent alors par email seulement. Numéro partagé avec le suivi des tâches MLA (« ICC-ChatBot »).
+    enabled: ${KAPSO_ENABLED:false}
+    base-url: ${KAPSO_BASE_URL:https://api.kapso.ai}
+    api-key: ${KAPSO_API_KEY:}
+    phone-number-id: ${KAPSO_PHONE_NUMBER_ID:}
+    # Secret de signature du webhook (POST /api/v1/webhooks/kapso), donné par Kapso à la création du webhook.
+    webhook-secret: ${KAPSO_WEBHOOK_SECRET:}
+    language: fr
+    # Modèles approuvés par Meta le 22/11/2026.
+    template-monthly: mla_finance_relance_contribution
+    template-project: mla_finance_relance_collecte
+    template-promise: mla_finance_rappel_promesse
   rate-limit:
     # Limitation de débit par adresse IP sur les surfaces non authentifiées (voir
     # security/RateLimitFilter). Fenêtre glissante d'une minute, 429 + Retry-After au-delà.

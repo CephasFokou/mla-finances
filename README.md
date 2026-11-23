@@ -8,7 +8,8 @@ back-office (voir « Décaissement des retraits par Mobile Money » dans `backen
 décaissé a un bon de décaissement PDF téléchargeable, et un retrait est validé par une autre personne que
 celle qui l'a saisi (sauf super administrateur, auto-validation tracée). Les frais Mobile Money sont enregistrés
 automatiquement chaque matin, et la page Retraits signale tout écart avec le solde Mobile Money réel. Les membres
-qui n'ont pas versé leur contribution du mois peuvent être relancés par email depuis l'écran Relances.
+qui n'ont pas versé leur contribution du mois peuvent être relancés par email et WhatsApp depuis l'écran Relances,
+et leurs réponses (« Bien reçu », date promise, « C'est déjà fait ») sont suivies automatiquement.
 
 Monorepo :
 - `backend/` — API Spring Boot 3 / Java 21 / PostgreSQL / Liquibase (voir `backend/README.md`), sert aussi bien le back-office authentifié que les endpoints publics (`/api/v1/public/**`) consommés par le site de don.

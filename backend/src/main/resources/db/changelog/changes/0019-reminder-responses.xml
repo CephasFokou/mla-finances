@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Module Relances, lot 2 : WhatsApp (Kapso), réponses des membres, liens signés des emails et du bouton
+         « Contribuer maintenant », rappel programmé à la date promise. -->
+
+    <!-- RELANCE : relance envoyée par un admin (ou groupée) ; PROMISE : rappel automatique le jour promis. -->
+    <changeSet id="0019-01-reminder-kind" author="mla-finance">
+        <addColumn tableName="reminders">
+            <column name="kind" type="VARCHAR(20)" defaultValue="RELANCE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <createIndex tableName="reminder_deliveries" indexName="idx_reminder_deliveries_provider_msg">
+            <column name="provider_message_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Réponse d'un membre (bouton, liste, texte libre WhatsApp, ou page de réponse des emails). Unicité de
+         provider_message_id (wamid) : un webhook rejoué n'est jamais traité deux fois. -->
+    <changeSet id="0019-02-reminder-responses" author="mla-finance">
+        <createTable tableName="reminder_responses">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="case_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_reminder_responses_case" references="reminder_cases(id)"/>
+            </column>
+            <!-- EMAIL ou WHATSAPP. -->
+            <column name="channel" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ACK, PROMISE, UNSURE, DONE, REFERENCE ou FREE_TEXT. -->
+            <column name="response_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="promised_date" type="DATE"/>
+            <!-- Texte reçu (tronqué) : ce qu'il faut lire pour une réponse non reconnue. -->
+            <column name="raw_text" type="VARCHAR(500)"/>
+            <column name="provider_message_id" type="VARCHAR(120)">
+                <constraints unique="true" uniqueConstraintName="uq_reminder_responses_provider_msg"/>
+            </column>
+            <!-- Ce que le système en a conclu (« Contribution retrouvée », « Date promise : 25/11 »…). -->
+            <column name="outcome" type="VARCHAR(300)"/>
+            <column name="received_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="reminder_responses" indexName="idx_reminder_responses_case">
+            <column name="case_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Jetons des liens envoyés aux membres : stockés hachés (SHA-256), jamais en clair. REMINDER_ACTION : page de
+         réponse d'un email ; CONTRIBUTE : bouton « Contribuer maintenant » (membre et mois présélectionnés). -->
+    <changeSet id="0019-03-access-tokens" author="mla-finance">
+        <createTable tableName="access_tokens">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="token_hash" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_access_tokens_hash"/>
+            </column>
+            <column name="purpose" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="donor_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_access_tokens_donor" references="donors(id)"/>
+            </column>
+            <column name="case_id" type="BIGINT">
+                <constraints foreignKeyName="fk_access_tokens_case" references="reminder_cases(id)"/>
+            </column>
+            <column name="period_month" type="DATE"/>
+            <column name="expires_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

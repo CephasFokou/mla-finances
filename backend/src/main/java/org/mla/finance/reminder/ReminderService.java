@@ -1,6 +1,7 @@
 package org.mla.finance.reminder;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.mla.finance.domain.AccessTokenPurpose;
 import org.mla.finance.domain.Contribution;
 import org.mla.finance.domain.Donor;
 import org.mla.finance.domain.MemberStatus;
@@ -12,6 +13,7 @@ import org.mla.finance.domain.ReminderCaseStatus;
 import org.mla.finance.domain.ReminderChannel;
 import org.mla.finance.domain.ReminderDelivery;
 import org.mla.finance.domain.ReminderDeliveryStatus;
+import org.mla.finance.domain.ReminderKind;
 import org.mla.finance.domain.ReminderReason;
 import org.mla.finance.domain.ReminderSettings;
 import org.mla.finance.domain.ReminderTrigger;
@@ -27,6 +29,7 @@ import org.mla.finance.repository.PaymentTransactionRepository;
 import org.mla.finance.repository.ReminderCaseRepository;
 import org.mla.finance.repository.ReminderDeliveryRepository;
 import org.mla.finance.repository.ReminderRepository;
+import org.mla.finance.repository.ReminderResponseRepository;
 import org.mla.finance.repository.ReminderSettingsRepository;
 import org.mla.finance.service.AuditLogService;
 import org.mla.finance.service.CurrentUserProvider;
@@ -88,6 +91,7 @@ public class ReminderService {
     private static final Set<ReminderCaseStatus> CLOSED = EnumSet.of(ReminderCaseStatus.REGLE, ReminderCaseStatus.SANS_SUITE);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DAY_TIME = DateTimeFormatter.ofPattern("dd/MM 'à' HH:mm");
+    private static final DateTimeFormatter DAY_SHORT = DateTimeFormatter.ofPattern("dd/MM");
 
     private final ReminderSettingsRepository settingsRepository;
     private final ReminderCaseRepository caseRepository;
@@ -103,6 +107,8 @@ public class ReminderService {
     private final AuditLogService auditLogService;
     private final CurrentUserProvider currentUserProvider;
     private final TransactionTemplate requiresNew;
+    private final AccessTokenService tokenService;
+    private final ReminderResponseRepository responseRepository;
 
     public ReminderService(ReminderSettingsRepository settingsRepository, ReminderCaseRepository caseRepository,
                            ReminderRepository reminderRepository, ReminderDeliveryRepository deliveryRepository,
@@ -111,7 +117,10 @@ public class ReminderService {
                            MonthlyContributionSettingsRepository monthlySettingsRepository,
                            ReminderMessageRenderer renderer, List<NotificationChannel> channels, ReminderClock clock,
                            AuditLogService auditLogService, CurrentUserProvider currentUserProvider,
-                           PlatformTransactionManager transactionManager) {
+                           PlatformTransactionManager transactionManager, AccessTokenService tokenService,
+                           ReminderResponseRepository responseRepository) {
+        this.tokenService = tokenService;
+        this.responseRepository = responseRepository;
         this.settingsRepository = settingsRepository;
         this.caseRepository = caseRepository;
         this.reminderRepository = reminderRepository;
@@ -196,7 +205,8 @@ public class ReminderService {
                 last == null ? null : last.getSentAt(), last == null ? null : last.getScheduledFor(), lastDeliveries,
                 rc == null ? null : rc.getNextAllowedAt(), block.isEmpty(),
                 block.map(b -> b.code().name()).orElse(null), block.map(Blocked::message).orElse(null),
-                rc != null && rc.isNeedsAttention()));
+                rc != null && rc.isNeedsAttention(), rc == null ? null : rc.getLastResponse(),
+                rc == null ? null : rc.getPromisedDate()));
         }
         return new ReminderOverviewResponse(month.toString(), ReminderMessageRenderer.monthLabel(month),
             month.equals(currentMonth(now)), settings.isEnabled(), month.atDay(settings.getOpenFromDay()),
@@ -210,13 +220,15 @@ public class ReminderService {
         Instant now = clock.now();
         YearMonth month = monthParam == null || monthParam.isBlank() ? currentMonth(now) : parseMonth(monthParam);
         Donor donor = findDonor(donorId);
-        ReminderMessage message = renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()));
+        ReminderMessage message = renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()),
+            ReminderLinks.preview());
         ReminderCase rc = caseRepository.findByDonorIdAndReasonAndCaseKey(donorId, ReminderReason.MONTHLY_CONTRIBUTION,
             ReminderCase.monthKey(month.atDay(1))).orElse(null);
         Facts facts = facts(donor, month, rc);
         Optional<Blocked> block = isActiveMember(donor) ? evaluate(settings(), month, now, facts, rc)
             : Optional.of(new Blocked(ReminderBlock.CLOSED, "Ce donateur n'est pas un membre actif du MLA."));
         return new ReminderPreviewResponse(message.subject(), message.html(), message.text(),
+            ReminderMessageRenderer.whatsappText(message.whatsapp()),
             facts.targets().stream().map(t -> new ReminderPreviewResponse.Target(t.channel().channel(), mask(t))).toList(),
             block.isEmpty(), block.map(Blocked::message).orElse(null));
     }
@@ -230,7 +242,7 @@ public class ReminderService {
             : deliveryRepository.findByReminderIdInOrderByIdAsc(reminders.stream().map(Reminder::getId).toList()).stream()
                 .collect(Collectors.groupingBy(d -> d.getReminder().getId()));
         List<ReminderCaseDetailResponse.Entry> entries = reminders.stream().map(r -> new ReminderCaseDetailResponse.Entry(
-            r.getId(), r.getSequenceNo(), r.getTrigger(), r.getSentBy() == null ? null : r.getSentBy().getFullName(),
+            r.getId(), r.getSequenceNo(), r.getTrigger(), r.getKind().name(), r.getSentBy() == null ? null : r.getSentBy().getFullName(),
             r.getCreatedAt(), r.getScheduledFor(), r.getSentAt(), r.getCancelledAt(), r.getMessageSnapshot(),
             deliveries.getOrDefault(r.getId(), List.of()).stream().map(d -> new ReminderCaseDetailResponse.Delivery(
                 d.getChannel(), maskRecipient(d.getChannel(), d.getRecipient()), d.getStatus(), d.getError(), d.getUpdatedAt()))
@@ -240,7 +252,10 @@ public class ReminderService {
             month == null ? null : month.toString(), month == null ? null : ReminderMessageRenderer.monthLabel(month),
             rc.getStatus(), rc.getReminderCount(), rc.getNextAllowedAt(), rc.getCreatedAt(), rc.getClosedAt(),
             rc.getClosedReason(), rc.getClosedBy() == null ? null : rc.getClosedBy().getFullName(),
-            rc.getContribution() == null ? null : rc.getContribution().getId(), entries);
+            rc.getContribution() == null ? null : rc.getContribution().getId(), rc.isNeedsAttention(), rc.getPromisedDate(),
+            entries, responseRepository.findByReminderCaseIdOrderByReceivedAtAsc(caseId).stream()
+                .map(x -> new ReminderCaseDetailResponse.Response(x.getChannel(), x.getType().name(), x.getPromisedDate(),
+                    x.getRawText(), x.getOutcome(), x.getReceivedAt())).toList());
     }
 
     // ------------------------------------------------------------------------------------------------ envoi
@@ -273,7 +288,9 @@ public class ReminderService {
                     + ") et le mois se termine avant la prochaine ouverture : relance impossible.");
         }
 
-        ReminderMessage message = renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()));
+        ReminderMessage message = inWindow
+            ? renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()), links(rc))
+            : renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()), ReminderLinks.preview());
         User actor = currentUserProvider.currentOrNull();
         Reminder reminder = reminderRepository.save(Reminder.builder()
             .reminderCase(rc)
@@ -299,6 +316,8 @@ public class ReminderService {
             rc.setReminderCount(rc.getReminderCount() + 1);
             rc.setStatus(ReminderCaseStatus.EN_ATTENTE_REPONSE);
             rc.setNextAllowedAt((inWindow ? now : scheduledFor).plus(Duration.ofDays(settings.getCooldownNoResponseDays())));
+            rc.setPromisedDate(null);
+            rc.setNeedsAttention(false);
             // Dossier « Réglé » rouvert : la contribution qui l'avait clos a été annulée depuis.
             rc.setClosedAt(null);
             rc.setClosedReason(null);
@@ -407,19 +426,28 @@ public class ReminderService {
             log.info("Relance programmée #{} annulée : {}", reminderId, cancel);
             return;
         }
-        ReminderMessage message = renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()));
+        boolean promise = reminder.getKind() == ReminderKind.PROMISE;
+        ReminderMessage message = promise
+            ? renderer.promise(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()), links(rc))
+            : renderer.monthly(donor, month, monthlySettings().suggestedAmount(donor.getMemberRole()), links(rc));
         reminder.setMessageSnapshot(message.text());
         List<ReminderDelivery> deliveries = dispatch(reminder, facts.targets(), message);
         reminder.setSentAt(now);
         boolean delivered = deliveries.stream().anyMatch(d -> d.getStatus() != ReminderDeliveryStatus.FAILED);
-        if (delivered) {
+        if (delivered && promise) {
+            // Rappel du jour promis : le bouton de l'admin reste débloqué le lendemain de la date promise.
+            auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_SENT",
+                "Rappel automatique (date promise) envoyé à " + donor.getLabel());
+        } else if (delivered) {
             rc.setNextAllowedAt(now.plus(Duration.ofDays(settings.getCooldownNoResponseDays())));
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_SENT",
                 "Relance programmée n°" + rc.getReminderCount() + " envoyée à " + donor.getLabel());
         } else {
             // Aucun canal n'a abouti : la relance ne compte pas et le bouton redevient disponible tout de suite.
             rc.setReminderCount(Math.max(0, rc.getReminderCount() - 1));
-            rc.setNextAllowedAt(now);
+            if (!promise) {
+                rc.setNextAllowedAt(now);
+            }
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_FAILED",
                 "Relance programmée de " + donor.getLabel() + " non envoyée : aucun canal n'a abouti");
         }
@@ -503,7 +531,7 @@ public class ReminderService {
         return open.size();
     }
 
-    private void closeAsPaid(ReminderCase rc, Instant now) {
+    public void closeAsPaid(ReminderCase rc, Instant now) {
         List<Contribution> entries = contributionRepository.monthlyEntries(rc.getDonor().getId(), rc.getPeriodMonth());
         Contribution closing = entries.stream().filter(c -> c.getAmount().signum() > 0).findFirst().orElse(null);
         rc.setStatus(ReminderCaseStatus.REGLE);
@@ -519,7 +547,7 @@ public class ReminderService {
     }
 
     /** Une relance programmée qui ne part pas n'est pas comptée dans le maximum. */
-    private void cancelQueued(ReminderCase rc, Reminder reminder, Instant now) {
+    public void cancelQueued(ReminderCase rc, Reminder reminder, Instant now) {
         if (!reminder.isQueued()) {
             return;
         }
@@ -532,17 +560,17 @@ public class ReminderService {
 
     // ------------------------------------------------------------------------------------------------ règles
 
-    record Target(NotificationChannel channel, String recipient) {
+    public record Target(NotificationChannel channel, String recipient) {
     }
 
     /** Faits du mois pour un membre : réglé, paiement en cours, canaux joignables, relance déjà en file. */
-    record Facts(boolean paid, boolean inProgress, List<Target> targets, boolean hasPhone, boolean queued) {
+    public record Facts(boolean paid, boolean inProgress, List<Target> targets, boolean hasPhone, boolean queued) {
     }
 
     record Blocked(ReminderBlock code, String message) {
     }
 
-    private Facts facts(Donor donor, YearMonth month, ReminderCase rc) {
+    public Facts facts(Donor donor, YearMonth month, ReminderCase rc) {
         LocalDate monthDate = month.atDay(1);
         boolean paid = contributionRepository.donorsWithMonthlyContribution(monthDate).contains(donor.getId());
         boolean inProgress = paymentTransactionRepository.donorsWithPaymentInProgress(monthDate).contains(donor.getId());
@@ -584,10 +612,17 @@ public class ReminderService {
             return blocked(ReminderBlock.MAX_REACHED,
                 "Maximum de " + settings.getMaxPerMonth() + " relances atteint pour ce mois.");
         }
-        if (rc != null && rc.getStatus() != ReminderCaseStatus.REGLE && rc.getNextAllowedAt() != null
-            && now.isBefore(rc.getNextAllowedAt())) {
-            return blocked(ReminderBlock.COOLDOWN, "Relancé, sans réponse — relance possible à partir du "
-                + rc.getNextAllowedAt().atZone(ReminderClock.ZONE).format(DAY_TIME) + ".");
+        if (rc != null && rc.getStatus() != ReminderCaseStatus.REGLE && rc.getStatus() != ReminderCaseStatus.VERIFICATION
+            && rc.getNextAllowedAt() != null && now.isBefore(rc.getNextAllowedAt())) {
+            String from = rc.getNextAllowedAt().atZone(ReminderClock.ZONE).format(DAY_TIME);
+            String why = switch (rc.getStatus()) {
+                case ACCUSE -> "Le membre a répondu « Bien reçu »";
+                case PROMIS -> rc.getPromisedDate() == null ? "Le membre a promis une date"
+                    : "Le membre prévoit de payer le " + rc.getPromisedDate().format(DAY_SHORT);
+                case DECLARE_NON_RETROUVE -> "Le membre dit avoir payé (non retrouvé, à vérifier)";
+                default -> "Relancé, sans réponse";
+            };
+            return blocked(ReminderBlock.COOLDOWN, why + " — relance possible à partir du " + from + ".");
         }
         if (facts.targets().isEmpty()) {
             boolean whatsappEnabled = channels.stream().anyMatch(c -> c.channel() == ReminderChannel.WHATSAPP
@@ -655,6 +690,53 @@ public class ReminderService {
         }
     }
 
+    /** Jetons neufs pour les liens d'une relance qui part maintenant (page de réponse, « Contribuer maintenant »). */
+    public ReminderLinks links(ReminderCase rc) {
+        return new ReminderLinks(rc.getId(), tokenService.issue(AccessTokenPurpose.REMINDER_ACTION, rc),
+            tokenService.issue(AccessTokenPurpose.CONTRIBUTE, rc));
+    }
+
+    /** « Réponse lue » : retire le dossier du badge et du filtre « Réponse à lire ». */
+    @Transactional
+    public ReminderCaseDetailResponse acknowledge(Long caseId) {
+        ReminderCase rc = caseRepository.findByIdForUpdate(caseId)
+            .orElseThrow(() -> new EntityNotFoundException("Dossier de relance introuvable : " + caseId));
+        if (rc.isNeedsAttention()) {
+            rc.setNeedsAttention(false);
+            auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_RESPONSE_READ",
+                "Réponse de " + rc.getDonor().getLabel() + " lue");
+        }
+        return detail(caseId);
+    }
+
+    @Transactional(readOnly = true)
+    public long attentionCount() {
+        return reminderRepository.countNeedingAttention();
+    }
+
+    /**
+     * Paiement échoué ou abandonné : un dossier « En vérification » sur ce mois redevient relançable tout de suite
+     * (cadrage §3, ligne VERIFICATION).
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onPaymentAbandoned(PaymentAbandonedEvent event) {
+        if (event.donorId() == null) {
+            return;
+        }
+        Instant now = clock.now();
+        for (LocalDate month : event.months()) {
+            caseRepository.findForUpdate(event.donorId(), ReminderReason.MONTHLY_CONTRIBUTION, ReminderCase.monthKey(month))
+                .filter(rc -> rc.getStatus() == ReminderCaseStatus.VERIFICATION)
+                .ifPresent(rc -> {
+                    rc.setStatus(ReminderCaseStatus.EN_ATTENTE_REPONSE);
+                    rc.setNextAllowedAt(now);
+                    auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_REOPENED",
+                        "Paiement de " + rc.getDonor().getLabel() + " non abouti : dossier de nouveau relançable");
+                });
+        }
+    }
+
     // ------------------------------------------------------------------------------------------------ outils
 
     static boolean inWindow(Instant now, ReminderSettings settings) {
@@ -668,7 +750,7 @@ public class ReminderService {
         return day.atTime(settings.getSendWindowStart()).atZone(ReminderClock.ZONE).toInstant();
     }
 
-    static YearMonth currentMonth(Instant now) {
+    public static YearMonth currentMonth(Instant now) {
         return YearMonth.from(now.atZone(ReminderClock.ZONE));
     }
 
@@ -680,11 +762,11 @@ public class ReminderService {
         }
     }
 
-    private ReminderSettings settings() {
+    public ReminderSettings settings() {
         return settingsRepository.findById(ReminderSettings.SINGLETON_ID).orElseGet(ReminderSettings::new);
     }
 
-    private MonthlyContributionSettings monthlySettings() {
+    public MonthlyContributionSettings monthlySettings() {
         return monthlySettingsRepository.findById(MonthlyContributionSettings.SINGLETON_ID).orElseGet(MonthlyContributionSettings::new);
     }
 

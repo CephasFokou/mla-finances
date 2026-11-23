@@ -25,12 +25,21 @@ public record ReminderCaseDetailResponse(
     String closedReason,
     String closedBy,
     Long contributionId,
-    List<Entry> reminders
+    boolean needsAttention,
+    java.time.LocalDate promisedDate,
+    List<Entry> reminders,
+    List<Response> responses
 ) {
+    /** Réponse du membre : ce qu'il a envoyé et ce que le système en a conclu. */
+    public record Response(ReminderChannel channel, String type, java.time.LocalDate promisedDate, String text,
+                           String outcome, Instant receivedAt) {
+    }
+
     public record Entry(
         Long id,
         int sequenceNo,
         ReminderTrigger trigger,
+        String kind,
         String sentBy,
         Instant createdAt,
         Instant scheduledFor,

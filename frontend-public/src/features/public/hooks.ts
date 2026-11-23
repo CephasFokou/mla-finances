@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { publicDonationApi } from './api'
-import type { PublicDonationInput, PublicDonationStatus, PublicMonthlyContributionInput } from './types'
+import type {
+  PublicDonationInput,
+  PublicDonationStatus,
+  PublicMonthlyContributionInput,
+  ReminderAction,
+} from './types'
 
 const FINAL_STATUSES: PublicDonationStatus[] = ['CONFIRMED', 'FAILED', 'CANCELLED']
 /** Fréquence du suivi d'un don en ligne : 3 s (≈ 20 req/min, sous la limite publique de 60/min). */
@@ -54,5 +59,30 @@ export function usePublicMonthlyOfferQuery() {
   return useQuery({
     queryKey: ['public-monthly-contribution'],
     queryFn: publicDonationApi.monthlyContribution,
+  })
+}
+
+/** Lien « Contribuer maintenant » d'une relance (/c/{jeton}) : un lien expiré n'est pas réessayé. */
+export function useContributionLinkQuery(token: string | null) {
+  return useQuery({
+    queryKey: ['contribution-link', token],
+    queryFn: () => publicDonationApi.contributionLink(token as string),
+    enabled: !!token,
+    retry: false,
+  })
+}
+
+export function useReminderActionQuery(token: string) {
+  return useQuery({
+    queryKey: ['reminder-action', token],
+    queryFn: () => publicDonationApi.reminderAction(token),
+    retry: false,
+  })
+}
+
+export function useAnswerReminderMutation(token: string) {
+  return useMutation({
+    mutationFn: ({ action, date }: { action: ReminderAction; date?: string }) =>
+      publicDonationApi.answerReminder(token, action, date),
   })
 }

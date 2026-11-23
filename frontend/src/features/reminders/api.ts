@@ -23,6 +23,9 @@ export const remindersApi = {
     apiClient.post<ReminderBulkResult>('/reminders/bulk', { donorIds, month }),
   closeForMember: (donorId: number, month: string, reason: string) =>
     apiClient.post<ReminderCaseDetail>('/reminders/close', { donorId, month, reason }),
+  acknowledge: (caseId: number) =>
+    apiClient.post<ReminderCaseDetail>(`/reminders/cases/${caseId}/acknowledge`),
+  attention: () => apiClient.get<{ count: number }>('/reminders/attention'),
   settings: () => apiClient.get<ReminderSettings>('/reminder-settings'),
   updateSettings: (input: ReminderSettingsInput) =>
     apiClient.put<ReminderSettings>('/reminder-settings', input),
