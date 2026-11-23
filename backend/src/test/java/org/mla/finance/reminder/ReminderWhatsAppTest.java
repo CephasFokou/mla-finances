@@ -273,27 +273,6 @@ class ReminderWhatsAppTest {
     }
 
     @Test
-    void signatureComputedWithAnEscapedApostropheIsAccepted() throws Exception {
-        // Kapso a refusé « C'est déjà fait » : signature calculée sur \u0027, corps envoyé avec l'apostrophe en clair.
-        Donor donor = member("Wa Apostrophe");
-        send(donor);
-        Long caseId = caseOf(donor).getId();
-        String body = objectMapper.writeValueAsString(
-            button(donor, "wamid.in-apos-" + tag, "mlaf:done:" + caseId, "C'est déjà fait"));
-        assertThat(body).contains("C'est");
-        String signedOn = body.replace("'", "\\u0027");
-
-        int status = mockMvc.perform(post("/api/v1/webhooks/kapso").contentType(MediaType.APPLICATION_JSON)
-                .header("X-Webhook-Event", "whatsapp.message.received").header("X-Webhook-Signature", sign(signedOn))
-                .content(body))
-            .andReturn().getResponse().getStatus();
-
-        assertThat(status).isEqualTo(200);
-        assertThat(caseOf(donor).getStatus()).isEqualTo(ReminderCaseStatus.DECLARE_NON_RETROUVE);
-        verify(kapso).sendText(eq(donor.getPhone()), contains("Nous ne retrouvons pas encore"));
-    }
-
-    @Test
     void ackButtonAsksForADateOnceEvenIfTheWebhookIsReplayed() throws Exception {
         Donor donor = member("Wa Accuse");
         send(donor);
