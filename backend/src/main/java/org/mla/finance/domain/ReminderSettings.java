@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
-import java.time.LocalTime;
 
 /**
  * Réglages des relances (cadrage Relances §8) : une seule ligne (id = 1), créée par la migration 0018 et
@@ -36,23 +35,18 @@ public class ReminderSettings {
     @Column(name = "open_from_day", nullable = false)
     private int openFromDay = 10;
 
-    @Column(name = "cooldown_no_response_days", nullable = false)
-    private int cooldownNoResponseDays = 3;
+    /** Délais d'attente en heures (lot 3) : une valeur par défaut, que l'admin peut passer outre. */
+    @Column(name = "cooldown_no_response_hours", nullable = false)
+    private int cooldownNoResponseHours = 72;
 
-    @Column(name = "cooldown_ack_days", nullable = false)
-    private int cooldownAckDays = 5;
+    @Column(name = "cooldown_ack_hours", nullable = false)
+    private int cooldownAckHours = 120;
 
     @Column(name = "cooldown_not_found_hours", nullable = false)
     private int cooldownNotFoundHours = 48;
 
     @Column(name = "max_per_month", nullable = false)
     private int maxPerMonth = 3;
-
-    @Column(name = "send_window_start", nullable = false)
-    private LocalTime sendWindowStart = LocalTime.of(8, 0);
-
-    @Column(name = "send_window_end", nullable = false)
-    private LocalTime sendWindowEnd = LocalTime.of(20, 0);
 
     @Column(name = "auto_reminder_on_promise", nullable = false)
     private boolean autoReminderOnPromise = true;

@@ -66,13 +66,14 @@ public class ReminderController {
     @PostMapping("/api/v1/reminders")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
     public ReminderSendResponse send(@Valid @RequestBody ReminderSendRequest request) {
-        return reminderService.send(request.donorId(), request.month(), request.projectId(), ReminderTrigger.MANUAL);
+        return reminderService.send(request.donorId(), request.month(), request.projectId(), ReminderTrigger.MANUAL,
+            request.force(), request.delay());
     }
 
     @PostMapping("/api/v1/reminders/bulk")
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
     public ReminderBulkResponse bulk(@Valid @RequestBody ReminderBulkRequest request) {
-        return reminderService.bulk(request.donorIds(), request.month(), request.projectId());
+        return reminderService.bulk(request.donorIds(), request.month(), request.projectId(), request.delay());
     }
 
     @PostMapping("/api/v1/reminders/cases/{id}/close")
@@ -85,6 +86,13 @@ public class ReminderController {
     @PreAuthorize("hasAuthority('SEND_REMINDERS')")
     public ReminderCaseDetailResponse closeForMember(@Valid @RequestBody ReminderCloseForMemberRequest request) {
         return reminderService.closeForMember(request.donorId(), request.month(), request.projectId(), request.reason());
+    }
+
+    /** Remet un dossier à zéro (compteur, délais, rappels programmés annulés) ; l'historique est conservé. */
+    @PostMapping("/api/v1/reminders/cases/{id}/reset")
+    @PreAuthorize("hasAuthority('SEND_REMINDERS')")
+    public ReminderCaseDetailResponse reset(@PathVariable Long id) {
+        return reminderService.reset(id);
     }
 
     @PostMapping("/api/v1/reminders/cases/{id}/acknowledge")

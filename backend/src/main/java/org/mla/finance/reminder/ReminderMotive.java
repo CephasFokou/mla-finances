@@ -63,7 +63,7 @@ public record ReminderMotive(ReminderReason reason, YearMonth month, Project pro
         return month.atDay(Math.min(settings.getOpenFromDay(), month.lengthOfMonth()));
     }
 
-    /** Dernier jour où la relance est possible (et dernière date proposée au membre). */
+    /** Échéance affichée : fin de la collecte, ou dernier jour du mois de la contribution. */
     public LocalDate dueDate() {
         if (isProject()) {
             return project.getReminderDueDate() != null ? project.getReminderDueDate() : project.getEndDate();
@@ -71,13 +71,35 @@ public record ReminderMotive(ReminderReason reason, YearMonth month, Project pro
         return month.atEndOfMonth();
     }
 
+    /**
+     * Dernier jour où relancer et répondre est possible : échéance de la collecte ; pour une contribution mensuelle, le
+     * 31 décembre de son année (un mois impayé de l'année reste relançable, cadrage Relances lot 3).
+     */
+    public LocalDate lastDay() {
+        return isProject() ? dueDate() : LocalDate.of(month.getYear(), 12, 31);
+    }
+
+    /**
+     * Date limite proposée au membre aujourd'hui : échéance de la collecte ; fin du mois de la contribution, ou fin du
+     * mois en cours pour un mois passé (arriéré).
+     */
+    public LocalDate memberDeadline(LocalDate today) {
+        if (isProject()) {
+            return dueDate();
+        }
+        YearMonth current = YearMonth.from(today);
+        return current.isAfter(month) ? current.atEndOfMonth() : month.atEndOfMonth();
+    }
+
+    /** Mois passé (contribution mensuelle encore due) : la relance parle d'un arriéré. */
+    public boolean isArrears(LocalDate today) {
+        return !isProject() && YearMonth.from(today).isAfter(month);
+    }
+
     /** Échéance dépassée : plus aucune relance, les dossiers ouverts sont clos par le job quotidien. */
     public boolean isOver(LocalDate today) {
-        if (isProject()) {
-            LocalDate due = dueDate();
-            return due == null || today.isAfter(due);
-        }
-        return YearMonth.from(today).isAfter(month);
+        LocalDate last = lastDay();
+        return last == null || today.isAfter(last);
     }
 
     /** Collecte : relances activées et collecte en cours (ACTIVE). Contribution mensuelle : toujours. */

@@ -8,7 +8,10 @@ import { useReminderSettingsQuery, useUpdateReminderSettingsMutation } from '../
 import type { ReminderSettings } from '../../features/reminders/types'
 import { ApiError } from '../../lib/apiClient'
 
-/** Réglages des relances : activation, ouverture dans le mois, délais d'attente, maximum, plage horaire d'envoi. */
+/**
+ * Réglages des relances : activation, ouverture dans le mois, délais d'attente (heures), maximum. Ce sont des valeurs
+ * par défaut : l'admin peut relancer quand même depuis l'écran Relances (lot 3).
+ */
 export function ReminderSettingsPanel() {
   const { t } = useTranslation()
   const { data, isLoading, isError } = useReminderSettingsQuery()
@@ -26,13 +29,13 @@ export function ReminderSettingsPanel() {
 }
 
 type NumberKey =
-  'openFromDay' | 'cooldownNoResponseDays' | 'cooldownAckDays' | 'cooldownNotFoundHours' | 'maxPerMonth'
+  'openFromDay' | 'cooldownNoResponseHours' | 'cooldownAckHours' | 'cooldownNotFoundHours' | 'maxPerMonth'
 const NUMBER_FIELDS: { key: NumberKey; min: number; max: number }[] = [
   { key: 'openFromDay', min: 1, max: 28 },
-  { key: 'cooldownNoResponseDays', min: 0, max: 31 },
   { key: 'maxPerMonth', min: 1, max: 10 },
-  { key: 'cooldownAckDays', min: 0, max: 31 },
-  { key: 'cooldownNotFoundHours', min: 0, max: 240 },
+  { key: 'cooldownNoResponseHours', min: 0, max: 744 },
+  { key: 'cooldownAckHours', min: 0, max: 744 },
+  { key: 'cooldownNotFoundHours', min: 0, max: 744 },
 ]
 
 function SettingsForm({ settings }: { settings: ReminderSettings }) {
@@ -41,20 +44,17 @@ function SettingsForm({ settings }: { settings: ReminderSettings }) {
   const [enabled, setEnabled] = useState(settings.enabled)
   const [numbers, setNumbers] = useState<Record<NumberKey, string>>({
     openFromDay: String(settings.openFromDay),
-    cooldownNoResponseDays: String(settings.cooldownNoResponseDays),
-    cooldownAckDays: String(settings.cooldownAckDays),
+    cooldownNoResponseHours: String(settings.cooldownNoResponseHours),
+    cooldownAckHours: String(settings.cooldownAckHours),
     cooldownNotFoundHours: String(settings.cooldownNotFoundHours),
     maxPerMonth: String(settings.maxPerMonth),
   })
-  const [start, setStart] = useState(settings.sendWindowStart.slice(0, 5))
-  const [end, setEnd] = useState(settings.sendWindowEnd.slice(0, 5))
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
-  const valid =
-    NUMBER_FIELDS.every(({ key, min, max }) => {
-      const v = Number(numbers[key])
-      return numbers[key] !== '' && Number.isInteger(v) && v >= min && v <= max
-    }) && start < end
+  const valid = NUMBER_FIELDS.every(({ key, min, max }) => {
+    const v = Number(numbers[key])
+    return numbers[key] !== '' && Number.isInteger(v) && v >= min && v <= max
+  })
 
   const save = async () => {
     setMessage(null)
@@ -63,12 +63,10 @@ function SettingsForm({ settings }: { settings: ReminderSettings }) {
       await mutation.mutateAsync({
         enabled,
         openFromDay: Number(numbers.openFromDay),
-        cooldownNoResponseDays: Number(numbers.cooldownNoResponseDays),
-        cooldownAckDays: Number(numbers.cooldownAckDays),
+        cooldownNoResponseHours: Number(numbers.cooldownNoResponseHours),
+        cooldownAckHours: Number(numbers.cooldownAckHours),
         cooldownNotFoundHours: Number(numbers.cooldownNotFoundHours),
         maxPerMonth: Number(numbers.maxPerMonth),
-        sendWindowStart: start,
-        sendWindowEnd: end,
         autoReminderOnPromise: settings.autoReminderOnPromise,
       })
       setMessage({ ok: true, text: t('reminderSettings.saved') })
@@ -114,14 +112,6 @@ function SettingsForm({ settings }: { settings: ReminderSettings }) {
               </span>
             </label>
           ))}
-          <label className={ui.field}>
-            {t('reminderSettings.fields.sendWindowStart')}
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-          </label>
-          <label className={ui.field}>
-            {t('reminderSettings.fields.sendWindowEnd')}
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
-          </label>
         </div>
         <p className={ui.cellSub} style={{ margin: 0 }}>
           {t('reminderSettings.nextLots')}

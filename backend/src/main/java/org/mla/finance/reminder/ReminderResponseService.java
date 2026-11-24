@@ -159,7 +159,7 @@ public class ReminderResponseService {
     /** Dates proposées après « Bien reçu » : jamais avant demain, jamais après l'échéance (mois ou collecte). */
     public List<DateChoice> dateChoices(ReminderMotive motive) {
         LocalDate today = clock.now().atZone(ReminderClock.ZONE).toLocalDate();
-        LocalDate due = motive.dueDate();
+        LocalDate due = motive.memberDeadline(today);
         if (due == null || !due.isAfter(today)) {
             return List.of();
         }
@@ -174,7 +174,7 @@ public class ReminderResponseService {
         if (motive.isProject()) {
             add(choices, due, "Le " + due.format(DAY), "Avant l'échéance de la collecte", due);
         } else {
-            LocalDate the25 = motive.month().atDay(25);
+            LocalDate the25 = YearMonth.from(due).atDay(25);
             if (the25.isAfter(today)) {
                 add(choices, the25, "Le " + the25.format(DAY), "Le 25 du mois", due);
             }
@@ -227,7 +227,7 @@ public class ReminderResponseService {
 
     private Step ack(ReminderCase rc, Instant now, ReminderSettings settings, ReminderMotive motive) {
         rc.setStatus(ReminderCaseStatus.ACCUSE);
-        rc.setNextAllowedAt(now.plus(Duration.ofDays(settings.getCooldownAckDays())));
+        rc.setNextAllowedAt(now.plus(Duration.ofHours(settings.getCooldownAckHours())));
         List<DateChoice> choices = dateChoices(motive);
         if (choices.isEmpty()) {
             return new Step("Merci ! Vous pouvez " + (motive.isProject() ? "participer" : "contribuer")
@@ -245,7 +245,7 @@ public class ReminderResponseService {
         cancelPromiseReminders(rc, now);
         rc.setStatus(ReminderCaseStatus.ACCUSE);
         rc.setPromisedDate(null);
-        rc.setNextAllowedAt(now.plus(Duration.ofDays(settings.getCooldownAckDays())));
+        rc.setNextAllowedAt(now.plus(Duration.ofHours(settings.getCooldownAckHours())));
         return new Step("C'est noté, merci ! Vous pouvez " + (motive.isProject() ? "participer" : "contribuer")
             + " à tout moment avec le bouton « " + contributeLabel(motive) + " ».",
             null, "Ne sait pas encore quand payer");
@@ -253,7 +253,7 @@ public class ReminderResponseService {
 
     private Step promise(ReminderCase rc, LocalDate date, Instant now, ReminderSettings settings, ReminderMotive motive) {
         LocalDate today = now.atZone(ReminderClock.ZONE).toLocalDate();
-        LocalDate due = motive.dueDate();
+        LocalDate due = motive.memberDeadline(today);
         if (date == null || date.isBefore(today) || date.isAfter(due)) {
             rc.setNeedsAttention(true);
             return new Step("Merci ! Cette date tombe après l'échéance (le " + due.format(DAY)

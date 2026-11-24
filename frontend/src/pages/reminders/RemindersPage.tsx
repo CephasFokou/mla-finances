@@ -12,6 +12,7 @@ import {
   useReminderOverviewQuery,
   useReminderPreviewQuery,
   useReminderReasonsQuery,
+  useResetReminderMutation,
   useSendReminderMutation,
 } from '../../features/reminders/hooks'
 import type {
@@ -373,12 +374,14 @@ export function RemindersPage() {
                         <span title={row.blockedReason ?? undefined}>
                           <button
                             type="button"
-                            className={`${ui.btn} ${ui.btnPrimary} ${ui.btnSm}`}
-                            disabled={!row.canRemind}
+                            className={`${ui.btn} ${row.canRemind ? ui.btnPrimary : ui.btnSecondary} ${ui.btnSm}`}
+                            disabled={!row.canRemind && !row.canForce}
                             onClick={() => setPreviewFor(row)}
                           >
                             <Icon name="repeat" strokeWidth={2.4} />
-                            {t('reminders.remind')}
+                            {row.canRemind || !row.canForce
+                              ? t('reminders.remind')
+                              : t('reminders.forceRemind')}
                           </button>
                         </span>
                         {!row.canRemind && row.blockedReason && (
@@ -446,6 +449,90 @@ function sendSummary(
   return t('reminders.result.failed', { name: label, error })
 }
 
+/** Heure de Douala : les membres sont au Cameroun. */
+function isNightInDouala(at: number): boolean {
+  const hour = Number(
+    new Intl.DateTimeFormat('fr-FR', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Africa/Douala' }).format(
+      new Date(at),
+    ),
+  )
+  return hour >= 21 || hour < 7
+}
+
+interface SendTiming {
+  later: boolean
+  hours: number
+  minutes: number
+}
+
+const NOW: SendTiming = { later: false, hours: 1, minutes: 0 }
+
+function delayOf(timing: SendTiming): number {
+  return timing.later ? Math.max(0, timing.hours) * 60 + Math.max(0, timing.minutes) : 0
+}
+
+// Moment de l'envoi (lot 3) : maintenant, ou « dans x h y min » ; plus de plage horaire, un avertissement la nuit.
+function SendTimingFields({ value, onChange }: { value: SendTiming; onChange: (next: SendTiming) => void }) {
+  const { t } = useTranslation()
+  const delay = delayOf(value)
+  // Heure d'ouverture de la fenêtre : sert au « Départ prévu » et à l'avertissement de nuit.
+  const [openedAt] = useState(() => Date.now())
+  const night = useMemo(() => isNightInDouala(openedAt), [openedAt])
+  return (
+    <div className={styles.timing}>
+      <div className={styles.timingChoices} role="radiogroup" aria-label={t('reminders.timing.label')}>
+        <label>
+          <input type="radio" checked={!value.later} onChange={() => onChange({ ...value, later: false })} />
+          {t('reminders.timing.now')}
+        </label>
+        <label>
+          <input type="radio" checked={value.later} onChange={() => onChange({ ...value, later: true })} />
+          {t('reminders.timing.in')}
+        </label>
+        {value.later && (
+          <span className={styles.timingDelay}>
+            <input
+              type="number"
+              min={0}
+              max={168}
+              aria-label={t('reminders.timing.hours')}
+              value={value.hours}
+              onChange={(e) =>
+                onChange({ ...value, hours: Math.min(168, Math.max(0, Number(e.target.value) || 0)) })
+              }
+            />
+            {t('reminders.timing.h')}
+            <input
+              type="number"
+              min={0}
+              max={59}
+              step={5}
+              aria-label={t('reminders.timing.minutes')}
+              value={value.minutes}
+              onChange={(e) =>
+                onChange({ ...value, minutes: Math.min(59, Math.max(0, Number(e.target.value) || 0)) })
+              }
+            />
+            {t('reminders.timing.min')}
+          </span>
+        )}
+      </div>
+      {value.later && delay > 0 && (
+        <span className={ui.hint}>
+          {t('reminders.timing.at', {
+            date: formatDateTime(new Date(openedAt + delay * 60000).toISOString()),
+          })}
+        </span>
+      )}
+      {!value.later && night && (
+        <span className={ui.hint}>
+          <Icon name="alert" size={14} /> {t('reminders.timing.night')}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function PreviewDialog({
   row,
   month,
@@ -462,11 +549,18 @@ function PreviewDialog({
   const { data, isLoading, isError } = useReminderPreviewQuery(row.donorId, month)
   const sendMutation = useSendReminderMutation()
   const [error, setError] = useState<string | null>(null)
+  const [timing, setTiming] = useState<SendTiming>(NOW)
+  const force = !!data && !data.canRemind && data.canForce
 
   const send = async () => {
     setError(null)
     try {
-      const result = await sendMutation.mutateAsync({ donorId: row.donorId, month })
+      const result = await sendMutation.mutateAsync({
+        donorId: row.donorId,
+        month,
+        force,
+        delayMinutes: delayOf(timing),
+      })
       onDone(sendSummary(t, row.label, result), result.sent || result.queued)
     } catch (e) {
       setError(errorMessage(e))
@@ -515,9 +609,16 @@ function PreviewDialog({
                 sandbox=""
                 srcDoc={data.html}
               />
-              {!data.canRemind && data.blockedReason && (
+              {force && data.blockedReason && (
+                <div className={`${ui.banner} ${ui.bannerAmber}`} role="status">
+                  <Icon name="alert" size={16} />
+                  <div>{t('reminders.preview.forceHint', { reason: data.blockedReason })}</div>
+                </div>
+              )}
+              {!data.canRemind && !data.canForce && data.blockedReason && (
                 <span className={ui.error}>{data.blockedReason}</span>
               )}
+              {(data.canRemind || data.canForce) && <SendTimingFields value={timing} onChange={setTiming} />}
             </>
           )}
           {error && <span className={ui.error}>{error}</span>}
@@ -529,10 +630,14 @@ function PreviewDialog({
           <button
             type="button"
             className={`${ui.btn} ${ui.btnPrimary}`}
-            disabled={!data?.canRemind || sendMutation.isPending}
+            disabled={!(data?.canRemind || data?.canForce) || sendMutation.isPending}
             onClick={() => void send()}
           >
-            {t('reminders.preview.send')}
+            {force
+              ? t('reminders.preview.sendForced')
+              : timing.later
+                ? t('reminders.preview.schedule')
+                : t('reminders.preview.send')}
           </button>
         </div>
       </div>
@@ -556,11 +661,18 @@ function BulkDialog({
   const mutation = useBulkReminderMutation()
   const [result, setResult] = useState<ReminderBulkResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [timing, setTiming] = useState<SendTiming>(NOW)
 
   const run = async () => {
     setError(null)
     try {
-      setResult(await mutation.mutateAsync({ donorIds: rows.map((r) => r.donorId), month }))
+      setResult(
+        await mutation.mutateAsync({
+          donorIds: rows.map((r) => r.donorId),
+          month,
+          delayMinutes: delayOf(timing),
+        }),
+      )
       onDone()
     } catch (e) {
       setError(errorMessage(e))
@@ -587,6 +699,7 @@ function BulkDialog({
             <>
               <p>{t('reminders.bulk.confirm', { count: rows.length })}</p>
               <p className={ui.cellSub}>{rows.map((r) => r.label).join(', ')}</p>
+              <SendTimingFields value={timing} onChange={setTiming} />
             </>
           )}
           {result && (
@@ -638,8 +751,20 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
   const { data, isLoading, isError } = useReminderCaseQuery(row.caseId)
   const closeMutation = useCloseReminderMutation()
   const ackMutation = useAcknowledgeReminderMutation()
+  const resetMutation = useResetReminderMutation()
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
+
+  const reset = async (caseId: number) => {
+    setError(null)
+    try {
+      await resetMutation.mutateAsync(caseId)
+      setConfirmReset(false)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
 
   const close = async () => {
     setError(null)
@@ -746,7 +871,13 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
                   </li>
                 )}
               </ol>
-              {open && (
+              {confirmReset && (
+                <div className={`${ui.banner} ${ui.bannerAmber}`} role="alert">
+                  <Icon name="alert" size={16} />
+                  <div>{t('reminders.case.resetConfirm')}</div>
+                </div>
+              )}
+              {open && !confirmReset && (
                 <label className={ui.field}>
                   {t('reminders.case.closeLabel')}
                   <textarea
@@ -763,10 +894,14 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
           {error && <span className={ui.error}>{error}</span>}
         </div>
         <div className={styles.modalFoot}>
-          <button type="button" className={`${ui.btn} ${ui.btnSecondary}`} onClick={onClose}>
-            {t('reminders.close')}
+          <button
+            type="button"
+            className={`${ui.btn} ${ui.btnSecondary}`}
+            onClick={confirmReset ? () => setConfirmReset(false) : onClose}
+          >
+            {confirmReset ? t('reminders.back') : t('reminders.close')}
           </button>
-          {data?.needsAttention && (
+          {data?.needsAttention && !confirmReset && (
             <button
               type="button"
               className={`${ui.btn} ${ui.btnPrimary}`}
@@ -776,7 +911,17 @@ function CaseDialog({ row, month, onClose }: { row: ReminderRow; month: string; 
               {t('reminders.case.markRead')}
             </button>
           )}
-          {open && (
+          {data && data.status !== 'REGLE' && (
+            <button
+              type="button"
+              className={`${ui.btn} ${confirmReset ? ui.btnDanger : ui.btnSecondary}`}
+              disabled={resetMutation.isPending}
+              onClick={() => (confirmReset ? void reset(data.id) : setConfirmReset(true))}
+            >
+              {confirmReset ? t('reminders.case.resetConfirmAction') : t('reminders.case.reset')}
+            </button>
+          )}
+          {open && !confirmReset && (
             <button
               type="button"
               className={`${ui.btn} ${ui.btnDanger}`}

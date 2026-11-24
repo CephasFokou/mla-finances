@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <!-- Relances, lot 3 : délais d'attente en heures (valeurs reprises : jours x 24) ; plus de plage horaire d'envoi,
+         l'admin choisit « maintenant » ou « dans x h y min » au moment de relancer. -->
+    <changeSet id="0022-01-reminder-settings-hours" author="mla-finance">
+        <addColumn tableName="reminder_settings">
+            <column name="cooldown_no_response_hours" type="INT" defaultValueNumeric="72">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cooldown_ack_hours" type="INT" defaultValueNumeric="120">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <update tableName="reminder_settings">
+            <column name="cooldown_no_response_hours" valueComputed="cooldown_no_response_days * 24"/>
+            <column name="cooldown_ack_hours" valueComputed="cooldown_ack_days * 24"/>
+        </update>
+        <dropColumn tableName="reminder_settings" columnName="cooldown_no_response_days"/>
+        <dropColumn tableName="reminder_settings" columnName="cooldown_ack_days"/>
+        <dropColumn tableName="reminder_settings" columnName="send_window_start"/>
+        <dropColumn tableName="reminder_settings" columnName="send_window_end"/>
+    </changeSet>
+</databaseChangeLog>

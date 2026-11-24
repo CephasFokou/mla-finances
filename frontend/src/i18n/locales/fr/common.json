@@ -976,7 +976,7 @@
     "title": "Relances",
     "subtitle": "Contribution mensuelle de {{month}} — relances ouvertes à partir du {{openFrom}}, échéance le {{due}}.",
     "disabled": "Les relances sont désactivées (Administration → Relances).",
-    "readOnlyMonth": "Mois terminé ou à venir : consultation seulement, seul le mois en cours peut être relancé.",
+    "readOnlyMonth": "Mois à venir ou d'une année terminée : consultation seulement. Le mois en cours et les mois impayés de l'année peuvent être relancés.",
     "loading": "Chargement des membres…",
     "error": "Impossible de charger les relances. Vérifiez que le backend est démarré.",
     "empty": "Aucun membre dans cette vue.",
@@ -1053,7 +1053,7 @@
     "close": "Fermer",
     "result": {
       "sent": "Relance envoyée à {{name}}.",
-      "queued": "Hors plage horaire : la relance de {{name}} partira le {{date}}.",
+      "queued": "La relance de {{name}} est programmée pour le {{date}}.",
       "failed": "La relance de {{name}} n'est pas partie : {{error}} Elle ne compte pas, vous pouvez réessayer."
     },
     "preview": {
@@ -1063,7 +1063,10 @@
       "frameTitle": "Aperçu de l'email de relance",
       "error": "Impossible de charger l'aperçu.",
       "send": "Envoyer la relance",
-      "whatsapp": "WhatsApp"
+      "whatsapp": "WhatsApp",
+      "forceHint": "Relance normalement bloquée : {{reason}} Vous pouvez relancer quand même ; ce sera noté dans l'historique.",
+      "sendForced": "Relancer quand même",
+      "schedule": "Programmer la relance"
     },
     "bulk": {
       "button_one": "Relancer la sélection ({{count}})",
@@ -1075,7 +1078,7 @@
       "send_other": "Relancer {{count}} membres",
       "sending": "Envoi en cours…",
       "report": "{{sent}} relancé(s), {{skipped}} ignoré(s).",
-      "queuedHint": "Une partie des relances est programmée pour l'ouverture de la plage horaire d'envoi."
+      "queuedHint": "Les relances sont programmées : elles partiront à l'heure choisie, sauf pour un membre qui aura payé entre-temps."
     },
     "case": {
       "title": "Dossier de {{name}}",
@@ -1090,7 +1093,10 @@
       "closeAction": "Clore sans suite",
       "markRead": "Marquer comme lu",
       "toReadHint": "Le membre a envoyé un message que le système n'a pas su interpréter : lisez-le, puis marquez-le comme lu.",
-      "notFoundHint": "Le membre dit avoir payé mais rien n'est enregistré. S'il a payé en espèces ou par virement, saisissez la contribution : le dossier sera clos automatiquement."
+      "notFoundHint": "Le membre dit avoir payé mais rien n'est enregistré. S'il a payé en espèces ou par virement, saisissez la contribution : le dossier sera clos automatiquement.",
+      "reset": "Réinitialiser le dossier",
+      "resetConfirm": "Réinitialiser ce dossier ? Le compteur de relances, les délais, la date promise et la réponse sont remis à zéro, et les rappels programmés sont annulés. L'historique ci-dessus est conservé.",
+      "resetConfirmAction": "Confirmer la réinitialisation"
     },
     "promisedOn": "Promis le {{date}}",
     "toRead": "Réponse à lire",
@@ -1110,32 +1116,42 @@
       "PAID": "A participé",
       "UNPAID": "Pas encore",
       "IN_PROGRESS": "Don en cours"
+    },
+    "forceRemind": "Relancer quand même",
+    "timing": {
+      "label": "Moment de l'envoi",
+      "now": "Envoyer maintenant",
+      "in": "Envoyer dans",
+      "hours": "Heures",
+      "minutes": "Minutes",
+      "h": "h",
+      "min": "min",
+      "at": "Départ prévu le {{date}}.",
+      "night": "Il fait nuit au Cameroun (entre 21 h et 7 h) : pensez à programmer l'envoi."
     }
   },
   "reminderSettings": {
-    "intro": "Relances de la contribution mensuelle (membres actifs). L'échéance est toujours le dernier jour du mois ; les envois partent uniquement dans la plage horaire (heure de Douala), une demande hors plage est programmée pour l'ouverture suivante.",
+    "intro": "Relances de la contribution mensuelle (membres actifs) : le mois en cours et les mois impayés de l'année. Ces règles sont des valeurs par défaut : depuis l'écran Relances, un admin peut relancer quand même (c'est noté dans l'historique), choisir d'envoyer maintenant ou dans quelques heures, et réinitialiser un dossier.",
     "enabled": "Relances activées",
     "enabledHint": "Désactivées, plus aucune relance ne part (les relances programmées sont annulées à leur heure d'envoi).",
     "fields": {
       "openFromDay": "Relances ouvertes à partir du (jour du mois)",
-      "cooldownNoResponseDays": "Délai sans réponse (jours)",
       "maxPerMonth": "Relances maximum par membre et par mois",
-      "cooldownAckDays": "Délai après « Bien reçu » (jours)",
       "cooldownNotFoundHours": "Délai si « C'est fait » non retrouvé (heures)",
-      "sendWindowStart": "Envois à partir de",
-      "sendWindowEnd": "Envois jusqu'à"
+      "cooldownNoResponseHours": "Délai sans réponse (heures)",
+      "cooldownAckHours": "Délai après « Bien reçu » (heures)"
     },
     "hints": {
       "openFromDay": "Entre {{min}} et {{max}}.",
-      "cooldownNoResponseDays": "Entre {{min}} et {{max}}.",
       "maxPerMonth": "Entre {{min}} et {{max}}.",
-      "cooldownAckDays": "Après la réponse « Bien reçu » (WhatsApp ou email). Entre {{min}} et {{max}}.",
-      "cooldownNotFoundHours": "Après « C'est déjà fait » sans paiement retrouvé. Entre {{min}} et {{max}}."
+      "cooldownNotFoundHours": "Après « C'est déjà fait » sans paiement retrouvé. Entre {{min}} et {{max}}.",
+      "cooldownNoResponseHours": "Après une relance restée sans réponse (72 h = 3 jours). Entre {{min}} et {{max}}.",
+      "cooldownAckHours": "Après la réponse « Bien reçu » (WhatsApp ou email). Entre {{min}} et {{max}}."
     },
     "nextLots": "Les relances partent par WhatsApp (si le membre a un numéro) et par email. Le rappel automatique part à 9 h le jour promis par le membre.",
     "save": "Enregistrer",
     "saved": "Réglages enregistrés.",
-    "invalid": "Vérifiez les valeurs : nombres entiers dans les bornes indiquées, et fin de plage après son début.",
+    "invalid": "Vérifiez les valeurs : nombres entiers dans les bornes indiquées.",
     "error": "Impossible de charger les réglages des relances.",
     "genericError": "L'enregistrement a échoué."
   }

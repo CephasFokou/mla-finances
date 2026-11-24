@@ -57,9 +57,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.YearMonth;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -185,6 +183,7 @@ public class ReminderService {
             Facts facts = new Facts(paid.contains(donor.getId()), inProgress.contains(donor.getId()), targets(donor),
                 hasPhone(donor), reminders.stream().anyMatch(Reminder::isQueued));
             Optional<Blocked> block = evaluate(settings, motive, now, facts, rc, donor);
+            boolean canForce = forceable(block, settings, motive, now, facts, rc, donor);
 
             Reminder last = reminders.stream().filter(r -> r.getCancelledAt() == null)
                 .max(Comparator.comparingInt(Reminder::getSequenceNo)).orElse(null);
@@ -213,14 +212,14 @@ public class ReminderService {
                 monthStatus, EmailChannel.emailOf(donor).isPresent(), hasPhone(donor),
                 rc == null ? null : rc.getId(), rc == null ? null : rc.getStatus(), rc == null ? 0 : rc.getReminderCount(),
                 last == null ? null : last.getSentAt(), last == null ? null : last.getScheduledFor(), lastDeliveries,
-                rc == null ? null : rc.getNextAllowedAt(), block.isEmpty(),
+                rc == null ? null : rc.getNextAllowedAt(), block.isEmpty(), canForce,
                 block.map(b -> b.code().name()).orElse(null), block.map(Blocked::message).orElse(null),
                 rc != null && rc.isNeedsAttention(), rc == null ? null : rc.getLastResponse(),
                 rc == null ? null : rc.getPromisedDate()));
         }
         LocalDate today = today(now);
         boolean current = motive.isProject() ? motive.isRemindable() && !motive.isOver(today)
-            : motive.month().equals(currentMonth(now));
+            : !motive.month().isAfter(currentMonth(now)) && !motive.isOver(today);
         return new ReminderOverviewResponse(motive.isProject() ? null : motive.month().toString(), motive.label(),
             current, settings.isEnabled(), motive.openFrom(settings), motive.dueDate(), settings.getMaxPerMonth(),
             motive.reason(), motive.projectId(), motive.isProject() ? ReminderMessageRenderer.projectNote(motive.project()) : null,
@@ -236,12 +235,14 @@ public class ReminderService {
         ReminderMessage message = message(donor, motive, ReminderLinks.preview(), false);
         ReminderCase rc = caseRepository.findByDonorIdAndReasonAndCaseKey(donorId, motive.reason(), motive.caseKey()).orElse(null);
         Facts facts = facts(donor, motive, rc);
-        Optional<Blocked> block = isActiveMember(donor) ? evaluate(settings(), motive, now, facts, rc, donor)
+        ReminderSettings settings = settings();
+        Optional<Blocked> block = isActiveMember(donor) ? evaluate(settings, motive, now, facts, rc, donor)
             : Optional.of(new Blocked(ReminderBlock.CLOSED, "Ce donateur n'est pas un membre actif du MLA."));
+        boolean canForce = isActiveMember(donor) && forceable(block, settings, motive, now, facts, rc, donor);
         return new ReminderPreviewResponse(message.subject(), message.html(), message.text(),
             ReminderMessageRenderer.whatsappText(message.whatsapp()),
             facts.targets().stream().map(t -> new ReminderPreviewResponse.Target(t.channel().channel(), mask(t))).toList(),
-            block.isEmpty(), block.map(Blocked::message).orElse(null));
+            block.isEmpty(), canForce, block.map(Blocked::message).orElse(null));
     }
 
     @Transactional(readOnly = true)
@@ -274,6 +275,16 @@ public class ReminderService {
     /** Relance d'un membre ; motif = {@code month} (« 2026-11 ») ou {@code projectId} (collecte relançable). */
     @Transactional
     public ReminderSendResponse send(Long donorId, String monthParam, Long projectId, ReminderTrigger trigger) {
+        return send(donorId, monthParam, projectId, trigger, false, 0);
+    }
+
+    /**
+     * {@code force} : relance malgré un blocage souple (délai, maximum, ouverture, rappel programmé — remplacé), tracée
+     * dans l'historique. {@code delayMinutes} > 0 : la relance est programmée (« dans x h y min ») au lieu de partir.
+     */
+    @Transactional
+    public ReminderSendResponse send(Long donorId, String monthParam, Long projectId, ReminderTrigger trigger,
+                                     boolean force, int delayMinutes) {
         Instant now = clock.now();
         ReminderMotive motive = motive(monthParam, projectId, now);
         ReminderSettings settings = settings();
@@ -284,6 +295,11 @@ public class ReminderService {
         ReminderCase rc = lockOrCreateCase(donor, motive);
         Facts facts = facts(donor, motive, rc);
         Optional<Blocked> block = evaluate(settings, motive, now, facts, rc, donor);
+        Optional<Blocked> forced = Optional.empty();
+        if (block.isPresent() && force && block.get().code().soft()) {
+            forced = block;
+            block = evaluate(settings, motive, now, facts, rc, donor, true);
+        }
         if (block.isPresent()) {
             Blocked b = block.get();
             if (b.code().conflict()) {
@@ -292,15 +308,18 @@ public class ReminderService {
             throw new BusinessRuleViolationException(b.code().rule(), b.message());
         }
 
-        boolean inWindow = inWindow(now, settings);
-        Instant scheduledFor = inWindow ? null : nextWindowStart(now, settings);
+        boolean immediate = delayMinutes <= 0;
+        Instant scheduledFor = immediate ? null : now.plus(Duration.ofMinutes(delayMinutes));
         if (scheduledFor != null && motive.isOver(today(scheduledFor))) {
             throw new BusinessRuleViolationException("RL-07",
-                "Hors plage horaire (" + settings.getSendWindowStart() + " - " + settings.getSendWindowEnd()
-                    + ") et l'échéance tombe avant la prochaine ouverture : relance impossible.");
+                "L'heure choisie tombe après l'échéance (" + motive.lastDay().format(DAY) + ") : relance impossible.");
+        }
+        if (forced.isPresent() && facts.queued()) {
+            // Relance manuelle forcée : elle remplace le rappel déjà programmé (date promise ou relance différée).
+            reminderRepository.findQueuedByCase(rc.getId()).forEach(r -> cancelQueued(rc, r, now));
         }
 
-        ReminderMessage message = message(donor, motive, inWindow ? links(rc) : ReminderLinks.preview(), false);
+        ReminderMessage message = message(donor, motive, immediate ? links(rc) : ReminderLinks.preview(), false);
         User actor = currentUserProvider.currentOrNull();
         Reminder reminder = reminderRepository.save(Reminder.builder()
             .reminderCase(rc)
@@ -313,7 +332,7 @@ public class ReminderService {
 
         List<ReminderDelivery> deliveries = List.of();
         boolean delivered;
-        if (inWindow) {
+        if (immediate) {
             deliveries = dispatch(reminder, facts.targets(), message);
             delivered = deliveries.stream().anyMatch(d -> d.getStatus() != ReminderDeliveryStatus.FAILED);
             reminder.setSentAt(now);
@@ -321,11 +340,11 @@ public class ReminderService {
             delivered = false;
         }
 
-        boolean counts = !inWindow || delivered;
+        boolean counts = !immediate || delivered;
         if (counts) {
             rc.setReminderCount(rc.getReminderCount() + 1);
             rc.setStatus(ReminderCaseStatus.EN_ATTENTE_REPONSE);
-            rc.setNextAllowedAt((inWindow ? now : scheduledFor).plus(Duration.ofDays(settings.getCooldownNoResponseDays())));
+            rc.setNextAllowedAt((immediate ? now : scheduledFor).plus(Duration.ofHours(settings.getCooldownNoResponseHours())));
             rc.setPromisedDate(null);
             rc.setNeedsAttention(false);
             // Dossier « Réglé » rouvert : la contribution qui l'avait clos a été annulée depuis.
@@ -338,8 +357,9 @@ public class ReminderService {
         String channelsLabel = facts.targets().stream().map(t -> t.channel().channel().name().toLowerCase())
             .collect(Collectors.joining(", "));
         String what = "Relance n°" + rc.getReminderCount() + "/" + settings.getMaxPerMonth() + " de " + donor.getLabel()
-            + " pour " + motive.auditPhrase();
-        if (!inWindow) {
+            + " pour " + motive.auditPhrase()
+            + forced.map(b -> " — relance forcée (" + b.message() + ")").orElse("");
+        if (!immediate) {
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_SENT",
                 what + " — programmée pour le " + scheduledFor.atZone(ReminderClock.ZONE).format(DAY_TIME) + " (" + channelsLabel + ")");
         } else if (delivered) {
@@ -348,7 +368,7 @@ public class ReminderService {
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_FAILED",
                 "Relance de " + donor.getLabel() + " non envoyée : aucun canal n'a abouti (" + channelsLabel + ")");
         }
-        return new ReminderSendResponse(rc.getId(), reminder.getSequenceNo(), delivered, !inWindow, scheduledFor,
+        return new ReminderSendResponse(rc.getId(), reminder.getSequenceNo(), delivered, !immediate, scheduledFor,
             rc.getNextAllowedAt(), deliveries.stream().map(d -> new ReminderSendResponse.Delivery(d.getChannel(),
                 maskRecipient(d.getChannel(), d.getRecipient()), d.getStatus(), d.getError())).toList());
     }
@@ -358,6 +378,10 @@ public class ReminderService {
      * éligible est ignoré et listé avec son motif, sans bloquer les autres.
      */
     public ReminderBulkResponse bulk(List<Long> donorIds, String monthParam, Long projectId) {
+        return bulk(donorIds, monthParam, projectId, 0);
+    }
+
+    public ReminderBulkResponse bulk(List<Long> donorIds, String monthParam, Long projectId, int delayMinutes) {
         if (projectId == null) {
             parseMonth(monthParam);
         }
@@ -366,7 +390,7 @@ public class ReminderService {
         for (Long donorId : new LinkedHashSet<>(donorIds)) {
             String label = donorRepository.findById(donorId).map(Donor::getLabel).orElse("#" + donorId);
             try {
-                ReminderSendResponse result = requiresNew.execute(status -> send(donorId, monthParam, projectId, ReminderTrigger.BULK));
+                ReminderSendResponse result = requiresNew.execute(status -> send(donorId, monthParam, projectId, ReminderTrigger.BULK, false, delayMinutes));
                 if (result.sent() || result.queued()) {
                     sent.add(new ReminderBulkResponse.Sent(donorId, label, result.sent(), result.queued()));
                 } else {
@@ -426,7 +450,7 @@ public class ReminderService {
         } else if (!isActiveMember(donor)) {
             cancel = "membre inactif";
         } else if (motive.isOver(today(now))) {
-            cancel = motive.isProject() ? "échéance de la collecte dépassée" : "mois terminé";
+            cancel = motive.isProject() ? "échéance de la collecte dépassée" : "année terminée";
         } else if (!motive.isRemindable()) {
             cancel = "relances de la collecte désactivées";
         } else if (!isTargeted(motive, donor)) {
@@ -453,7 +477,7 @@ public class ReminderService {
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_SENT",
                 "Rappel automatique (date promise) envoyé à " + donor.getLabel());
         } else if (delivered) {
-            rc.setNextAllowedAt(now.plus(Duration.ofDays(settings.getCooldownNoResponseDays())));
+            rc.setNextAllowedAt(now.plus(Duration.ofHours(settings.getCooldownNoResponseHours())));
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_SENT",
                 "Relance programmée n°" + rc.getReminderCount() + " envoyée à " + donor.getLabel());
         } else {
@@ -468,6 +492,36 @@ public class ReminderService {
     }
 
     // ------------------------------------------------------------------------------------------------ clôture
+
+    /**
+     * Remise à zéro d'un dossier par un admin (lot 3, remplace le SQL) : rappels programmés annulés, compteur, délais,
+     * date promise et réponse effacés, dossier « À relancer ». L'historique des envois et des réponses est conservé.
+     * Un dossier réglé par une contribution ne se réinitialise pas.
+     */
+    @Transactional
+    public ReminderCaseDetailResponse reset(Long caseId) {
+        ReminderCase rc = caseRepository.findByIdForUpdate(caseId)
+            .orElseThrow(() -> new EntityNotFoundException("Dossier de relance introuvable : " + caseId));
+        if (rc.getStatus() == ReminderCaseStatus.REGLE) {
+            throw new BusinessRuleViolationException("RL-08", "Dossier réglé par une contribution : rien à réinitialiser.");
+        }
+        Instant now = clock.now();
+        List<Reminder> queued = reminderRepository.findQueuedByCase(rc.getId());
+        queued.forEach(r -> cancelQueued(rc, r, now));
+        rc.setStatus(ReminderCaseStatus.A_RELANCER);
+        rc.setReminderCount(0);
+        rc.setNextAllowedAt(null);
+        rc.setPromisedDate(null);
+        rc.setLastResponse(null);
+        rc.setNeedsAttention(false);
+        rc.setClosedAt(null);
+        rc.setClosedReason(null);
+        rc.setClosedBy(null);
+        auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_RESET",
+            "Dossier de relance de " + rc.getDonor().getLabel() + " (" + ReminderMotive.of(rc).auditPhrase()
+                + ") réinitialisé" + (queued.isEmpty() ? "" : ", " + queued.size() + " rappel(s) programmé(s) annulé(s)"));
+        return detail(caseId);
+    }
 
     @Transactional
     public ReminderCaseDetailResponse close(Long caseId, String reason) {
@@ -537,11 +591,14 @@ public class ReminderService {
         }
     }
 
-    /** Mois terminés : dossiers encore ouverts passés « Sans suite » (ou « Réglé » si payé), file vidée. */
+    /**
+     * Mois d'une année terminée (un mois impayé reste relançable jusqu'au 31/12) : dossiers encore ouverts passés
+     * « Sans suite » (ou « Réglé » si payé), file vidée.
+     */
     @Transactional
     public int closeFinishedMonths() {
         Instant now = clock.now();
-        LocalDate current = currentMonth(now).atDay(1);
+        LocalDate current = LocalDate.of(currentMonth(now).getYear(), 1, 1);
         List<ReminderCase> open = caseRepository.findByReasonAndPeriodMonthBeforeAndStatusNotIn(
             ReminderReason.MONTHLY_CONTRIBUTION, current, CLOSED);
         for (ReminderCase rc : open) {
@@ -551,10 +608,10 @@ public class ReminderService {
             }
             rc.setStatus(ReminderCaseStatus.SANS_SUITE);
             rc.setClosedAt(now);
-            rc.setClosedReason("Mois terminé sans contribution enregistrée");
+            rc.setClosedReason("Année terminée sans contribution enregistrée");
             reminderRepository.findQueuedByCase(rc.getId()).forEach(r -> cancelQueued(rc, r, now));
             auditLogService.record("REMINDER_CASE", rc.getId(), "REMINDER_CLOSED",
-                "Dossier de relance de " + rc.getDonor().getLabel() + " clos sans suite (mois terminé)");
+                "Dossier de relance de " + rc.getDonor().getLabel() + " clos sans suite (année terminée)");
         }
         int closed = open.size();
         // Collectes : échéance dépassée, collecte terminée ou relances coupées sans passer par le formulaire.
@@ -670,6 +727,12 @@ public class ReminderService {
     /** Ordre des contrôles = ordre d'importance du motif affiché au survol du bouton grisé. */
     Optional<Blocked> evaluate(ReminderSettings settings, ReminderMotive motive, Instant now, Facts facts, ReminderCase rc,
                                Donor donor) {
+        return evaluate(settings, motive, now, facts, rc, donor, false);
+    }
+
+    /** {@code force} : passe outre les blocages « souples » ({@link ReminderBlock#soft()}), jamais les autres. */
+    Optional<Blocked> evaluate(ReminderSettings settings, ReminderMotive motive, Instant now, Facts facts, ReminderCase rc,
+                               Donor donor, boolean force) {
         if (!settings.isEnabled()) {
             return blocked(ReminderBlock.DISABLED, "Les relances sont désactivées (Administration → Relances).");
         }
@@ -688,15 +751,16 @@ public class ReminderService {
                 return blocked(ReminderBlock.CLOSED, "Ce membre n'est pas concerné par les relances de cette collecte.");
             }
         } else {
-            YearMonth current = currentMonth(now);
-            if (!motive.month().equals(current)) {
-                return blocked(ReminderBlock.MONTH_NOT_CURRENT, motive.month().isBefore(current)
-                    ? "Mois terminé : seul le mois en cours peut être relancé."
-                    : "Seul le mois en cours peut être relancé.");
+            // Mois en cours, ou mois passé de l'année encore impayé (arriéré) ; jamais un mois à venir.
+            if (motive.month().isAfter(currentMonth(now))) {
+                return blocked(ReminderBlock.MONTH_NOT_CURRENT, "Mois à venir : pas encore de relance.");
+            }
+            if (motive.isOver(today)) {
+                return blocked(ReminderBlock.MONTH_NOT_CURRENT, "Mois d'une année terminée : plus de relance.");
             }
         }
         LocalDate openFrom = motive.openFrom(settings);
-        if (openFrom != null && today.isBefore(openFrom)) {
+        if (!force && openFrom != null && today.isBefore(openFrom)) {
             return blocked(ReminderBlock.NOT_OPEN_YET, "Relances ouvertes à partir du " + openFrom.format(DAY) + ".");
         }
         if (facts.paid()) {
@@ -713,16 +777,16 @@ public class ReminderService {
                 ? "Un don à cette collecte" : "Un paiement de ce mois")
                 + " est en cours de validation : pas de relance tant qu'il n'est pas final.");
         }
-        if (facts.queued()) {
+        if (!force && facts.queued()) {
             return blocked(ReminderBlock.QUEUED,
-                "Une relance est déjà programmée : elle partira à l'ouverture de la plage horaire d'envoi.");
+                "Un rappel est déjà programmé pour ce membre : une nouvelle relance le remplacerait.");
         }
-        if (rc != null && rc.getStatus() != ReminderCaseStatus.REGLE && rc.getReminderCount() >= settings.getMaxPerMonth()) {
+        if (!force && rc != null && rc.getStatus() != ReminderCaseStatus.REGLE && rc.getReminderCount() >= settings.getMaxPerMonth()) {
             return blocked(ReminderBlock.MAX_REACHED,
                 "Maximum de " + settings.getMaxPerMonth() + " relances atteint pour "
                     + (motive.isProject() ? "cette collecte." : "ce mois."));
         }
-        if (rc != null && rc.getStatus() != ReminderCaseStatus.REGLE && rc.getStatus() != ReminderCaseStatus.VERIFICATION
+        if (!force && rc != null && rc.getStatus() != ReminderCaseStatus.REGLE && rc.getStatus() != ReminderCaseStatus.VERIFICATION
             && rc.getNextAllowedAt() != null && now.isBefore(rc.getNextAllowedAt())) {
             String from = rc.getNextAllowedAt().atZone(ReminderClock.ZONE).format(DAY_TIME);
             String why = switch (rc.getStatus()) {
@@ -742,6 +806,13 @@ public class ReminderService {
                 : "Aucun contact : ni email ni numéro WhatsApp.");
         }
         return Optional.empty();
+    }
+
+    /** Bloqué uniquement par des règles souples : une relance forcée passerait. */
+    private boolean forceable(Optional<Blocked> block, ReminderSettings settings, ReminderMotive motive, Instant now,
+                              Facts facts, ReminderCase rc, Donor donor) {
+        return block.isPresent() && block.get().code().soft()
+            && evaluate(settings, motive, now, facts, rc, donor, true).isEmpty();
     }
 
     private static Optional<Blocked> blocked(ReminderBlock code, String message) {
@@ -915,7 +986,14 @@ public class ReminderService {
             return renderer.project(donor, motive.project(), motive.dueDate(), links, promise);
         }
         BigDecimal amount = monthlySettings().suggestedAmount(donor.getMemberRole());
-        return promise ? renderer.promise(donor, motive.month(), amount, links) : renderer.monthly(donor, motive.month(), amount, links);
+        LocalDate due = motive.memberDeadline(today(clock.now()));
+        return promise ? renderer.promise(donor, motive.month(), amount, due, links)
+            : renderer.monthly(donor, motive.month(), amount, due, links);
+    }
+
+    /** Date limite proposée au membre aujourd'hui (voir {@link ReminderMotive#memberDeadline}). */
+    public LocalDate memberDeadline(ReminderMotive motive) {
+        return motive.memberDeadline(today(clock.now()));
     }
 
     static LocalDate today(Instant now) {
@@ -923,17 +1001,6 @@ public class ReminderService {
     }
 
     // ------------------------------------------------------------------------------------------------ outils
-
-    static boolean inWindow(Instant now, ReminderSettings settings) {
-        LocalTime time = now.atZone(ReminderClock.ZONE).toLocalTime();
-        return !time.isBefore(settings.getSendWindowStart()) && time.isBefore(settings.getSendWindowEnd());
-    }
-
-    static Instant nextWindowStart(Instant now, ReminderSettings settings) {
-        ZonedDateTime local = now.atZone(ReminderClock.ZONE);
-        LocalDate day = local.toLocalTime().isBefore(settings.getSendWindowStart()) ? local.toLocalDate() : local.toLocalDate().plusDays(1);
-        return day.atTime(settings.getSendWindowStart()).atZone(ReminderClock.ZONE).toInstant();
-    }
 
     public static YearMonth currentMonth(Instant now) {
         return YearMonth.from(now.atZone(ReminderClock.ZONE));
