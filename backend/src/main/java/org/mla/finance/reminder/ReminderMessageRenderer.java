@@ -98,20 +98,22 @@ public class ReminderMessageRenderer {
     }
 
     /** Relance de la contribution mensuelle (email + modèle WhatsApp mla_finance_relance_contribution). */
-    public ReminderMessage monthly(Donor donor, YearMonth month, BigDecimal suggestedAmount, ReminderLinks links) {
-        return render(donor, month, suggestedAmount, links, false);
+    public ReminderMessage monthly(Donor donor, YearMonth month, BigDecimal suggestedAmount, LocalDate due, ReminderLinks links) {
+        return render(donor, month, suggestedAmount, due, links, false);
     }
 
     /** Rappel automatique le jour promis par le membre (modèle mla_finance_rappel_promesse). */
-    public ReminderMessage promise(Donor donor, YearMonth month, BigDecimal suggestedAmount, ReminderLinks links) {
-        return render(donor, month, suggestedAmount, links, true);
+    public ReminderMessage promise(Donor donor, YearMonth month, BigDecimal suggestedAmount, LocalDate due, ReminderLinks links) {
+        return render(donor, month, suggestedAmount, due, links, true);
     }
 
-    private ReminderMessage render(Donor donor, YearMonth month, BigDecimal suggestedAmount, ReminderLinks links, boolean promise) {
+    /** {@code due} : fin du mois, ou fin du mois en cours pour un mois passé encore dû. */
+    private ReminderMessage render(Donor donor, YearMonth month, BigDecimal suggestedAmount, LocalDate dueDate,
+                                   ReminderLinks links, boolean promise) {
         String name = donor.getLabel() == null ? "" : donor.getLabel().trim();
         String monthLabel = monthLabel(month);
         String amount = fcfa(suggestedAmount);
-        String due = month.atEndOfMonth().format(DATE);
+        String due = dueDate.format(DATE);
         String contributeUrl = publicSiteUrl + "/c/" + links.contributeToken();
         String ackUrl = publicSiteUrl + "/relance/" + links.actionToken() + "?a=ack";
         String doneUrl = publicSiteUrl + "/relance/" + links.actionToken() + "?a=done";

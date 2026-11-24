@@ -44,7 +44,17 @@ function useInvalidate() {
 export function useSendReminderMutation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ donorId, month }: { donorId: number; month: string }) => remindersApi.send(donorId, month),
+    mutationFn: ({
+      donorId,
+      month,
+      force,
+      delayMinutes,
+    }: {
+      donorId: number
+      month: string
+      force?: boolean
+      delayMinutes?: number
+    }) => remindersApi.send(donorId, month, { force, delayMinutes }),
     onSettled: invalidate,
   })
 }
@@ -52,8 +62,15 @@ export function useSendReminderMutation() {
 export function useBulkReminderMutation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ donorIds, month }: { donorIds: number[]; month: string }) =>
-      remindersApi.bulk(donorIds, month),
+    mutationFn: ({
+      donorIds,
+      month,
+      delayMinutes,
+    }: {
+      donorIds: number[]
+      month: string
+      delayMinutes?: number
+    }) => remindersApi.bulk(donorIds, month, delayMinutes),
     onSettled: invalidate,
   })
 }
@@ -63,6 +80,14 @@ export function useCloseReminderMutation() {
   return useMutation({
     mutationFn: ({ donorId, month, reason }: { donorId: number; month: string; reason: string }) =>
       remindersApi.closeForMember(donorId, month, reason),
+    onSettled: invalidate,
+  })
+}
+
+export function useResetReminderMutation() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (caseId: number) => remindersApi.reset(caseId),
     onSettled: invalidate,
   })
 }

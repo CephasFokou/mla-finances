@@ -37,8 +37,8 @@ public class AccessTokenService {
         byte[] bytes = new byte[16];
         RANDOM.nextBytes(bytes);
         String raw = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        // Valable jusqu'à l'échéance incluse : fin du mois, ou échéance de la collecte.
-        LocalDate due = ReminderMotive.of(rc).dueDate();
+        // Valable jusqu'au dernier jour de relance inclus : échéance de la collecte, ou 31/12 pour un mois de l'année.
+        LocalDate due = ReminderMotive.of(rc).lastDay();
         repository.save(AccessToken.builder()
             .tokenHash(hash(raw))
             .purpose(purpose)

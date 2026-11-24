@@ -71,7 +71,7 @@ public class ReminderPublicService {
         boolean open = !settled && rc.getStatus() != ReminderCaseStatus.SANS_SUITE;
         return new ActionView(rc.getDonor().getLabel(), rc.getReason().name(),
             motive.isProject() ? null : motive.month().toString(), motive.isProject() ? null : motive.label(),
-            motive.isProject() ? motive.project().getName() : null, motive.dueDate(), rc.getStatus().name(), settled, open,
+            motive.isProject() ? motive.project().getName() : null, reminderService.memberDeadline(motive), rc.getStatus().name(), settled, open,
             options(motive));
     }
 

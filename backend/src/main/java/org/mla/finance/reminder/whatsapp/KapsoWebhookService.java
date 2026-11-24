@@ -119,9 +119,8 @@ public class KapsoWebhookService {
             return;
         }
         ReminderCase rc = target.get();
-        // Collecte : les dates écrites en texte libre se lisent dans le mois en cours.
-        YearMonth month = rc.getPeriodMonth() != null ? YearMonth.from(rc.getPeriodMonth())
-            : YearMonth.from(clock.now().atZone(ReminderClock.ZONE));
+        // Les dates écrites en texte libre se lisent dans le mois en cours (collecte, mois en cours ou arriéré).
+        YearMonth month = YearMonth.from(clock.now().atZone(ReminderClock.ZONE));
 
         ReminderResponseType type;
         LocalDate date = null;

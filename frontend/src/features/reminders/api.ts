@@ -29,10 +29,12 @@ export const remindersApi = {
   preview: (donorId: number, motive: string) =>
     apiClient.get<ReminderPreview>(`/reminders/preview?donorId=${donorId}&${motiveQuery(motive)}`),
   detail: (caseId: number) => apiClient.get<ReminderCaseDetail>(`/reminders/cases/${caseId}`),
-  send: (donorId: number, motive: string) =>
-    apiClient.post<ReminderSendResult>('/reminders', { donorId, ...motiveBody(motive) }),
-  bulk: (donorIds: number[], motive: string) =>
-    apiClient.post<ReminderBulkResult>('/reminders/bulk', { donorIds, ...motiveBody(motive) }),
+  /** force : relancer malgré un blocage souple ; delayMinutes > 0 : relance programmée. */
+  send: (donorId: number, motive: string, options: { force?: boolean; delayMinutes?: number } = {}) =>
+    apiClient.post<ReminderSendResult>('/reminders', { donorId, ...motiveBody(motive), ...options }),
+  bulk: (donorIds: number[], motive: string, delayMinutes = 0) =>
+    apiClient.post<ReminderBulkResult>('/reminders/bulk', { donorIds, ...motiveBody(motive), delayMinutes }),
+  reset: (caseId: number) => apiClient.post<ReminderCaseDetail>(`/reminders/cases/${caseId}/reset`),
   closeForMember: (donorId: number, motive: string, reason: string) =>
     apiClient.post<ReminderCaseDetail>('/reminders/close', { donorId, ...motiveBody(motive), reason }),
   acknowledge: (caseId: number) =>

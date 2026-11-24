@@ -57,7 +57,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -68,7 +70,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Relances de la contribution mensuelle (lot 1) : éligibilité, délais d'attente, maximum, plage horaire et file,
+ * Relances de la contribution mensuelle (lot 1) : éligibilité, délais d'attente, maximum, envoi différé et file, relance forcée, remise à zéro, arriérés,
  * clôture automatique par une contribution (RL-08, après commit), relance groupée, concurrence, permission.
  * Sans transaction de test (le listener RL-08 s'exécute après commit) : les données créées sont supprimées après
  * chaque test. Horloge et envoi d'email simulés.
@@ -94,6 +96,7 @@ class ReminderServiceTest {
     @Autowired ContributionService contributionService;
     @Autowired DonorRepository donorRepository;
     @Autowired ReminderCaseRepository caseRepository;
+    @Autowired org.mla.finance.repository.AuditLogRepository auditLogRepository;
     @Autowired PaymentChannelRepository paymentChannelRepository;
     @Autowired PaymentTransactionRepository paymentTransactionRepository;
     @Autowired DonationCategoryRepository categoryRepository;
@@ -148,7 +151,13 @@ class ReminderServiceTest {
     }
 
     private JsonNode send(Donor donor, int expectedStatus) throws Exception {
-        String body = objectMapper.writeValueAsString(Map.of("donorId", donor.getId(), "month", MONTH));
+        return send(donor, expectedStatus, Map.of());
+    }
+
+    private JsonNode send(Donor donor, int expectedStatus, Map<String, Object> extra) throws Exception {
+        Map<String, Object> fields = new java.util.HashMap<>(Map.of("donorId", donor.getId(), "month", MONTH));
+        fields.putAll(extra);
+        String body = objectMapper.writeValueAsString(fields);
         String content = mockMvc.perform(post("/api/v1/reminders").with(as("SEND_REMINDERS"))
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().is(expectedStatus))
@@ -165,6 +174,11 @@ class ReminderServiceTest {
             }
         }
         return null;
+    }
+
+    private JsonNode caseDetail(Long caseId) throws Exception {
+        return objectMapper.readTree(mockMvc.perform(get("/api/v1/reminders/cases/" + caseId).with(as("SEND_REMINDERS")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
     }
 
     private ReminderCase caseOf(Donor donor) {
@@ -288,29 +302,101 @@ class ReminderServiceTest {
     }
 
     @Test
-    void outsideTheSendingWindowTheReminderIsQueuedThenSentAtEightOrCancelledIfPaid() throws Exception {
+    void aDelayedReminderIsQueuedThenSentOrCancelledIfPaid() throws Exception {
+        // Plus de plage horaire (lot 3) : l'admin choisit « dans x h y min ».
         Donor waiting = activeMember("Rel File");
         Donor payer = activeMember("Rel File Paye");
         when(clock.now()).thenReturn(Instant.parse("2026-11-20T20:30:00Z")); // 21 h 30 à Douala
 
-        JsonNode queued = send(waiting, 200);
+        JsonNode queued = send(waiting, 200, Map.of("delayMinutes", 90));
         assertThat(queued.get("queued").asBoolean()).isTrue();
-        assertThat(queued.get("scheduledFor").asText()).isEqualTo("2026-11-21T07:00:00Z"); // 8 h à Douala
-        send(payer, 200);
+        assertThat(queued.get("scheduledFor").asText()).isEqualTo("2026-11-20T22:00:00Z");
+        send(payer, 200, Map.of("delayMinutes", 90));
         verify(emailService, never()).sendHtml(anyString(), anyString(), anyString(), any());
         assertThat(rowOf(waiting).get("blockedCode").asText()).isEqualTo("QUEUED");
 
         recordMonthlyContribution(payer);
 
-        when(clock.now()).thenReturn(Instant.parse("2026-11-21T07:00:30Z"));
+        when(clock.now()).thenReturn(Instant.parse("2026-11-20T22:00:30Z"));
         reminderService.sendDueQueued();
 
         verify(emailService, times(1)).sendHtml(eq(waiting.getEmail()), anyString(), anyString(), any());
         verify(emailService, never()).sendHtml(eq(payer.getEmail()), anyString(), anyString(), any());
-        assertThat(caseOf(waiting).getNextAllowedAt()).isEqualTo(Instant.parse("2026-11-24T07:00:30Z"));
+        assertThat(caseOf(waiting).getNextAllowedAt()).isEqualTo(Instant.parse("2026-11-23T22:00:30Z")); // + 72 h
         ReminderCase paidCase = caseOf(payer);
         assertThat(paidCase.getStatus()).isEqualTo(ReminderCaseStatus.REGLE);
         assertThat(paidCase.getReminderCount()).isZero();
+    }
+
+    @Test
+    void withoutADelayTheReminderLeavesAtOnceEvenAtNight() throws Exception {
+        Donor donor = activeMember("Rel Nuit");
+        when(clock.now()).thenReturn(Instant.parse("2026-11-20T22:30:00Z")); // 23 h 30 à Douala
+        JsonNode result = send(donor, 200);
+        assertThat(result.get("sent").asBoolean()).isTrue();
+        assertThat(result.get("queued").asBoolean()).isFalse();
+    }
+
+    @Test
+    void softBlocksCanBeForcedAndAreTracedButHardBlocksCannot() throws Exception {
+        Donor donor = activeMember("Rel Force");
+        send(donor, 200);
+        // Délai d'attente : bloqué, mais « Relancer quand même » est proposé.
+        JsonNode row = rowOf(donor);
+        assertThat(row.get("blockedCode").asText()).isEqualTo("COOLDOWN");
+        assertThat(row.get("canForce").asBoolean()).isTrue();
+        send(donor, 409);
+
+        JsonNode forced = send(donor, 200, Map.of("force", true));
+        assertThat(forced.get("sent").asBoolean()).isTrue();
+        assertThat(caseOf(donor).getReminderCount()).isEqualTo(2);
+        assertThat(auditLogRepository.findAll()).anySatisfy(a -> assertThat(a.getSummary())
+            .contains("Relance n°2/3 de " + donor.getLabel()).contains("relance forcée"));
+
+        // Contribution enregistrée : blocage strict, jamais forcé.
+        recordMonthlyContribution(donor);
+        assertThat(rowOf(donor).get("canForce").asBoolean()).isFalse();
+        send(donor, 422, Map.of("force", true));
+    }
+
+    @Test
+    void aForcedReminderReplacesTheScheduledOne() throws Exception {
+        Donor donor = activeMember("Rel Remplace");
+        send(donor, 200, Map.of("delayMinutes", 600));
+        assertThat(rowOf(donor).get("blockedCode").asText()).isEqualTo("QUEUED");
+
+        send(donor, 200, Map.of("force", true));
+
+        JsonNode detail = caseDetail(caseOf(donor).getId());
+        assertThat(detail.get("reminders")).hasSize(2);
+        assertThat(detail.get("reminders").get(0).get("cancelledAt").isNull()).isFalse();
+        assertThat(detail.get("reminders").get(1).get("sentAt").isNull()).isFalse();
+    }
+
+    @Test
+    void anAdminCanResetACaseButNotASettledOne() throws Exception {
+        Donor donor = activeMember("Rel Reset");
+        send(donor, 200);
+        send(donor, 200, Map.of("force", true, "delayMinutes", 60));
+        Long caseId = caseOf(donor).getId();
+
+        mockMvc.perform(post("/api/v1/reminders/cases/" + caseId + "/reset").with(as("SEND_REMINDERS")))
+            .andExpect(status().isOk());
+
+        ReminderCase rc = caseOf(donor);
+        assertThat(rc.getStatus()).isEqualTo(ReminderCaseStatus.A_RELANCER);
+        assertThat(rc.getReminderCount()).isZero();
+        assertThat(rc.getNextAllowedAt()).isNull();
+        JsonNode detail = caseDetail(caseId);
+        assertThat(detail.get("reminders")).hasSize(2); // historique conservé
+        assertThat(detail.get("reminders").get(1).get("cancelledAt").isNull()).isFalse(); // rappel programmé annulé
+        assertThat(rowOf(donor).get("canRemind").asBoolean()).isTrue();
+
+        recordMonthlyContribution(donor);
+        mockMvc.perform(post("/api/v1/reminders/cases/" + caseId + "/reset").with(as("SEND_REMINDERS")))
+            .andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(post("/api/v1/reminders/cases/" + caseId + "/reset").with(as("VIEW_DASHBOARD")))
+            .andExpect(status().isForbidden());
     }
 
     @Test
@@ -393,11 +479,26 @@ class ReminderServiceTest {
     }
 
     @Test
-    void finishedMonthIsReadOnlyAndItsOpenCasesAreClosed() throws Exception {
-        Donor donor = activeMember("Rel Mois Fini");
+    void anUnpaidPastMonthOfTheYearStaysRemindableUntilTheYearEnds() throws Exception {
+        Donor donor = activeMember("Rel Arriere");
         send(donor, 200);
 
-        when(clock.now()).thenReturn(Instant.parse("2026-12-01T00:30:00Z"));
+        // Décembre : novembre impayé reste relançable (arriéré), le dossier n'est pas clos.
+        when(clock.now()).thenReturn(Instant.parse("2026-12-05T09:00:00Z"));
+        reminderService.closeFinishedMonths();
+        assertThat(caseOf(donor).getStatus()).isEqualTo(ReminderCaseStatus.EN_ATTENTE_REPONSE);
+        JsonNode arrears = send(donor, 200);
+        assertThat(arrears.get("sent").asBoolean()).isTrue();
+        verify(emailService, atLeastOnce()).sendHtml(eq(donor.getEmail()), contains("novembre 2026"),
+            contains("31/12/2026"), any());
+
+        // Un mois à venir n'est jamais relancé.
+        String body = objectMapper.writeValueAsString(Map.of("donorId", donor.getId(), "month", "2027-01"));
+        mockMvc.perform(post("/api/v1/reminders").with(as("SEND_REMINDERS")).contentType(MediaType.APPLICATION_JSON)
+            .content(body)).andExpect(status().isUnprocessableEntity());
+
+        // Année terminée : plus de relance, le dossier est clos.
+        when(clock.now()).thenReturn(Instant.parse("2027-01-02T09:00:00Z"));
         send(donor, 422);
         reminderService.closeFinishedMonths();
         assertThat(caseOf(donor).getStatus()).isEqualTo(ReminderCaseStatus.SANS_SUITE);

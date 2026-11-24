@@ -125,11 +125,16 @@ wallet-ledger ne renvoie pas de date d'ouverture). L'encart de solde de la page 
 ## Relances des contributions (email + WhatsApp)
 
 Écran « Relances » (permission `SEND_REMINDERS`, par défaut SUPER_ADMIN et TRESORIER) : membres actifs du mois,
-contribution mensuelle réglée ou non, relance individuelle (aperçu email et WhatsApp) ou groupée. Règles : mois en cours
-seulement, à partir du 10, 3 relances maximum par mois (rappel programmé compris), envois entre 8 h et 20 h (Douala ;
-hors plage, programmée pour 8 h). Délais : 3 j sans réponse, 5 j après « Bien reçu », 48 h après « C'est déjà fait »
-non retrouvé, lendemain de la date promise. Une contribution mensuelle enregistrée clôt le dossier en « Réglé ». Réglages
-dans Administration → Relances.
+contribution mensuelle réglée ou non, relance individuelle (aperçu email et WhatsApp) ou groupée, envoyée maintenant ou
+programmée « dans x h y min » (plus de plage horaire ; avertissement entre 21 h et 7 h, heure de Douala). Mois relançables :
+le mois en cours et les mois impayés de l'année (arriérés, dossiers clos au 1er janvier). Règles par défaut (Administration
+→ Relances) : à partir du 10, 3 relances maximum, délais en heures (72 h sans réponse, 120 h après « Bien reçu », 48 h
+après « C'est déjà fait » non retrouvé), un rappel programmé bloque une nouvelle relance. Ces règles sont « souples » :
+« Relancer quand même » les contourne (rappel programmé remplacé, mention « relance forcée » dans l'historique). Restent
+bloquants : contribution réglée, paiement en cours, aucun contact, membre non concerné, collecte terminée, relances
+désactivées. « Réinitialiser le dossier » (`POST /api/v1/reminders/cases/{id}/reset`) remet compteur, délais et réponse à
+zéro et annule les rappels programmés, historique conservé ; impossible sur un dossier réglé. Une contribution mensuelle
+enregistrée clôt le dossier en « Réglé ».
 
 - **Email** (Resend) : boutons « Contribuer maintenant » (`/c/{jeton}` sur le site de don, membre et mois
   présélectionnés), « Bien reçu » et « C'est déjà fait » (`/relance/{jeton}`, page de réponse). Jetons hachés en base,

@@ -37,6 +37,8 @@ export interface ReminderRow {
   lastDeliveries: ReminderDeliverySummary[]
   nextAllowedAt: string | null
   canRemind: boolean
+  /** Bloqué seulement par une règle souple (délai, maximum, ouverture, rappel programmé). */
+  canForce: boolean
   blockedCode: string | null
   blockedReason: string | null
   needsAttention: boolean
@@ -88,6 +90,7 @@ export interface ReminderPreview {
   whatsappText: string | null
   channels: { channel: ReminderChannel; recipient: string }[]
   canRemind: boolean
+  canForce: boolean
   blockedReason: string | null
 }
 
@@ -159,12 +162,10 @@ export interface ReminderCaseDetail {
 export interface ReminderSettings {
   enabled: boolean
   openFromDay: number
-  cooldownNoResponseDays: number
-  cooldownAckDays: number
+  cooldownNoResponseHours: number
+  cooldownAckHours: number
   cooldownNotFoundHours: number
   maxPerMonth: number
-  sendWindowStart: string
-  sendWindowEnd: string
   autoReminderOnPromise: boolean
   updatedAt: string | null
 }

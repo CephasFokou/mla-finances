@@ -52,6 +52,8 @@ public record ReminderOverviewResponse(
         List<DeliverySummary> lastDeliveries,
         Instant nextAllowedAt,
         boolean canRemind,
+        /** Bloqué seulement par une règle souple : « Relancer quand même » possible. */
+        boolean canForce,
         String blockedCode,
         String blockedReason,
         boolean needsAttention,
