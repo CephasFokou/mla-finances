@@ -134,8 +134,8 @@ class ReminderWhatsAppTest {
         when(emailService.sendHtml(anyString(), anyString(), anyString(), any()))
             .thenReturn(new EmailService.SendResult(true, "re_test", null));
         when(kapso.sendTemplate(anyString(), any())).thenAnswer(i -> new KapsoClient.Result(true, "wamid.out" + wamids.incrementAndGet(), null));
-        when(kapso.sendText(anyString(), anyString())).thenReturn(new KapsoClient.Result(true, "wamid.txt", null));
-        when(kapso.sendList(anyString(), anyString(), anyString(), anyList())).thenReturn(new KapsoClient.Result(true, "wamid.list", null));
+        when(kapso.sendText(anyString(), anyString())).thenAnswer(i -> new KapsoClient.Result(true, "wamid.txt-" + tag + "-" + wamids.incrementAndGet(), null));
+        when(kapso.sendList(anyString(), anyString(), anyString(), anyList())).thenAnswer(i -> new KapsoClient.Result(true, "wamid.list-" + tag + "-" + wamids.incrementAndGet(), null));
     }
 
     @AfterEach
@@ -146,6 +146,7 @@ class ReminderWhatsAppTest {
         String ids = createdDonors.stream().map(String::valueOf).collect(Collectors.joining(","));
         String cases = "select id from reminder_cases where donor_id in (" + ids + ")";
         jdbc.update("delete from reminder_responses where case_id in (" + cases + ")");
+        jdbc.update("delete from reminder_whatsapp_replies where case_id in (" + cases + ")");
         jdbc.update("delete from access_tokens where donor_id in (" + ids + ")");
         jdbc.update("delete from reminder_deliveries where reminder_id in (select id from reminders where case_id in (" + cases + "))");
         jdbc.update("delete from reminders where case_id in (" + cases + ")");
@@ -217,6 +218,18 @@ class ReminderWhatsAppTest {
 
     private Map<String, Object> textMessage(Donor donor, String wamid, String text) {
         return inbound(donor, wamid, Map.of("type", "text", "text", Map.of("body", text)));
+    }
+
+    /** Texte libre envoyé avec « Répondre » sur un message (context.id). */
+    private Map<String, Object> replyTo(Donor donor, String wamid, String text, String contextId) {
+        return inbound(donor, wamid, Map.of("type", "text", "text", Map.of("body", text), "context", Map.of("id", contextId)));
+    }
+
+    /** wamid du modèle de relance WhatsApp envoyé au membre. */
+    private String reminderWamid(Donor donor) {
+        return deliveryRepository.findAll().stream()
+            .filter(d -> d.getChannel() == org.mla.finance.domain.ReminderChannel.WHATSAPP && donor.getPhone().equals(d.getRecipient()))
+            .findFirst().orElseThrow().getProviderMessageId();
     }
 
     private void payMonth(Donor donor) {
@@ -411,9 +424,10 @@ class ReminderWhatsAppTest {
             .coveredMonths(new ArrayList<>(List.of(LocalDate.of(2026, 11, 1))))
             .status(PaymentTransactionStatus.PROCESSING).reference("MLA-" + String.format("%06d", Math.abs(tag.hashCode()) % 1000000)).build());
 
-        webhook("whatsapp.message.received", textMessage(ok, "wamid.t1-" + tag, "Ok merci, bien noté"));
-        webhook("whatsapp.message.received", textMessage(ref, "wamid.t2-" + tag, "J'ai payé, voici la référence " + tx.getReference().toLowerCase()));
-        webhook("whatsapp.message.received", textMessage(other, "wamid.t3-" + tag, "Qui est à l'appareil ?"));
+        webhook("whatsapp.message.received", replyTo(ok, "wamid.t1-" + tag, "Ok merci, bien noté", reminderWamid(ok)));
+        webhook("whatsapp.message.received", replyTo(ref, "wamid.t2-" + tag, "J'ai payé, voici la référence "
+            + tx.getReference().toLowerCase(), reminderWamid(ref)));
+        webhook("whatsapp.message.received", replyTo(other, "wamid.t3-" + tag, "Qui est à l'appareil ?", reminderWamid(other)));
 
         assertThat(caseOf(ok).getStatus()).isEqualTo(ReminderCaseStatus.ACCUSE);
         assertThat(caseOf(ref).getStatus()).isEqualTo(ReminderCaseStatus.VERIFICATION);
@@ -446,6 +460,39 @@ class ReminderWhatsAppTest {
         assertThat(responseRepository.findByReminderCaseIdOrderByReceivedAtAsc(caseId)).isEmpty();
         assertThat(caseOf(reminded).getStatus()).isEqualTo(ReminderCaseStatus.EN_ATTENTE_REPONSE);
         verify(kapso, never()).sendText(anyString(), anyString());
+    }
+
+    @Test
+    void onlyRepliesToMlaFinanceMessagesAreHandledOnTheSharedNumber() throws Exception {
+        // Numéro partagé avec le suivi des tâches : un membre relancé répond aussi aux messages des tâches.
+        Donor donor = member("Wa Partage");
+        send(donor);
+        Long caseId = caseOf(donor).getId();
+
+        webhook("whatsapp.message.received", textMessage(donor, "wamid.s1-" + tag, "Bien reçu"));
+        webhook("whatsapp.message.received", textMessage(donor, "wamid.s2-" + tag, "c'est fait"));
+        webhook("whatsapp.message.received", textMessage(donor, "wamid.s3-" + tag, "MLA-2026-S47-21"));
+        webhook("whatsapp.message.received", textMessage(donor, "wamid.s4-" + tag, "Voir mes tâches"));
+        webhook("whatsapp.message.received", button(donor, "wamid.s5-" + tag, "LISTE|T42", "Voir mes tâches"));
+        webhook("whatsapp.message.received", button(donor, "wamid.s6-" + tag, "RECU|MLA-2026-S47-21", "Bien reçu"));
+        webhook("whatsapp.message.received", replyTo(donor, "wamid.s7-" + tag, "c'est fait", "wamid.message-des-taches"));
+
+        assertThat(responseRepository.findByReminderCaseIdOrderByReceivedAtAsc(caseId)).isEmpty();
+        assertThat(caseOf(donor).getStatus()).isEqualTo(ReminderCaseStatus.EN_ATTENTE_REPONSE);
+        verify(kapso, never()).sendText(anyString(), anyString());
+        verify(kapso, never()).sendList(anyString(), anyString(), anyString(), anyList());
+
+        // « C'est déjà fait » (bouton mlaf:) : la question posée en retour invite à répondre au message…
+        webhook("whatsapp.message.received", button(donor, "wamid.s8-" + tag, "mlaf:done:" + caseId, "C'est déjà fait"));
+        ArgumentCaptor<String> question = ArgumentCaptor.forClass(String.class);
+        verify(kapso).sendText(eq(donor.getPhone()), question.capture());
+        assertThat(question.getValue()).contains("référence de paiement").contains("Répondez directement à ce message");
+        String questionWamid = "wamid.txt-" + tag + "-" + wamids.get();
+
+        // … et une réponse à cette question (context.id = notre message) est bien lue.
+        webhook("whatsapp.message.received", replyTo(donor, "wamid.s9-" + tag, "J'ai payé en espèces à Paul", questionWamid));
+        assertThat(responseRepository.findByReminderCaseIdOrderByReceivedAtAsc(caseId))
+            .extracting(r -> r.getRawText()).containsExactly("C'est déjà fait", "J'ai payé en espèces à Paul");
     }
 
     @Test

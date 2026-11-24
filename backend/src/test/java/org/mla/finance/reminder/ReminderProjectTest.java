@@ -108,6 +108,7 @@ class ReminderProjectTest {
         if (!createdDonors.isEmpty()) {
             String ids = createdDonors.stream().map(String::valueOf).collect(Collectors.joining(","));
             jdbc.update("delete from reminder_responses where case_id in (select id from reminder_cases where donor_id in (" + ids + "))");
+            jdbc.update("delete from reminder_whatsapp_replies where case_id in (select id from reminder_cases where donor_id in (" + ids + "))");
             jdbc.update("delete from access_tokens where donor_id in (" + ids + ")");
             jdbc.update("delete from reminder_deliveries where reminder_id in (select r.id from reminders r join reminder_cases c on r.case_id = c.id where c.donor_id in (" + ids + "))");
             jdbc.update("delete from reminders where case_id in (select id from reminder_cases where donor_id in (" + ids + "))");
@@ -117,6 +118,7 @@ class ReminderProjectTest {
         if (!createdProjects.isEmpty()) {
             String ids = createdProjects.stream().map(String::valueOf).collect(Collectors.joining(","));
             jdbc.update("delete from reminder_responses where case_id in (select id from reminder_cases where project_id in (" + ids + "))");
+            jdbc.update("delete from reminder_whatsapp_replies where case_id in (select id from reminder_cases where project_id in (" + ids + "))");
             jdbc.update("delete from access_tokens where case_id in (select id from reminder_cases where project_id in (" + ids + "))");
             jdbc.update("delete from reminder_deliveries where reminder_id in (select r.id from reminders r join reminder_cases c on r.case_id = c.id where c.project_id in (" + ids + "))");
             jdbc.update("delete from reminders where case_id in (select id from reminder_cases where project_id in (" + ids + "))");

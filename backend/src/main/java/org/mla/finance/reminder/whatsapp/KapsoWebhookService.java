@@ -1,25 +1,23 @@
 package org.mla.finance.reminder.whatsapp;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mla.finance.domain.MemberStatus;
 import org.mla.finance.domain.ReminderCase;
 import org.mla.finance.domain.ReminderChannel;
 import org.mla.finance.domain.ReminderDelivery;
 import org.mla.finance.domain.ReminderDeliveryStatus;
 import org.mla.finance.domain.ReminderResponseType;
+import org.mla.finance.domain.ReminderWhatsAppReply;
 import org.mla.finance.reminder.ReminderClock;
-import org.mla.finance.reminder.ReminderMotive;
 import org.mla.finance.reminder.ReminderPayloads;
 import org.mla.finance.reminder.ReminderResponseService;
 import org.mla.finance.repository.ReminderCaseRepository;
 import org.mla.finance.repository.ReminderDeliveryRepository;
+import org.mla.finance.repository.ReminderWhatsAppReplyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -45,19 +43,21 @@ import java.util.Optional;
 public class KapsoWebhookService {
 
     private static final Logger log = LoggerFactory.getLogger(KapsoWebhookService.class);
-    private static final Duration FREE_TEXT_WINDOW = Duration.ofDays(7);
 
     private final ReminderResponseService responseService;
     private final ReminderCaseRepository caseRepository;
     private final ReminderDeliveryRepository deliveryRepository;
+    private final ReminderWhatsAppReplyRepository replyRepository;
     private final KapsoClient client;
     private final ReminderClock clock;
 
     public KapsoWebhookService(ReminderResponseService responseService, ReminderCaseRepository caseRepository,
-                               ReminderDeliveryRepository deliveryRepository, KapsoClient client, ReminderClock clock) {
+                               ReminderDeliveryRepository deliveryRepository, ReminderWhatsAppReplyRepository replyRepository,
+                               KapsoClient client, ReminderClock clock) {
         this.responseService = responseService;
         this.caseRepository = caseRepository;
         this.deliveryRepository = deliveryRepository;
+        this.replyRepository = replyRepository;
         this.client = client;
         this.clock = clock;
     }
@@ -101,20 +101,21 @@ public class KapsoWebhookService {
             text(message.path("kapso").path("content")));
         String contextId = text(message.path("context").path("id"));
 
+        // Numéro partagé avec le suivi des tâches MLA : on ne traite que les boutons/listes « mlaf: » et les réponses
+        // (context.id) à un message envoyé par MLA Finance. Tout le reste (FAIT|…, LISTE|…, RECU|…, textes libres
+        // « Bien reçu », « c'est fait », MLA-AAAA-Snn-nn…) appartient au suivi des tâches : ignoré, sans réponse.
         Optional<ReminderPayloads.Parsed> parsed = ReminderPayloads.parse(buttonId);
         if (buttonId != null && parsed.isEmpty()) {
-            return; // bouton du suivi des tâches (FAIT|…, RECU|…) : pas pour nous
+            return;
         }
-        Optional<ReminderCase> target = parsed.map(p -> caseRepository.findById(p.caseId()).orElse(null))
-            .or(() -> contextId == null ? Optional.empty()
-                : deliveryRepository.findFirstByProviderMessageId(contextId).map(d -> d.getReminder().getReminderCase()))
-            .or(() -> buttonId == null ? recentCase(number) : Optional.empty())
-            .filter(rc -> WhatsAppChannel.sameNumber(rc.getDonor().getPhone(), number));
+        Optional<ReminderCase> target = parsed.isPresent()
+            ? caseRepository.findById(parsed.get().caseId())
+            : caseOfOurMessage(contextId);
         if (target.isEmpty()) {
-            if (parsed.isPresent()) {
-                log.info("Relances : réponse au dossier #{} ignorée (numéro différent de celui du membre)",
-                    parsed.get().caseId());
-            }
+            return;
+        }
+        if (!WhatsAppChannel.sameNumber(target.get().getDonor().getPhone(), number)) {
+            log.info("Relances : réponse au dossier #{} ignorée (numéro différent de celui du membre)", target.get().getId());
             return;
         }
         ReminderCase rc = target.get();
@@ -156,28 +157,28 @@ public class KapsoWebhookService {
             rows.add(new KapsoClient.ListRow(ReminderPayloads.unsure(caseId), "Je ne sais pas encore", null));
             result = client.sendList(number, outcome.reply(), "Choisir une date", rows);
         } else if (outcome.reply() != null) {
-            result = client.sendText(number, outcome.reply());
+            // Une réponse tapée sans « Répondre » n'est pas reconnue (numéro partagé) : on le précise quand on pose une question.
+            String text = outcome.reply().trim().endsWith("?")
+                ? outcome.reply() + "\n\n↩️ Répondez directement à ce message (appui long puis « Répondre »)." : outcome.reply();
+            result = client.sendText(number, text);
         } else {
             return;
         }
         if (!result.sent()) {
             log.warn("Relances : réponse WhatsApp au dossier #{} non envoyée ({})", caseId, result.error());
+        } else if (result.messageId() != null) {
+            replyRepository.save(ReminderWhatsAppReply.builder().reminderCase(caseRepository.getReferenceById(caseId))
+                .providerMessageId(result.messageId()).createdAt(clock.now()).build());
         }
     }
 
-    /**
-     * Texte libre : dernier dossier (mois en cours ou collecte encore ouverte) d'un membre à qui MLA Finance a écrit sur
-     * WhatsApp ces 7 derniers jours.
-     */
-    private Optional<ReminderCase> recentCase(String number) {
-        Instant now = clock.now();
-        return deliveryRepository.findFirstByChannelAndRecipientOrderByCreatedAtDesc(ReminderChannel.WHATSAPP, number)
-            .filter(d -> d.getCreatedAt().isAfter(now.minus(FREE_TEXT_WINDOW)))
-            .map(d -> d.getReminder().getReminderCase())
-            .filter(rc -> rc.getDonor().getMemberStatus() == MemberStatus.ACTIVE)
-            .filter(rc -> rc.getPeriodMonth() == null
-                ? !ReminderMotive.of(rc).isOver(now.atZone(ReminderClock.ZONE).toLocalDate())
-                : YearMonth.from(rc.getPeriodMonth()).equals(YearMonth.from(now.atZone(ReminderClock.ZONE))));
+    /** Dossier du message MLA Finance auquel le membre répond (relance ou réponse déjà envoyée) ; vide sinon. */
+    private Optional<ReminderCase> caseOfOurMessage(String contextId) {
+        if (contextId == null) {
+            return Optional.empty();
+        }
+        return deliveryRepository.findFirstByProviderMessageId(contextId).map(d -> d.getReminder().getReminderCase())
+            .or(() -> replyRepository.findFirstByProviderMessageId(contextId).map(ReminderWhatsAppReply::getReminderCase));
     }
 
     // ------------------------------------------------------------------------------------------------ statuts

@@ -23,5 +23,6 @@
     <include file="db/changelog/changes/0018-reminders.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/changes/0019-reminder-responses.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/changes/0020-project-reminders.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/changes/0021-reminder-whatsapp-replies.xml" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>
