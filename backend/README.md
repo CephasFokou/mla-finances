@@ -136,9 +136,11 @@ dans Administration → Relances.
   valables jusqu'à la fin du mois.
 - **WhatsApp** (Kapso, modèles `mla_finance_*` approuvés par Meta) si le membre a un numéro. Réponses reçues par
   `POST /api/v1/webhooks/kapso` (signature HMAC vérifiée, idempotence par wamid) : boutons, liste de dates, texte libre
-  (mots-clés, date, référence MLA-…). « C'est déjà fait » est toujours vérifié en base ; non retrouvé, les trésoriers
+  en réponse à un de ses messages (mots-clés, date, référence MLA-…). « C'est déjà fait » est toujours vérifié en base ; non retrouvé, les trésoriers
   sont alertés par email et le dossier apparaît dans « Non retrouvés ». Le numéro est partagé avec le suivi des tâches
-  MLA (Apps Script), qui ignore les réponses `mlaf:` de MLA Finance.
+  MLA (Apps Script), qui ignore les réponses `mlaf:` de MLA Finance ; réciproquement, MLA Finance ne traite qu'un
+  bouton/liste `mlaf:` ou un message qui répond (context.id) à un message qu'il a envoyé (relance ou réponse, table
+  `reminder_whatsapp_replies`). Un texte libre tapé sans « Répondre » est ignoré, sans réponse.
 - Variables : `PUBLIC_SITE_URL`, `REMINDER_QUEUE_POLL_MS`, `KAPSO_ENABLED` (faux par défaut : email seul),
   `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_WEBHOOK_SECRET`, `KAPSO_BASE_URL`.
 - **Collectes relançables** (lot 2 bis) : une collecte n'est pas relançable par défaut. Le bloc « Relances » de la fiche
