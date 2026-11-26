@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -10,13 +10,10 @@ import { Icon } from '../../components/ui/Icon'
 import ui from '../../components/ui/ui.module.scss'
 import { useActivitiesQuery } from '../../features/ledger/hooks'
 import { OUTFLOW_NATURES, type MovementNature } from '../../features/ledger/types'
-import {
-  useCategoriesQuery,
-  usePaymentChannelsQuery,
-  useProjectsQuery,
-} from '../../features/reference-data/hooks'
-import { useCreateWithdrawalMutation } from '../../features/withdrawals/hooks'
+import { useCategoriesQuery, usePaymentChannelsQuery } from '../../features/reference-data/hooks'
+import { useCreateWithdrawalMutation, useWithdrawableProjectsQuery } from '../../features/withdrawals/hooks'
 import { ApiError } from '../../lib/apiClient'
+import { formatFcfa } from '../../lib/format'
 import { useHasPermission } from '../../store/authStore'
 import styles from './WithdrawalFormPage.module.scss'
 
@@ -59,7 +56,7 @@ type FormValues = z.infer<typeof schema>
 export function WithdrawalFormPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { data: projects } = useProjectsQuery()
+  const { data: projects } = useWithdrawableProjectsQuery()
   const { data: categories } = useCategoriesQuery()
   const { data: channels } = usePaymentChannelsQuery()
   const { data: activities } = useActivitiesQuery()
@@ -90,9 +87,6 @@ export function WithdrawalFormPage() {
   useEffect(() => {
     if (canRecord) setValue('mode', 'record')
   }, [canRecord, setValue])
-
-  // Une sortie ne se fait que sur une collecte en cours (une collecte clôturée est soldée).
-  const activeProjects = useMemo(() => projects?.filter((p) => p.status === 'ACTIVE') ?? [], [projects])
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null)
@@ -187,9 +181,16 @@ export function WithdrawalFormPage() {
               {t('ledger.collection')}
               <select {...register('projectId')}>
                 <option value="">{t('withdrawals.form.selectPlaceholder')}</option>
-                {activeProjects.map((project) => (
+                {/* Ouvertes, puis clôturées avec un reste (ordre et filtre faits par le serveur, qui plafonne
+                    aussi la sortie sur une clôturée à ce reste). */}
+                {projects?.map((project) => (
                   <option key={project.id} value={project.id}>
-                    {project.name}
+                    {project.status === 'COMPLETED'
+                      ? t('withdrawals.form.closedProjectOption', {
+                          name: project.name,
+                          amount: formatFcfa(project.remainingBalance ?? 0),
+                        })
+                      : project.name}
                   </option>
                 ))}
               </select>

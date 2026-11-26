@@ -12,6 +12,7 @@ import org.mla.finance.service.WithdrawalVoucherService;
 import org.mla.finance.web.dto.MobileMoneyBalanceResponse;
 import org.mla.finance.web.dto.PayoutOptionsResponse;
 import org.mla.finance.web.dto.PayoutRequest;
+import org.mla.finance.web.dto.WithdrawableProjectResponse;
 import org.mla.finance.web.dto.WithdrawalCreateRequest;
 import org.mla.finance.web.dto.WithdrawalRejectRequest;
 import org.mla.finance.web.dto.WithdrawalResponse;
@@ -36,6 +37,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/withdrawals")
@@ -64,6 +66,12 @@ public class WithdrawalController {
     ) {
         return withdrawalService.search(
             new WithdrawalFilter(projectId, categoryId, status, dateFrom, dateTo, nature, activityId, personId, selfApproved), pageable);
+    }
+
+    /** Collectes du formulaire de sortie : ouvertes, puis clôturées avec un solde restant (et ce solde). */
+    @GetMapping("/projects")
+    public List<WithdrawableProjectResponse> withdrawableProjects() {
+        return withdrawalService.withdrawableProjects();
     }
 
     @GetMapping("/export")

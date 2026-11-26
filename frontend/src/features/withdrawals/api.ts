@@ -3,6 +3,7 @@ import type {
   MobileMoneyBalance,
   PageResponse,
   PayoutOptions,
+  WithdrawableProject,
   WithdrawalBalanceResponse,
   WithdrawalCreateInput,
   WithdrawalFilters,
@@ -24,6 +25,9 @@ function toQueryString(filters: WithdrawalFilters): string {
 export const withdrawalsApi = {
   list: (filters: WithdrawalFilters) =>
     apiClient.get<PageResponse<WithdrawalResponse>>(`/withdrawals${toQueryString(filters)}`),
+
+  /** Collectes du formulaire : ouvertes, puis clôturées avec un reste. */
+  projects: () => apiClient.get<WithdrawableProject[]>('/withdrawals/projects'),
 
   get: (id: number) => apiClient.get<WithdrawalResponse>(`/withdrawals/${id}`),
 
