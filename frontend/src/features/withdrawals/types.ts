@@ -125,6 +125,17 @@ export interface WithdrawalRejectInput {
 
 // Même forme que BalanceResponse (features/contributions/types.ts), étendue avec les champs de
 // solde réel/prévisionnel introduits par le module Retraits (voir BalanceService côté backend).
+/**
+ * Collecte proposée au formulaire de sortie : ouverte, ou clôturée avec un reste (remainingBalance,
+ * plafond de la sortie côté serveur ; null pour une collecte ouverte).
+ */
+export interface WithdrawableProject {
+  id: number
+  name: string
+  status: 'ACTIVE' | 'COMPLETED'
+  remainingBalance: number | null
+}
+
 export interface WithdrawalBalanceResponse {
   projectId?: number
   categoryId?: number

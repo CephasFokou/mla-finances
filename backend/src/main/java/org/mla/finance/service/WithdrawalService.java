@@ -4,6 +4,8 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.mla.finance.domain.MovementNature;
 import org.mla.finance.domain.PaymentChannel;
+import org.mla.finance.domain.Project;
+import org.mla.finance.domain.ProjectStatus;
 import org.mla.finance.domain.User;
 import org.mla.finance.domain.Withdrawal;
 import org.mla.finance.domain.WithdrawalStatus;
@@ -13,6 +15,7 @@ import org.mla.finance.exception.ForbiddenActionException;
 import org.mla.finance.repository.DonationCategoryRepository;
 import org.mla.finance.repository.ProjectRepository;
 import org.mla.finance.repository.WithdrawalRepository;
+import org.mla.finance.web.dto.WithdrawableProjectResponse;
 import org.mla.finance.web.dto.WithdrawalCreateRequest;
 import org.mla.finance.web.dto.WithdrawalRejectRequest;
 import org.mla.finance.web.dto.WithdrawalResponse;
@@ -22,9 +25,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Workflow retrait : demande (PENDING) -> validation (APPROVED/REJECTED via VALIDATE_WITHDRAWALS, par
@@ -43,6 +49,11 @@ import java.util.List;
  * une dépense malgré un solde tendu) — le déficit reste seulement signalé dans
  * BalanceService/ProjectBalanceResponse. À confirmer avec Cephas si un blocage strict est
  * attendu à la place d'un simple signal.
+ *
+ * Exception : une collecte clôturée (COMPLETED). Elle accepte encore une sortie (remise du reste),
+ * directe ou demandée, mais jamais au-delà de son solde prévisionnel — contrôlé à la création, à la
+ * validation et au décaissement, sous le verrou de l'enveloppe (CLOSED_PROJECT_BALANCE, 422). La
+ * collecte reste clôturée.
  */
 @Service
 @RequiredArgsConstructor
@@ -63,6 +74,7 @@ public class WithdrawalService {
     private final LedgerLookup lookup;
     private final CurrentUserProvider currentUserProvider;
     private final AuditLogService auditLogService;
+    private final BalanceService balanceService;
 
     @Transactional(readOnly = true)
     public Page<WithdrawalResponse> search(WithdrawalFilter filter, Pageable pageable) {
@@ -80,14 +92,34 @@ public class WithdrawalService {
         return withdrawalRepository.findAll(WithdrawalSpecifications.matching(filter), EXPORT_SORT);
     }
 
+    /**
+     * Collectes proposées pour une sortie : les ouvertes (par nom), puis les clôturées dont le solde
+     * prévisionnel est encore positif (par nom), avec ce solde. Brouillons et archivées exclus.
+     */
+    @Transactional(readOnly = true)
+    public List<WithdrawableProjectResponse> withdrawableProjects() {
+        List<WithdrawableProjectResponse> open = projectRepository.findByStatus(ProjectStatus.ACTIVE).stream()
+            .map(p -> new WithdrawableProjectResponse(p.getId(), p.getName(), p.getStatus(), null))
+            .sorted(Comparator.comparing(WithdrawableProjectResponse::name, String.CASE_INSENSITIVE_ORDER))
+            .toList();
+        List<WithdrawableProjectResponse> closed = projectRepository.findByStatus(ProjectStatus.COMPLETED).stream()
+            .map(p -> new WithdrawableProjectResponse(p.getId(), p.getName(), p.getStatus(),
+                balanceService.projectBalance(p.getId()).provisionalBalance()))
+            .filter(p -> p.remainingBalance().signum() > 0)
+            .sorted(Comparator.comparing(WithdrawableProjectResponse::name, String.CASE_INSENSITIVE_ORDER))
+            .toList();
+        return Stream.concat(open.stream(), closed.stream()).toList();
+    }
+
     /** Demande de retrait : passe ensuite par la validation puis le décaissement. */
     public WithdrawalResponse create(WithdrawalCreateRequest request) {
         Withdrawal withdrawal = build(request);
+        requireClosedProjectCovers(withdrawal, false);
         withdrawal.setStatus(WithdrawalStatus.PENDING);
         Withdrawal saved = withdrawalRepository.save(withdrawal);
         auditLogService.record("WITHDRAWAL", saved.getId(), "CREATE",
             "Demande de retrait (" + saved.getNature().label() + ") de " + saved.getAmount() + " FCFA sur "
-                + envelopeName(saved));
+                + envelopeName(saved) + closedNote(saved));
         return WithdrawalResponse.from(saved);
     }
 
@@ -103,6 +135,7 @@ public class WithdrawalService {
         }
         Withdrawal withdrawal = build(request);
         lockEnvelope(withdrawal);
+        requireClosedProjectCovers(withdrawal, false);
         Instant now = Instant.now();
         withdrawal.setStatus(WithdrawalStatus.PROCESSED);
         withdrawal.setDecidedBy(withdrawal.getRequestedBy());
@@ -112,7 +145,7 @@ public class WithdrawalService {
         Withdrawal saved = withdrawalRepository.save(withdrawal);
         auditLogService.record("WITHDRAWAL", saved.getId(), "RECORD",
             saved.getNature().label() + " de " + saved.getAmount() + " FCFA enregistrée sur " + envelopeName(saved)
-                + " (sortie du " + request.operationDate() + ")");
+                + " (sortie du " + request.operationDate() + ")" + closedNote(saved));
         return WithdrawalResponse.from(saved);
     }
 
@@ -153,10 +186,11 @@ public class WithdrawalService {
         User actor = currentUserProvider.currentOrNull();
         boolean self = requireSeparation(withdrawal, actor, SELF_APPROVE_REFUSED);
         lockEnvelope(withdrawal);
+        requireClosedProjectCovers(withdrawal, true);
         withdrawal.setStatus(WithdrawalStatus.APPROVED);
         withdrawal.setDecidedAt(Instant.now());
         withdrawal.setDecidedBy(actor);
-        auditLogService.record("WITHDRAWAL", id, "APPROVE", "Retrait #" + id + " validé");
+        auditLogService.record("WITHDRAWAL", id, "APPROVE", "Retrait #" + id + " validé" + closedNote(withdrawal));
         if (self) {
             auditLogService.record("WITHDRAWAL", id, "WITHDRAWAL_SELF_APPROVED",
                 "Retrait #" + id + " de " + withdrawal.getAmount().stripTrailingZeros().toPlainString()
@@ -196,10 +230,11 @@ public class WithdrawalService {
         requireStatus(withdrawal, WithdrawalStatus.APPROVED, "décaisser");
         requireNoActivePayout(withdrawal, "de marquer décaissé");
         lockEnvelope(withdrawal);
+        requireClosedProjectCovers(withdrawal, true);
         withdrawal.setStatus(WithdrawalStatus.PROCESSED);
         withdrawal.setProcessedAt(Instant.now());
         withdrawal.setOperationDate(LocalDate.now());
-        auditLogService.record("WITHDRAWAL", id, "PROCESS", "Retrait #" + id + " décaissé");
+        auditLogService.record("WITHDRAWAL", id, "PROCESS", "Retrait #" + id + " décaissé" + closedNote(withdrawal));
         return WithdrawalResponse.from(withdrawal);
     }
 
@@ -244,6 +279,36 @@ public class WithdrawalService {
                 + " : un décaissement Mobile Money est en cours (" + withdrawal.getPayoutStatus()
                 + "). Attendez son résultat ou vérifiez son statut.");
         }
+    }
+
+    /**
+     * Collecte clôturée : la sortie ne peut pas dépasser le solde prévisionnel. engaged = le retrait est
+     * déjà compté dans ce solde (PENDING/APPROVED, à la validation ou au décaissement) : on le rajoute pour
+     * obtenir ce qui reste disponible pour lui. À appeler après lockEnvelope (sauf à la création d'une
+     * demande, où le verrou est pris ici). Sans effet sur une collecte ouverte ou la caisse.
+     */
+    private void requireClosedProjectCovers(Withdrawal withdrawal, boolean engaged) {
+        Project project = withdrawal.getProject();
+        if (project == null || project.getStatus() != ProjectStatus.COMPLETED) {
+            return;
+        }
+        if (!engaged) {
+            lockEnvelope(withdrawal);
+        }
+        BigDecimal available = balanceService.projectBalance(project.getId()).provisionalBalance();
+        if (engaged) {
+            available = available.add(withdrawal.getAmount());
+        }
+        if (withdrawal.getAmount().compareTo(available) > 0) {
+            throw new BusinessRuleViolationException("CLOSED_PROJECT_BALANCE",
+                "Cette collecte est clôturée : la sortie ne peut pas dépasser le solde restant ("
+                    + WithdrawalVoucherService.fcfa(available.max(BigDecimal.ZERO)) + ").");
+        }
+    }
+
+    private static String closedNote(Withdrawal w) {
+        return w.getProject() != null && w.getProject().getStatus() == ProjectStatus.COMPLETED
+            ? " (enveloppe clôturée)" : "";
     }
 
     /** Verrouille la ligne Project/DonationCategory ciblée (anti-concurrence, voir javadoc de classe). */

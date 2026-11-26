@@ -6,6 +6,8 @@ import type { WithdrawalCreateInput, WithdrawalFilters, WithdrawalRejectInput } 
 const KEYS = {
   list: (filters: WithdrawalFilters) => ['withdrawals', filters] as const,
   detail: (id: number) => ['withdrawal', id] as const,
+  // Sous ['withdrawals'] : rafraîchie avec la liste après chaque sortie (le reste d'une clôturée baisse).
+  projects: ['withdrawals', 'projects'] as const,
   projectBalance: (projectId: number) => ['project-balance', projectId] as const,
   categoryBalance: (categoryId: number) => ['category-balance', categoryId] as const,
   payoutOptions: ['withdrawal-payout-options'] as const,
@@ -35,6 +37,10 @@ export function useWithdrawalQuery(id: number) {
         : false
     },
   })
+}
+
+export function useWithdrawableProjectsQuery() {
+  return useQuery({ queryKey: KEYS.projects, queryFn: withdrawalsApi.projects })
 }
 
 export function usePayoutOptionsQuery() {
